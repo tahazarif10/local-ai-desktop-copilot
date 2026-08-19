@@ -13,7 +13,7 @@
                 FontWeight="SemiBold" />
 
             <TextBlock
-                Text="M1.2  Foreground Window Observer"
+                Text="M1.3  Event-Driven Foreground Observer"
                 FontSize="18"
                 Opacity="0.7"
                 Margin="0,0,0,18" />
