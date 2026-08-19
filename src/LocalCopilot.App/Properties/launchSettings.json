@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "LocalCopilot.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "LocalCopilot.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
