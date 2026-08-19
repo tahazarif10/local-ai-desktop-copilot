@@ -1,18 +1,68 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <Page
     x:Class="LocalCopilot_App.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="using:LocalCopilot_App"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!--
-        This is the main content area of your application.
-        Add your UI elements here — for example, controls, layouts, and data-bound views.
-        Use 'dotnet new winui-page' to create additional pages and navigate to them via
-        the Frame in MainWindow (RootFrame).
-    -->
-    <Grid />
+    <ScrollViewer>
+        <StackPanel Padding="28" Spacing="10">
+
+            <TextBlock
+                Text="Local AI Desktop Copilot"
+                FontSize="28"
+                FontWeight="SemiBold" />
+
+            <TextBlock
+                Text="M1.3  Event-Driven Foreground Observer"
+                FontSize="18"
+                Opacity="0.7"
+                Margin="0,0,0,18" />
+
+            <TextBlock Text="Process" FontWeight="SemiBold" />
+
+            <TextBlock
+                x:Name="ProcessNameText"
+                Text="Waiting..."
+                FontSize="18" />
+
+            <TextBlock
+                Text="Window title"
+                FontWeight="SemiBold"
+                Margin="0,12,0,0" />
+
+            <TextBlock
+                x:Name="WindowTitleText"
+                Text="Waiting..."
+                TextWrapping="Wrap"
+                FontSize="18" />
+
+            <TextBlock
+                Text="Process ID"
+                FontWeight="SemiBold"
+                Margin="0,12,0,0" />
+
+            <TextBlock
+                x:Name="ProcessIdText"
+                Text="-" />
+
+            <TextBlock
+                Text="HWND"
+                FontWeight="SemiBold"
+                Margin="0,12,0,0" />
+
+            <TextBlock
+                x:Name="WindowHandleText"
+                Text="-" />
+
+            <TextBlock
+                Text="Last observed"
+                FontWeight="SemiBold"
+                Margin="0,12,0,0" />
+
+            <TextBlock
+                x:Name="LastObservedText"
+                Text="-" />
+
+        </StackPanel>
+    </ScrollViewer>
 </Page>
