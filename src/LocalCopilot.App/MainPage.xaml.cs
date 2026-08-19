@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Diagnostics;
+using Windows.Graphics.Capture;
 
 namespace LocalCopilot_App;
 
@@ -20,6 +21,9 @@ public sealed partial class MainPage : Page
 
     private readonly DispatcherQueue
         _uiDispatcher;
+
+    private ForegroundWindowSnapshot?
+        _lastSnapshot;
 
     public MainPage()
     {
@@ -193,9 +197,166 @@ public sealed partial class MainPage : Page
             $"hwnd=0x{hwnd.ToInt64():X} queued={queued}");
     }
 
+    private void CaptureTargetProbeButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        DiagnosticLog.Write(
+            "CAPTURE.PROBE_CLICK",
+            $"hasSnapshot={_lastSnapshot is not null}");
+
+        if (_lastSnapshot is null)
+        {
+            CaptureTargetStatusText.Text =
+                "No external foreground window has been observed yet.";
+
+            DiagnosticLog.Write(
+                "CAPTURE.PROBE_REJECT",
+                "reason=no_snapshot");
+
+            return;
+        }
+
+        bool captureSupported =
+            GraphicsCaptureSession.IsSupported();
+
+        DiagnosticLog.Write(
+            "CAPTURE.SUPPORT",
+            $"supported={captureSupported}");
+
+        if (!captureSupported)
+        {
+            CaptureTargetStatusText.Text =
+                "Windows Graphics Capture is not supported.";
+
+            DiagnosticLog.Write(
+                "CAPTURE.PROBE_REJECT",
+                "reason=graphics_capture_not_supported");
+
+            return;
+        }
+
+        DiagnosticLog.Write(
+            "CAPTURE.PROBE_BEGIN",
+            $"hwnd=0x{_lastSnapshot.Handle.ToInt64():X} " +
+            $"pid={_lastSnapshot.ProcessId} " +
+            $"process={_lastSnapshot.ProcessName} " +
+            $"title=[{_lastSnapshot.WindowTitle}]");
+
+        try
+        {
+            GraphicsCaptureItem item =
+                GraphicsCaptureItemFactory.CreateForWindow(
+                    _lastSnapshot.Handle);
+
+            CaptureTargetStatusText.Text =
+                $"OK | {item.Size.Width} x {item.Size.Height}" +
+                $" | {item.DisplayName}";
+
+            DiagnosticLog.Write(
+                "CAPTURE.PROBE_OK",
+                $"hwnd=0x{_lastSnapshot.Handle.ToInt64():X} " +
+                $"size={item.Size.Width}x{item.Size.Height} " +
+                $"displayName=[{item.DisplayName}]");
+        }
+        catch (Exception ex)
+        {
+            CaptureTargetStatusText.Text =
+                $"Capture target failed: {ex.Message}";
+
+            DiagnosticLog.Write(
+                "CAPTURE.PROBE_ERROR",
+                ex.ToString());
+        }
+    }
+    private async void CaptureOneFrameButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        DiagnosticLog.Write(
+            "CAPTURE.FRAME_CLICK",
+            $"hasSnapshot={_lastSnapshot is not null}");
+
+        if (_lastSnapshot is null)
+        {
+            CapturedFrameStatusText.Text =
+                "No capture target available.";
+
+            DiagnosticLog.Write(
+                "CAPTURE.FRAME_REJECT",
+                "reason=no_snapshot");
+
+            return;
+        }
+
+        DiagnosticLog.Write(
+            "CAPTURE.FRAME_BEGIN",
+            $"hwnd=0x{_lastSnapshot.Handle.ToInt64():X} " +
+            $"pid={_lastSnapshot.ProcessId} " +
+            $"process={_lastSnapshot.ProcessName} " +
+            $"title=[{_lastSnapshot.WindowTitle}]");
+
+        try
+        {
+            GraphicsCaptureItem item =
+                GraphicsCaptureItemFactory.CreateForWindow(
+                    _lastSnapshot.Handle);
+
+            DiagnosticLog.Write(
+                "CAPTURE.FRAME_ITEM",
+                $"itemSize={item.Size.Width}x{item.Size.Height} " +
+                $"displayName=[{item.DisplayName}]");
+
+            SingleFrameCaptureInfo frame =
+                await SingleFrameCaptureService.CaptureAsync(
+                    item,
+                    TimeSpan.FromSeconds(5),
+                    2560);
+
+            DiagnosticLog.Write(
+                "CAPTURE.FRAME_OK",
+                $"content={frame.ContentWidth}x{frame.ContentHeight} " +
+                $"surface={frame.SurfaceWidth}x{frame.SurfaceHeight} " +
+                $"frameMs={frame.FrameMilliseconds:0.0}");
+
+            DiagnosticLog.Write(
+                "CAPTURE.RESIZE_OK",
+                $"source={frame.ContentWidth}x{frame.ContentHeight} " +
+                $"output={frame.OutputWidth}x{frame.OutputHeight} " +
+                $"scale={frame.ScaleFactor:0.0000} " +
+                $"resizeMs={frame.ResizeMilliseconds:0.0}");
+
+            DiagnosticLog.Write(
+                "CAPTURE.BITMAP_OK",
+                $"bitmap={frame.OutputWidth}x{frame.OutputHeight} " +
+                $"format={frame.BitmapPixelFormat} " +
+                $"stride={frame.PlaneStride} " +
+                $"cpuBytes={frame.CpuBytes} " +
+                $"copyMs={frame.CopyMilliseconds:0.0} " +
+                $"totalMs={frame.TotalMilliseconds:0.0}");
+
+            CapturedFrameStatusText.Text =
+                $"RAM OK | " +
+                $"{frame.OutputWidth} x {frame.OutputHeight} | " +
+                $"{frame.CpuBytes / 1024.0 / 1024.0:0.0} MB | " +
+                $"{frame.TotalMilliseconds:0.0} ms";
+        }
+        catch (Exception ex)
+        {
+            CapturedFrameStatusText.Text =
+                $"RAM capture failed: {ex.Message}";
+
+            DiagnosticLog.Write(
+                "CAPTURE.BITMAP_ERROR",
+                ex.ToString());
+        }
+    }
     private void DisplaySnapshot(
         ForegroundWindowSnapshot snapshot)
     {
+        _lastSnapshot =
+            snapshot;
+
         DiagnosticLog.Write(
             "PAGE.DISPLAY",
             $"process={snapshot.ProcessName} " +
