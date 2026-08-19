@@ -24,8 +24,7 @@ try {
         Join-Path $cache "m1-3-probe.stop"
 
     $bundleStop =
-        Join-Path $cache "m1-3-bundle.stop",
-                    "diagnostics.enabled"
+        Join-Path $cache "m1-3-bundle.stop"
 
     $diagnosticsFlag =
         Join-Path $cache "diagnostics.enabled"
