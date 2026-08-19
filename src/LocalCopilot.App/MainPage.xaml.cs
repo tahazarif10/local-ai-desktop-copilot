@@ -9,29 +9,40 @@ public sealed partial class MainPage : Page
     private readonly ForegroundWindowService _foregroundWindowService = new();
     private readonly DispatcherTimer _timer = new();
 
+    private readonly uint _ownProcessId =
+        unchecked((uint)Environment.ProcessId);
+
     public MainPage()
     {
         InitializeComponent();
 
-        _timer.Interval = TimeSpan.FromMilliseconds(500);
+        _timer.Interval =
+            TimeSpan.FromMilliseconds(500);
+
         _timer.Tick += Timer_Tick;
 
         Loaded += MainPage_Loaded;
         Unloaded += MainPage_Unloaded;
     }
 
-    private void MainPage_Loaded(object sender, RoutedEventArgs e)
+    private void MainPage_Loaded(
+        object sender,
+        RoutedEventArgs e)
     {
         RefreshForegroundWindow();
         _timer.Start();
     }
 
-    private void MainPage_Unloaded(object sender, RoutedEventArgs e)
+    private void MainPage_Unloaded(
+        object sender,
+        RoutedEventArgs e)
     {
         _timer.Stop();
     }
 
-    private void Timer_Tick(object? sender, object e)
+    private void Timer_Tick(
+        object? sender,
+        object e)
     {
         RefreshForegroundWindow();
     }
@@ -39,15 +50,16 @@ public sealed partial class MainPage : Page
     private void RefreshForegroundWindow()
     {
         ForegroundWindowSnapshot? snapshot =
-            _foregroundWindowService.GetCurrent();
+            _foregroundWindowService.GetCurrent(
+                _ownProcessId);
 
+        // If Local Copilot itself is foreground,
+        // preserve the last external application context.
         if (snapshot is null)
             return;
 
-        if (snapshot.ProcessId == Environment.ProcessId)
-            return;
-
-        ProcessNameText.Text = snapshot.ProcessName;
+        ProcessNameText.Text =
+            snapshot.ProcessName;
 
         WindowTitleText.Text =
             string.IsNullOrWhiteSpace(snapshot.WindowTitle)

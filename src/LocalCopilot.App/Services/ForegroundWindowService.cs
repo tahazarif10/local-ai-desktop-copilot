@@ -29,7 +29,8 @@ public sealed class ForegroundWindowService
         StringBuilder lpString,
         int nMaxCount);
 
-    public ForegroundWindowSnapshot? GetCurrent()
+    public ForegroundWindowSnapshot? GetCurrent(
+        uint? excludedProcessId = null)
     {
         nint hwnd = GetForegroundWindow();
 
@@ -38,15 +39,27 @@ public sealed class ForegroundWindowService
 
         GetWindowThreadProcessId(hwnd, out uint processId);
 
+        // Critical:
+        // Do not call GetWindowText/GetWindowTextLength on our own
+        // WinUI window during page/window activation.
+        if (excludedProcessId.HasValue &&
+            processId == excludedProcessId.Value)
+        {
+            return null;
+        }
+
         string processName = "Unknown";
 
         try
         {
-            using Process process = Process.GetProcessById((int)processId);
+            using Process process =
+                Process.GetProcessById((int)processId);
+
             processName = process.ProcessName + ".exe";
         }
         catch
         {
+            // The process may have exited between Win32 calls.
         }
 
         int titleLength = GetWindowTextLengthW(hwnd);
@@ -54,8 +67,14 @@ public sealed class ForegroundWindowService
 
         if (titleLength > 0)
         {
-            StringBuilder buffer = new(titleLength + 1);
-            GetWindowTextW(hwnd, buffer, buffer.Capacity);
+            StringBuilder buffer =
+                new(titleLength + 1);
+
+            GetWindowTextW(
+                hwnd,
+                buffer,
+                buffer.Capacity);
+
             title = buffer.ToString();
         }
 
