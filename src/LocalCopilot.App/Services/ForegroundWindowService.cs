@@ -6,11 +6,20 @@ using System.Text;
 
 namespace LocalCopilot_App.Services;
 
+public sealed record ForegroundWindowIdentity(
+    nint Handle,
+    uint ProcessId,
+    string ProcessName);
+
 public sealed record ForegroundWindowSnapshot(
     nint Handle,
     uint ProcessId,
     string ProcessName,
     string WindowTitle);
+
+public sealed record ForegroundWindowObservation(
+    ForegroundWindowSnapshot Snapshot,
+    PrivacyEvaluation Privacy);
 
 public sealed class ForegroundWindowService
 {
@@ -40,9 +49,13 @@ public sealed class ForegroundWindowService
         StringBuilder lpString,
         int nMaxCount);
 
-    public ForegroundWindowSnapshot? GetCurrent(
+    public ForegroundWindowObservation? GetCurrent(
+        PrivacyPolicy privacyPolicy,
         uint? excludedProcessId = null)
     {
+        ArgumentNullException.ThrowIfNull(
+            privacyPolicy);
+
         nint hwnd =
             GetForegroundWindow();
 
@@ -52,13 +65,18 @@ public sealed class ForegroundWindowService
 
         return GetFromHandle(
             hwnd,
+            privacyPolicy,
             excludedProcessId);
     }
 
-    public ForegroundWindowSnapshot? GetFromHandle(
+    public ForegroundWindowObservation? GetFromHandle(
         nint hwnd,
+        PrivacyPolicy privacyPolicy,
         uint? excludedProcessId = null)
     {
+        ArgumentNullException.ThrowIfNull(
+            privacyPolicy);
+
         DiagnosticLog.Write(
             "SERVICE.BEGIN",
             $"hwnd=0x{hwnd.ToInt64():X} " +
@@ -68,7 +86,7 @@ public sealed class ForegroundWindowService
         {
             DiagnosticLog.Write(
                 "SERVICE.REJECT",
-                "HWND is zero.");
+                "reason=hwnd_zero");
 
             return null;
         }
@@ -84,11 +102,13 @@ public sealed class ForegroundWindowService
             $"windowThread={windowThreadId} " +
             $"pid={processId}");
 
-        if (processId == 0)
+        if (windowThreadId == 0 ||
+            processId == 0)
         {
             DiagnosticLog.Write(
                 "SERVICE.REJECT",
-                $"PID=0 error={Marshal.GetLastWin32Error()}");
+                $"reason=invalid_window_identity " +
+                $"error={Marshal.GetLastWin32Error()}");
 
             return null;
         }
@@ -98,33 +118,106 @@ public sealed class ForegroundWindowService
         {
             DiagnosticLog.Write(
                 "SERVICE.REJECT",
-                $"Own process pid={processId}");
+                $"reason=own_process pid={processId}");
 
             return null;
         }
 
-        string processName =
-            "Unknown";
+        string processName;
 
         try
         {
             using Process process =
                 Process.GetProcessById(
-                    (int)processId);
+                    checked((int)processId));
 
             processName =
-                process.ProcessName + ".exe";
+                process.ProcessName;
         }
         catch (Exception ex)
         {
             DiagnosticLog.Write(
                 "SERVICE.PROCESS_ERROR",
+                $"pid={processId} " +
                 $"type={ex.GetType().Name}");
+
+            DiagnosticLog.Write(
+                "SERVICE.REJECT",
+                "reason=process_identity_unavailable");
+
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                processName))
+        {
+            DiagnosticLog.Write(
+                "SERVICE.REJECT",
+                "reason=empty_process_name");
+
+            return null;
+        }
+
+        ForegroundWindowIdentity identity =
+            new(
+                hwnd,
+                processId,
+                processName);
+
+        DiagnosticLog.Write(
+            "SERVICE.IDENTITY",
+            $"hwnd=0x{identity.Handle.ToInt64():X} " +
+            $"pid={identity.ProcessId} " +
+            $"process={identity.ProcessName}");
+
+        PrivacyEvaluation privacy =
+            privacyPolicy.Evaluate(
+                identity);
+
+        if (!privacy.AllowsSensing)
+        {
+            DiagnosticLog.Write(
+                "SERVICE.PRIVACY_DENY",
+                $"hwnd=0x{identity.Handle.ToInt64():X} " +
+                $"pid={identity.ProcessId} " +
+                $"process={identity.ProcessName} " +
+                $"rule={privacy.RuleId}");
+
+            ForegroundWindowSnapshot blockedSnapshot =
+                new(
+                    identity.Handle,
+                    identity.ProcessId,
+                    identity.ProcessName,
+                    string.Empty);
+
+            return new ForegroundWindowObservation(
+                blockedSnapshot,
+                privacy);
+        }
+
+        // Revalidate the HWND/PID immediately before
+        // any content-bearing title API is called.
+        uint confirmedThreadId =
+            GetWindowThreadProcessId(
+                identity.Handle,
+                out uint confirmedProcessId);
+
+        if (confirmedThreadId == 0 ||
+            confirmedProcessId !=
+                identity.ProcessId)
+        {
+            DiagnosticLog.Write(
+                "SERVICE.REJECT",
+                $"reason=identity_changed_before_title " +
+                $"expectedPid={identity.ProcessId} " +
+                $"actualPid={confirmedProcessId}");
+
+            return null;
         }
 
         int titleLength =
             GetWindowTextLengthW(
-                hwnd);
+                identity.Handle);
 
         string title =
             string.Empty;
@@ -135,11 +228,12 @@ public sealed class ForegroundWindowService
         if (titleLength > 0)
         {
             StringBuilder buffer =
-                new(titleLength + 1);
+                new(
+                    titleLength + 1);
 
             copied =
                 GetWindowTextW(
-                    hwnd,
+                    identity.Handle,
                     buffer,
                     buffer.Capacity);
 
@@ -149,34 +243,40 @@ public sealed class ForegroundWindowService
 
         DiagnosticLog.Write(
             "SERVICE.TITLE",
-            $"hwnd=0x{hwnd.ToInt64():X} " +
+            $"hwnd=0x{identity.Handle.ToInt64():X} " +
             $"titleLength={titleLength} " +
             $"copied={copied} " +
             $"hasTitle={!string.IsNullOrWhiteSpace(title)}");
 
         DiagnosticLog.Write(
             "SERVICE.RESULT",
-            $"hwnd=0x{hwnd.ToInt64():X} " +
-            $"pid={processId} " +
-            $"process={processName} " +
+            $"hwnd=0x{identity.Handle.ToInt64():X} " +
+            $"pid={identity.ProcessId} " +
+            $"process={identity.ProcessName} " +
             $"titleLength={title.Length}");
 
-        if (processName.Equals(
-                "explorer.exe",
+        if (identity.ProcessName.Equals(
+                "explorer",
                 StringComparison.OrdinalIgnoreCase) &&
-            string.IsNullOrWhiteSpace(title))
+            string.IsNullOrWhiteSpace(
+                title))
         {
             DiagnosticLog.Write(
                 "SERVICE.REJECT",
-                "Transient Explorer shell window.");
+                "reason=transient_explorer_shell");
 
             return null;
         }
 
-        return new ForegroundWindowSnapshot(
-            hwnd,
-            processId,
-            processName,
-            title);
+        ForegroundWindowSnapshot snapshot =
+            new(
+                identity.Handle,
+                identity.ProcessId,
+                identity.ProcessName,
+                title);
+
+        return new ForegroundWindowObservation(
+            snapshot,
+            privacy);
     }
 }
