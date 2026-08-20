@@ -5,8 +5,31 @@ using WinRT;
 
 namespace LocalCopilot_App.Services;
 
+public sealed class GraphicsCaptureTargetUnavailableException :
+    InvalidOperationException
+{
+    public GraphicsCaptureTargetUnavailableException(
+        nint handle,
+        Exception innerException)
+        : base(
+            "The window is not available as a Windows Graphics Capture target.",
+            innerException)
+    {
+        Handle =
+            handle;
+
+        HResult =
+            innerException.HResult;
+    }
+
+    public nint Handle { get; }
+}
+
 public static class GraphicsCaptureItemFactory
 {
+    private const int EInvalidArg =
+        unchecked((int)0x80070057);
+
     private static readonly Guid GraphicsCaptureItemGuid =
         new("79C3F95B-31F7-4EC2-A464-632EF5D30760");
 
@@ -36,10 +59,22 @@ public static class GraphicsCaptureItemFactory
             GraphicsCaptureItem
                 .As<IGraphicsCaptureItemInterop>();
 
-        nint itemPointer =
-            interop.CreateForWindow(
+        nint itemPointer;
+
+        try
+        {
+            itemPointer =
+                interop.CreateForWindow(
+                    hwnd,
+                    GraphicsCaptureItemGuid);
+        }
+        catch (Exception ex)
+            when (ex.HResult == EInvalidArg)
+        {
+            throw new GraphicsCaptureTargetUnavailableException(
                 hwnd,
-                GraphicsCaptureItemGuid);
+                ex);
+        }
 
         if (itemPointer == nint.Zero)
             throw new InvalidOperationException(

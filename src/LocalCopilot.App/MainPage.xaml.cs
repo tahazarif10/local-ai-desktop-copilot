@@ -36,6 +36,18 @@ public sealed partial class MainPage : Page
     private readonly PersistentChangeDetectionService
         _persistentChangeDetectionService;
 
+    private readonly SensingOrchestrator
+        _sensingOrchestrator;
+
+    private readonly DiagnosticTimeline
+        _diagnosticTimeline;
+
+    private readonly InputActivityTracker
+        _inputActivityTracker;
+
+    private readonly ChangeCorrelationService
+        _changeCorrelationService;
+
     private ForegroundWindowSnapshot?
         _lastSnapshot;
 
@@ -82,20 +94,41 @@ public sealed partial class MainPage : Page
         _persistentChangeDetectionService =
             new PersistentChangeDetectionService();
 
+        _diagnosticTimeline =
+            new DiagnosticTimeline();
+
+        _inputActivityTracker =
+            new InputActivityTracker();
+
+        _changeCorrelationService =
+            new ChangeCorrelationService(
+                _diagnosticTimeline);
+
         _uiDispatcher =
             DispatcherQueue.GetForCurrentThread()
             ?? throw new InvalidOperationException(
                 "UI DispatcherQueue unavailable.");
 
+        _sensingOrchestrator =
+            new SensingOrchestrator(
+                _persistentChangeDetectionService,
+                _uiDispatcher);
+
         DiagnosticLog.Write(
             "PAGE.DISPATCHER",
             $"HasThreadAccess={_uiDispatcher.HasThreadAccess}");
+
+        _sensingOrchestrator.StatusChanged +=
+            SensingOrchestrator_StatusChanged;
 
         _persistentChangeDetectionService.SampleReady +=
             PersistentChangeDetectionService_SampleReady;
 
         _persistentChangeDetectionService.SessionEnded +=
             PersistentChangeDetectionService_SessionEnded;
+
+        _inputActivityTracker.ActivityObserved +=
+            InputActivityTracker_ActivityObserved;
 
         _foregroundWindowObserver.ForegroundWindowChanged +=
             ForegroundWindowObserver_ForegroundWindowChanged;
@@ -182,7 +215,10 @@ public sealed partial class MainPage : Page
             "PAGE.UNLOADED",
             $"observerStopped={stopped}");
 
-        _persistentChangeDetectionService.Stop(
+        _sensingOrchestrator.Disarm(
+            "page_unloaded");
+
+        StopInputTracking(
             "page_unloaded");
 
         _contextEpochManager.Reset();
@@ -286,6 +322,15 @@ public sealed partial class MainPage : Page
 
         _changeDetectionProbeService.ObserveContext(
             epoch);
+
+        _sensingOrchestrator.ObserveContext(
+            epoch);
+
+        RefreshInputTracking(
+            epoch,
+            contextChanged
+                ? "context_changed"
+                : "context_reused");
 
         DiagnosticLog.Write(
             "CONTEXT.APPLY",
@@ -729,10 +774,97 @@ public sealed partial class MainPage : Page
                 $"Change sample failed: {ex.Message}";
         }
     }
+    private void ArmSensingOrchestratorButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_sensingOrchestrator.IsArmed)
+        {
+            OrchestratorStatusText.Text =
+                "Already armed.";
+
+            return;
+        }
+
+        if (_persistentChangeDetectionService
+            .HasActiveSession)
+        {
+            OrchestratorStatusText.Text =
+                "Stop the manual persistent session before arming.";
+
+            DiagnosticLog.Write(
+                "ORCH.ARM_REJECT",
+                "reason=manual_session_active");
+
+            return;
+        }
+
+        OrchestratorStatusText.Text =
+            "ARMED | evaluating current context...";
+
+        _sensingOrchestrator.Arm(
+            _currentEpoch);
+
+        RefreshInputTracking(
+            _currentEpoch,
+            "user_arm");
+    }
+
+    private void DisarmSensingOrchestratorButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        OrchestratorStatusText.Text =
+            "Disarming...";
+
+        _sensingOrchestrator.Disarm(
+            "user_disarm");
+
+        StopInputTracking(
+            "user_disarm");
+
+        OrchestratorStatusText.Text =
+            "OFF";
+    }
+
+    private void SensingOrchestrator_StatusChanged(
+        SensingOrchestratorUpdate update)
+    {
+        bool queued =
+            _uiDispatcher.TryEnqueue(
+                DispatcherQueuePriority.Normal,
+                () =>
+                {
+                    OrchestratorStatusText.Text =
+                        $"{update.Phase} | " +
+                        $"epoch {update.EpochId} | " +
+                        $"{update.Reason}";
+                });
+
+        if (!queued)
+        {
+            DiagnosticLog.Write(
+                "ORCH.UI_QUEUE_REJECT",
+                $"epoch={update.EpochId} " +
+                $"phase={update.Phase}");
+        }
+    }
     private void StartPersistentChangeButton_Click(
         object sender,
         RoutedEventArgs e)
     {
+        if (_sensingOrchestrator.IsArmed)
+        {
+            PersistentChangeStatusText.Text =
+                "Disarm auto sensing before manual start.";
+
+            DiagnosticLog.Write(
+                "PERSIST.MANUAL_REJECT",
+                "operation=start reason=orchestrator_armed");
+
+            return;
+        }
+
         ContextEpoch? epoch =
             GetAllowedEpoch(
                 "persistent_start");
@@ -784,6 +916,18 @@ public sealed partial class MainPage : Page
         object sender,
         RoutedEventArgs e)
     {
+        if (_sensingOrchestrator.IsArmed)
+        {
+            PersistentChangeStatusText.Text =
+                "Use Disarm auto sensing to stop orchestrated capture.";
+
+            DiagnosticLog.Write(
+                "PERSIST.MANUAL_REJECT",
+                "operation=stop reason=orchestrator_armed");
+
+            return;
+        }
+
         try
         {
             _persistentChangeDetectionService.Stop(
@@ -804,9 +948,63 @@ public sealed partial class MainPage : Page
         }
     }
 
+    private void RefreshInputTracking(
+        ContextEpoch? epoch,
+        string reason)
+    {
+        if (
+            !_sensingOrchestrator.IsArmed ||
+            epoch is null ||
+            !epoch.Privacy.AllowsSensing)
+        {
+            StopInputTracking(
+                reason);
+
+            return;
+        }
+
+        _diagnosticTimeline.BeginEpoch(
+            epoch.Id);
+
+        try
+        {
+            _inputActivityTracker.Start(
+                epoch.Id);
+        }
+        catch (Exception ex)
+        {
+            _diagnosticTimeline.Reset();
+
+            DiagnosticLog.Write(
+                "INPUT.TRACKING_START_ERROR",
+                $"epoch={epoch.Id} " +
+                $"type={ex.GetType().Name} " +
+                $"hresult=0x{ex.HResult:X8}");
+        }
+    }
+
+    private void StopInputTracking(
+        string reason)
+    {
+        _inputActivityTracker.Stop(
+            reason);
+
+        _diagnosticTimeline.Reset();
+    }
+
+    private void InputActivityTracker_ActivityObserved(
+        InputActivityEvent activity)
+    {
+        _diagnosticTimeline.Record(
+            activity);
+    }
+
     private void PersistentChangeDetectionService_SampleReady(
         PersistentChangeSample sample)
     {
+        _changeCorrelationService.Observe(
+            sample);
+
         bool queued =
             _uiDispatcher.TryEnqueue(
                 DispatcherQueuePriority.Normal,
