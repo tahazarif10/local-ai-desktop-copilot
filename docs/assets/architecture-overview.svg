@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 760" role="img" aria-labelledby="title desc">
+  <title id="title">Two-computer local architecture</title>
+  <desc id="desc">The Windows client performs privacy-gated sensing and semantic escalation. An authenticated local boundary connects it to a separate AI server. Current components are solid and planned components are dashed.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07111F"/>
+      <stop offset="0.5" stop-color="#0B172B"/>
+      <stop offset="1" stop-color="#111329"/>
+    </linearGradient>
+    <linearGradient id="client" x1="80" y1="145" x2="690" y2="655" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A2035"/>
+      <stop offset="1" stop-color="#0A1528"/>
+    </linearGradient>
+    <linearGradient id="server" x1="910" y1="145" x2="1520" y2="655" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#171837"/>
+      <stop offset="1" stop-color="#0E1328"/>
+    </linearGradient>
+    <linearGradient id="flow" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#38BDF8"/>
+      <stop offset="0.55" stop-color="#818CF8"/>
+      <stop offset="1" stop-color="#C084FC"/>
+    </linearGradient>
+    <style>
+      text { font-family: "Segoe UI", Inter, Arial, sans-serif; }
+      .nodeTitle { fill: #EDF4FF; font-size: 21px; font-weight: 720; }
+      .nodeSub { fill: #91A6C5; font-size: 16px; font-weight: 550; }
+      .cardLabel { fill: #F4F8FF; font-size: 26px; font-weight: 780; letter-spacing: 1.2px; }
+      .hardware { fill: #8FA6C7; font-size: 17px; font-weight: 600; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="760" rx="32" fill="url(#bg)"/>
+  <text x="70" y="64" fill="#F6F9FF" font-size="34" font-weight="780">Local-first, two-node architecture</text>
+  <text x="70" y="96" fill="#8FA6C7" font-size="18">Cheap Windows sensing first. Rich semantics only when needed. Local inference behind an explicit privacy boundary.</text>
+  <g transform="translate(1190 50)">
+    <rect width="120" height="34" rx="17" fill="#09251F" stroke="#34D399" stroke-opacity="0.55"/>
+    <circle cx="19" cy="17" r="5" fill="#34D399"/>
+    <text x="33" y="23" fill="#A7F3D0" font-size="14" font-weight="700">CURRENT</text>
+    <rect x="134" width="132" height="34" rx="17" fill="#171A31" stroke="#818CF8" stroke-dasharray="5 5"/>
+    <circle cx="153" cy="17" r="5" fill="#818CF8"/>
+    <text x="167" y="23" fill="#C7D2FE" font-size="14" font-weight="700">PLANNED</text>
+  </g>
+
+  <g transform="translate(70 132)">
+    <rect width="620" height="542" rx="30" fill="url(#client)" stroke="#38BDF8" stroke-opacity="0.42" stroke-width="2"/>
+    <rect x="26" y="24" width="568" height="64" rx="18" fill="#0D2942"/>
+    <circle cx="56" cy="56" r="10" fill="#38BDF8"/>
+    <text x="80" y="52" class="cardLabel">WINDOWS CLIENT</text>
+    <text x="80" y="74" class="hardware">i7-6700K • 32 GB • Radeon R9 M395X</text>
+
+    <g transform="translate(34 116)">
+      <rect width="552" height="72" rx="17" fill="#09251F" stroke="#34D399" stroke-width="2"/>
+      <circle cx="34" cy="36" r="13" fill="#34D399" opacity="0.18"/>
+      <path d="M27 36L32 41L42 30" fill="none" stroke="#6EE7B7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="61" y="31" class="nodeTitle">Foreground identity + privacy gate</text>
+      <text x="61" y="53" class="nodeSub">HWND / PID / process → allow or block before content</text>
+    </g>
+    <path d="M310 188V210" stroke="#516987" stroke-width="4" stroke-linecap="round"/>
+    <path d="M301 203L310 212L319 203" fill="none" stroke="#516987" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(34 212)">
+      <rect width="552" height="72" rx="17" fill="#0B2336" stroke="#38BDF8" stroke-width="2"/>
+      <circle cx="34" cy="36" r="13" fill="#38BDF8" opacity="0.17"/>
+      <path d="M27 36L32 41L42 30" fill="none" stroke="#7DD3FC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="61" y="31" class="nodeTitle">Context epoch + persistent WGC</text>
+      <text x="61" y="53" class="nodeSub">Cancellation • stale-result gate • capacity-one frames</text>
+    </g>
+    <path d="M310 284V306" stroke="#516987" stroke-width="4" stroke-linecap="round"/>
+    <path d="M301 299L310 308L319 299" fill="none" stroke="#516987" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(34 308)">
+      <rect width="552" height="72" rx="17" fill="#101D38" stroke="#818CF8" stroke-width="2"/>
+      <circle cx="34" cy="36" r="13" fill="#818CF8" opacity="0.17"/>
+      <path d="M27 36L32 41L42 30" fill="none" stroke="#A5B4FC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="61" y="31" class="nodeTitle">640 px change sensing + correlation</text>
+      <text x="61" y="53" class="nodeSub">Latest wins • 500 ms cadence • metadata-only diagnostics</text>
+    </g>
+
+    <g transform="translate(34 410)">
+      <rect width="264" height="86" rx="17" fill="#11162C" stroke="#818CF8" stroke-width="2" stroke-dasharray="8 7"/>
+      <text x="24" y="35" class="nodeTitle">Read-only UIA</text>
+      <text x="24" y="59" class="nodeSub">Bounded MTA worker</text>
+      <rect x="288" width="264" height="86" rx="17" fill="#17142E" stroke="#C084FC" stroke-width="2" stroke-dasharray="8 7"/>
+      <text x="312" y="35" class="nodeTitle">ROI OCR planner</text>
+      <text x="312" y="59" class="nodeSub">Only when UIA is insufficient</text>
+    </g>
+    <text x="310" y="526" text-anchor="middle" fill="#7DD3FC" font-size="16" font-weight="700" letter-spacing="1.2">SENSE → GATE → ESCALATE</text>
+  </g>
+
+  <g transform="translate(720 230)">
+    <path d="M0 150H160" stroke="#425777" stroke-width="5" stroke-linecap="round" stroke-dasharray="10 11"/>
+    <path d="M13 135L-2 150L13 165M147 135L162 150L147 165" fill="none" stroke="#7188AB" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="80" cy="150" r="58" fill="#08231E" stroke="#34D399" stroke-width="3"/>
+    <path d="M62 144V132C62 108 98 108 98 132V144M55 144H105V181H55Z" fill="none" stroke="#6EE7B7" stroke-width="5" stroke-linejoin="round"/>
+    <circle cx="80" cy="160" r="5" fill="#6EE7B7"/>
+    <text x="80" y="231" text-anchor="middle" fill="#9FF3D0" font-size="17" font-weight="750">LOCAL TRUST GATE</text>
+    <text x="80" y="257" text-anchor="middle" fill="#8198B9" font-size="14" font-weight="650">AUTH • CAPABILITY</text>
+    <text x="80" y="278" text-anchor="middle" fill="#8198B9" font-size="14" font-weight="650">LIMITS • DEADLINES</text>
+    <rect x="18" y="305" width="124" height="36" rx="18" fill="#28100F" stroke="#F87171" stroke-opacity="0.52"/>
+    <text x="80" y="329" text-anchor="middle" fill="#FCA5A5" font-size="15" font-weight="750">NO CLOUD</text>
+  </g>
+
+  <g transform="translate(910 132)">
+    <rect width="620" height="542" rx="30" fill="url(#server)" stroke="#A78BFA" stroke-opacity="0.42" stroke-width="2"/>
+    <rect x="26" y="24" width="568" height="64" rx="18" fill="#221D43"/>
+    <circle cx="56" cy="56" r="10" fill="#A78BFA"/>
+    <text x="80" y="52" class="cardLabel">LOCAL AI SERVER</text>
+    <text x="80" y="74" class="hardware">i5-12450HX • 16 GB • RTX 3050 Laptop 6 GB</text>
+
+    <g transform="translate(34 116)">
+      <rect width="552" height="82" rx="17" fill="#15172E" stroke="#818CF8" stroke-width="2" stroke-dasharray="8 7"/>
+      <circle cx="36" cy="41" r="14" fill="#818CF8" opacity="0.18"/>
+      <path d="M29 41H43M36 34V48" stroke="#A5B4FC" stroke-width="4" stroke-linecap="round"/>
+      <text x="65" y="36" class="nodeTitle">Authenticated inference gateway</text>
+      <text x="65" y="60" class="nodeSub">Versioned contracts • request IDs • no retention</text>
+    </g>
+    <path d="M310 198V224" stroke="#5D587D" stroke-width="4" stroke-linecap="round" stroke-dasharray="6 6"/>
+    <g transform="translate(34 226)">
+      <rect width="552" height="82" rx="17" fill="#17162F" stroke="#A78BFA" stroke-width="2" stroke-dasharray="8 7"/>
+      <circle cx="36" cy="41" r="14" fill="#A78BFA" opacity="0.18"/>
+      <path d="M29 41H43M36 34V48" stroke="#C4B5FD" stroke-width="4" stroke-linecap="round"/>
+      <text x="65" y="36" class="nodeTitle">Resource manager</text>
+      <text x="65" y="60" class="nodeSub">VRAM budgets • priority • load / unload • degrade</text>
+    </g>
+    <path d="M310 308V334" stroke="#5D587D" stroke-width="4" stroke-linecap="round" stroke-dasharray="6 6"/>
+
+    <g transform="translate(34 336)">
+      <rect width="168" height="118" rx="17" fill="#17152E" stroke="#818CF8" stroke-width="2" stroke-dasharray="8 7"/>
+      <circle cx="28" cy="28" r="7" fill="#818CF8"/>
+      <text x="22" y="65" class="nodeTitle">Text LLM</text>
+      <text x="22" y="90" class="nodeSub">Reasoning</text>
+      <rect x="192" width="168" height="118" rx="17" fill="#1C1532" stroke="#A78BFA" stroke-width="2" stroke-dasharray="8 7"/>
+      <circle cx="220" cy="28" r="7" fill="#A78BFA"/>
+      <text x="214" y="65" class="nodeTitle">Small VLM</text>
+      <text x="214" y="90" class="nodeSub">Final fallback</text>
+      <rect x="384" width="168" height="118" rx="17" fill="#201535" stroke="#C084FC" stroke-width="2" stroke-dasharray="8 7"/>
+      <circle cx="412" cy="28" r="7" fill="#C084FC"/>
+      <text x="406" y="65" class="nodeTitle">STT / TTS</text>
+      <text x="406" y="90" class="nodeSub">Later voice</text>
+    </g>
+    <text x="310" y="526" text-anchor="middle" fill="#C4B5FD" font-size="16" font-weight="700" letter-spacing="1.2">SCHEDULE → INFER → STREAM BACK</text>
+  </g>
+
+  <rect x="1" y="1" width="1598" height="758" rx="31" fill="none" stroke="#DCEBFF" stroke-opacity="0.09" stroke-width="2"/>
+</svg>
