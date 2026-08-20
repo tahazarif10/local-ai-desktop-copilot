@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 560" role="img" aria-labelledby="title desc">
+  <title id="title">Local AI Desktop Copilot visual overview</title>
+  <desc id="desc">A privacy-first Windows client connected only to a local AI server, with no cloud path.</desc>
+  <defs>
+    <linearGradient id="heroBg" x1="0" y1="0" x2="1600" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07111F"/>
+      <stop offset="0.48" stop-color="#0C1830"/>
+      <stop offset="1" stop-color="#11142D"/>
+    </linearGradient>
+    <linearGradient id="headline" x1="95" y1="170" x2="760" y2="348" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FAFC"/>
+      <stop offset="0.48" stop-color="#DCEBFF"/>
+      <stop offset="1" stop-color="#C4B5FD"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#38BDF8"/>
+      <stop offset="0.48" stop-color="#818CF8"/>
+      <stop offset="1" stop-color="#C084FC"/>
+    </linearGradient>
+    <linearGradient id="safe" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#6EE7B7"/>
+      <stop offset="1" stop-color="#22C55E"/>
+    </linearGradient>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#8BA4CC" stroke-opacity="0.07"/>
+      <circle cx="1" cy="1" r="1.4" fill="#A8C2EA" fill-opacity="0.14"/>
+    </pattern>
+    <filter id="blur" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="34"/>
+    </filter>
+    <filter id="smallGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+    <style>
+      text { font-family: "Segoe UI", Inter, Arial, sans-serif; }
+      .caps { font-weight: 700; letter-spacing: 4px; }
+      .muted { fill: #9FB1CC; }
+      .label { fill: #DCE7F8; font-size: 19px; font-weight: 700; letter-spacing: 1.3px; }
+      .micro { fill: #8FA6C7; font-size: 17px; font-weight: 600; letter-spacing: 1px; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="560" rx="34" fill="url(#heroBg)"/>
+  <rect width="1600" height="560" rx="34" fill="url(#grid)"/>
+  <circle cx="196" cy="105" r="150" fill="#0EA5E9" opacity="0.13" filter="url(#blur)"/>
+  <circle cx="1460" cy="478" r="200" fill="#8B5CF6" opacity="0.12" filter="url(#blur)"/>
+  <circle cx="1026" cy="55" r="110" fill="#2563EB" opacity="0.09" filter="url(#blur)"/>
+
+  <g transform="translate(92 68)">
+    <rect width="452" height="40" rx="20" fill="#0B2740" stroke="#38BDF8" stroke-opacity="0.42"/>
+    <circle cx="23" cy="20" r="6" fill="#38BDF8"/>
+    <text x="42" y="27" fill="#7DD3FC" font-size="18" class="caps">LOCAL • PRIVATE • WINDOWS</text>
+  </g>
+
+  <text x="92" y="205" fill="url(#headline)" font-size="72" font-weight="780" letter-spacing="-2">Private by design.</text>
+  <text x="92" y="287" fill="url(#headline)" font-size="72" font-weight="780" letter-spacing="-2">Local by default.</text>
+  <text x="96" y="343" class="muted" font-size="25">A bounded sensing and reasoning system for Windows.</text>
+  <text x="96" y="379" class="muted" font-size="25">Two local machines. No cloud fallback.</text>
+
+  <g transform="translate(92 430)">
+    <rect width="426" height="58" rx="18" fill="#201B10" stroke="#FBBF24" stroke-opacity="0.58"/>
+    <circle cx="30" cy="29" r="9" fill="#FBBF24"/>
+    <circle cx="30" cy="29" r="16" fill="#FBBF24" opacity="0.15"/>
+    <text x="56" y="24" fill="#FDE68A" font-size="16" font-weight="700" letter-spacing="2.3">CURRENT GATE</text>
+    <text x="56" y="45" fill="#FFF7D6" font-size="19" font-weight="700">M2.4 • Foundation Hardening</text>
+  </g>
+
+  <g transform="translate(840 80)">
+    <rect x="0" y="0" width="292" height="350" rx="28" fill="#09182B" stroke="#38BDF8" stroke-opacity="0.45" stroke-width="2"/>
+    <rect x="22" y="22" width="248" height="42" rx="14" fill="#0E2942"/>
+    <circle cx="45" cy="43" r="7" fill="#38BDF8"/>
+    <text x="63" y="50" class="label">WINDOWS CLIENT</text>
+
+    <rect x="42" y="91" width="208" height="129" rx="18" fill="#07111F" stroke="url(#accent)" stroke-width="3"/>
+    <path d="M43 123H249" stroke="#263C5E" stroke-width="2"/>
+    <circle cx="61" cy="107" r="4" fill="#38BDF8"/>
+    <circle cx="74" cy="107" r="4" fill="#818CF8"/>
+    <circle cx="87" cy="107" r="4" fill="#C084FC"/>
+    <path d="M68 166H95L108 145L125 188L144 155L159 174H185" fill="none" stroke="url(#accent)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="207" cy="166" r="7" fill="#38BDF8"/>
+    <path d="M117 220V239M88 239H146" stroke="#52698E" stroke-width="6" stroke-linecap="round"/>
+
+    <g transform="translate(24 269)">
+      <rect width="72" height="35" rx="11" fill="#0D2A41" stroke="#38BDF8" stroke-opacity="0.42"/>
+      <text x="36" y="24" text-anchor="middle" class="micro">WGC</text>
+      <rect x="86" width="84" height="35" rx="11" fill="#171F42" stroke="#818CF8" stroke-opacity="0.42"/>
+      <text x="128" y="24" text-anchor="middle" class="micro">EPOCH</text>
+      <rect x="184" width="84" height="35" rx="11" fill="#171833" stroke="#C084FC" stroke-opacity="0.42"/>
+      <text x="226" y="24" text-anchor="middle" class="micro">CHANGE</text>
+    </g>
+    <text x="146" y="329" text-anchor="middle" fill="#6EE7B7" font-size="17" font-weight="700">IDENTITY → POLICY → CONTENT</text>
+  </g>
+
+  <path d="M1132 252H1268" stroke="#3C5478" stroke-width="4" stroke-linecap="round" stroke-dasharray="8 10"/>
+  <path d="M1140 239L1126 252L1140 265M1260 239L1274 252L1260 265" fill="none" stroke="#7088AD" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="1204" cy="252" r="34" fill="#08231E" stroke="url(#safe)" stroke-width="3"/>
+  <circle cx="1204" cy="252" r="47" fill="#34D399" opacity="0.08" filter="url(#smallGlow)"/>
+  <path d="M1192 249V242C1192 225 1216 225 1216 242V249M1188 249H1220V273H1188Z" fill="none" stroke="#6EE7B7" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="1204" cy="260" r="3" fill="#6EE7B7"/>
+  <text x="1204" y="313" text-anchor="middle" fill="#79E8BC" font-size="15" font-weight="700" letter-spacing="1.5">LAN GATE</text>
+
+  <g transform="translate(1268 80)">
+    <rect x="0" y="0" width="292" height="350" rx="28" fill="#11132B" stroke="#A78BFA" stroke-opacity="0.45" stroke-width="2"/>
+    <rect x="22" y="22" width="248" height="42" rx="14" fill="#211D43"/>
+    <circle cx="45" cy="43" r="7" fill="#A78BFA"/>
+    <text x="63" y="50" class="label">LOCAL AI SERVER</text>
+
+    <g transform="translate(51 91)">
+      <rect x="0" y="0" width="190" height="46" rx="13" fill="#0A1023" stroke="#5B5F8D"/>
+      <circle cx="24" cy="23" r="6" fill="#6EE7B7"/>
+      <path d="M45 17H161M45 29H129" stroke="#64779A" stroke-width="4" stroke-linecap="round"/>
+      <rect x="0" y="59" width="190" height="46" rx="13" fill="#0A1023" stroke="#6A5B9A"/>
+      <circle cx="24" cy="82" r="6" fill="#818CF8"/>
+      <path d="M45 76H148M45 88H171" stroke="#64779A" stroke-width="4" stroke-linecap="round"/>
+      <rect x="0" y="118" width="190" height="46" rx="13" fill="#0A1023" stroke="#79589C"/>
+      <circle cx="24" cy="141" r="6" fill="#C084FC"/>
+      <path d="M45 135H164M45 147H136" stroke="#64779A" stroke-width="4" stroke-linecap="round"/>
+    </g>
+
+    <g transform="translate(27 278)">
+      <rect width="108" height="35" rx="11" fill="#1A1B3C" stroke="#818CF8" stroke-opacity="0.42"/>
+      <text x="54" y="24" text-anchor="middle" class="micro">MODELS</text>
+      <rect x="124" width="114" height="35" rx="11" fill="#251A3D" stroke="#C084FC" stroke-opacity="0.42"/>
+      <text x="181" y="24" text-anchor="middle" class="micro">RESOURCES</text>
+    </g>
+    <text x="146" y="329" text-anchor="middle" fill="#C4B5FD" font-size="17" font-weight="700">TARGET • BOUNDED • LOCAL</text>
+  </g>
+
+  <g transform="translate(866 466)">
+    <rect width="676" height="50" rx="16" fill="#07111F" stroke="#2A3A58"/>
+    <circle cx="28" cy="25" r="7" fill="#34D399"/>
+    <text x="48" y="32" fill="#C9F8E6" font-size="20" font-weight="700">NO CLOUD</text>
+    <path d="M190 14V36" stroke="#2E4365"/>
+    <circle cx="220" cy="25" r="7" fill="#38BDF8"/>
+    <text x="240" y="32" fill="#D5F1FE" font-size="20" font-weight="700">RAM-ONLY PIXELS</text>
+    <path d="M456 14V36" stroke="#2E4365"/>
+    <circle cx="486" cy="25" r="7" fill="#A78BFA"/>
+    <text x="506" y="31" fill="#ECE7FF" font-size="16" font-weight="700">READ-ONLY UIA • NEXT</text>
+  </g>
+
+  <rect x="1" y="1" width="1598" height="558" rx="33" fill="none" stroke="#DCEBFF" stroke-opacity="0.1" stroke-width="2"/>
+</svg>

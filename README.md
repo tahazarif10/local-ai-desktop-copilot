@@ -1,6 +1,35 @@
-# Local AI Desktop Copilot
+<p align="center">
+  <img src="docs/assets/project-mark.svg" width="104" alt="Local AI Desktop Copilot project mark" />
+</p>
 
-A privacy-first, fully local Windows desktop copilot that observes, understands, remembers, listens, and answers. It is being built as a product-grade system, not as a screenshot-to-LLM demo.
+<h1 align="center">Local AI Desktop Copilot</h1>
+
+<p align="center">
+  <strong>A privacy-first, fully local Windows copilot that observes, understands, remembers, listens, and answers.</strong>
+</p>
+
+<p align="center">
+  <img alt="Platform: Windows" src="https://img.shields.io/badge/Platform-Windows-0078D4?style=for-the-badge&amp;logo=windows11&amp;logoColor=white" />
+  <img alt="Runtime: .NET 10" src="https://img.shields.io/badge/Runtime-.NET_10-512BD4?style=for-the-badge&amp;logo=dotnet&amp;logoColor=white" />
+  <img alt="UI: WinUI 3" src="https://img.shields.io/badge/UI-WinUI_3-2563EB?style=for-the-badge" />
+  <img alt="Privacy: local only" src="https://img.shields.io/badge/Privacy-Local_Only-15803D?style=for-the-badge" />
+  <img alt="Current gate: M2.4" src="https://img.shields.io/badge/Current_Gate-M2.4-F59E0B?style=for-the-badge" />
+</p>
+
+<p align="center">
+  <a href="docs/PROJECT_STATE.md">Project State</a> ·
+  <a href="docs/ARCHITECTURE.md">Architecture</a> ·
+  <a href="docs/PRIVACY_MODEL.md">Privacy</a> ·
+  <a href="docs/ROADMAP.md">Roadmap</a> ·
+  <a href="docs/ENGINEERING_WORKFLOW.md">Engineering Workflow</a> ·
+  <a href="docs/decisions/README.md">ADRs</a>
+</p>
+
+<p align="center">
+  <img src="docs/assets/readme-hero.svg" width="100%" alt="A Windows sensing client connected through a protected local boundary to a separate AI server, with no cloud path" />
+</p>
+
+This is a product-grade system, not a screenshot-to-LLM demo. It uses the smallest useful local context, escalates from cheap sensing to richer semantics only when required, and treats privacy as a control-plane boundary.
 
 > [!IMPORTANT]
 > The repository currently contains a validated sensing foundation and diagnostic UI. It does **not** yet contain UI Automation understanding, OCR, memory, model inference, voice, autonomous actions, or a production privacy-settings UI.
@@ -20,6 +49,10 @@ A privacy-first, fully local Windows desktop copilot that observes, understands,
 | Autonomous input/actions | Out of scope |
 
 The detailed, evidence-backed state is in [Project State](docs/PROJECT_STATE.md). Do not infer implementation status from the target architecture or roadmap.
+
+<p align="center">
+  <img src="docs/assets/milestone-strip.svg" width="100%" alt="M1 and M2 complete, M2.4 foundation hardening active, later milestones planned" />
+</p>
 
 ## Start here in a new AI or engineering session
 
@@ -41,17 +74,9 @@ The final product should let a user ask a natural question such as “Why did th
 
 The system is intentionally hierarchical:
 
-```mermaid
-flowchart LR
-    A[Foreground context] --> B[Privacy and context epoch]
-    B --> C[Cheap visual change sensing]
-    C --> D[Read-only UI Automation]
-    D --> E[ROI OCR when needed]
-    E --> F[Small VLM only when needed]
-    F --> G[Structured events and short-term memory]
-    G --> H[Local reasoning]
-    H --> I[Text / local voice response]
-```
+<p align="center">
+  <img src="docs/assets/architecture-overview.svg" width="100%" alt="Two-computer local architecture showing the current Windows sensing foundation and planned semantic and inference layers" />
+</p>
 
 UI Automation, OCR, and vision are escalation levels, not parallel always-on collectors. A direct user question may request a fresh bounded context snapshot, but it still passes through the same privacy and epoch gates.
 
@@ -130,6 +155,7 @@ For the full acceptance and Git workflow, use [Engineering Workflow](docs/ENGINE
 ├── README.md
 ├── run-debug.ps1
 ├── docs/
+│   ├── assets/
 │   ├── ARCHITECTURE.md
 │   ├── ENGINEERING_WORKFLOW.md
 │   ├── PRIVACY_MODEL.md
