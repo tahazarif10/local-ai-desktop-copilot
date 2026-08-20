@@ -33,6 +33,9 @@ public sealed partial class MainPage : Page
     private readonly ChangeDetectionProbeService
         _changeDetectionProbeService;
 
+    private readonly PersistentChangeDetectionService
+        _persistentChangeDetectionService;
+
     private ForegroundWindowSnapshot?
         _lastSnapshot;
 
@@ -76,6 +79,9 @@ public sealed partial class MainPage : Page
         _changeDetectionProbeService =
             new ChangeDetectionProbeService();
 
+        _persistentChangeDetectionService =
+            new PersistentChangeDetectionService();
+
         _uiDispatcher =
             DispatcherQueue.GetForCurrentThread()
             ?? throw new InvalidOperationException(
@@ -84,6 +90,12 @@ public sealed partial class MainPage : Page
         DiagnosticLog.Write(
             "PAGE.DISPATCHER",
             $"HasThreadAccess={_uiDispatcher.HasThreadAccess}");
+
+        _persistentChangeDetectionService.SampleReady +=
+            PersistentChangeDetectionService_SampleReady;
+
+        _persistentChangeDetectionService.SessionEnded +=
+            PersistentChangeDetectionService_SessionEnded;
 
         _foregroundWindowObserver.ForegroundWindowChanged +=
             ForegroundWindowObserver_ForegroundWindowChanged;
@@ -169,6 +181,9 @@ public sealed partial class MainPage : Page
         DiagnosticLog.Write(
             "PAGE.UNLOADED",
             $"observerStopped={stopped}");
+
+        _persistentChangeDetectionService.Stop(
+            "page_unloaded");
 
         _contextEpochManager.Reset();
 
@@ -310,6 +325,9 @@ public sealed partial class MainPage : Page
             ChangeDetectionStatusText.Text =
                 "Blocked by privacy policy.";
 
+            PersistentChangeStatusText.Text =
+                "Blocked by privacy policy.";
+
             DiagnosticLog.Write(
                 "PAGE.PRIVACY_BLOCKED",
                 $"epoch={epoch.Id} " +
@@ -330,6 +348,12 @@ public sealed partial class MainPage : Page
 
             ChangeDetectionStatusText.Text =
                 "No change samples yet";
+
+            if (!_persistentChangeDetectionService.IsRunning)
+            {
+                PersistentChangeStatusText.Text =
+                    "Stopped | context changed";
+            }
         }
 
         WindowTitleText.Text =
@@ -703,6 +727,177 @@ public sealed partial class MainPage : Page
 
             ChangeDetectionStatusText.Text =
                 $"Change sample failed: {ex.Message}";
+        }
+    }
+    private void StartPersistentChangeButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        ContextEpoch? epoch =
+            GetAllowedEpoch(
+                "persistent_start");
+
+        if (epoch is null)
+        {
+            PersistentChangeStatusText.Text =
+                _currentEpoch is not null &&
+                !_currentEpoch.Privacy.AllowsSensing
+                    ? "Blocked by privacy policy."
+                    : "No allowed persistent target.";
+
+            return;
+        }
+
+        if (_persistentChangeDetectionService.IsRunning)
+        {
+            PersistentChangeStatusText.Text =
+                "Persistent sensing is already running.";
+
+            return;
+        }
+
+        try
+        {
+            _persistentChangeDetectionService.Start(
+                epoch,
+                640,
+                TimeSpan.FromMilliseconds(
+                    500));
+
+            PersistentChangeStatusText.Text =
+                "Running | 640 px | 2 Hz | waiting for samples...";
+        }
+        catch (Exception ex)
+        {
+            PersistentChangeStatusText.Text =
+                $"Persistent start failed: {ex.Message}";
+
+            DiagnosticLog.Write(
+                "PERSIST.START_ERROR",
+                $"epoch={epoch.Id} " +
+                $"type={ex.GetType().Name} " +
+                $"message={ex.Message}");
+        }
+    }
+
+    private void StopPersistentChangeButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            _persistentChangeDetectionService.Stop(
+                "user_stop");
+
+            PersistentChangeStatusText.Text =
+                "Stopped by user.";
+        }
+        catch (Exception ex)
+        {
+            PersistentChangeStatusText.Text =
+                $"Persistent stop failed: {ex.Message}";
+
+            DiagnosticLog.Write(
+                "PERSIST.STOP_ERROR",
+                $"type={ex.GetType().Name} " +
+                $"message={ex.Message}");
+        }
+    }
+
+    private void PersistentChangeDetectionService_SampleReady(
+        PersistentChangeSample sample)
+    {
+        bool queued =
+            _uiDispatcher.TryEnqueue(
+                DispatcherQueuePriority.Normal,
+                () =>
+                {
+                    ContextEpoch? epoch =
+                        _currentEpoch;
+
+                    if (
+                        epoch is null ||
+                        epoch.Id !=
+                            sample.EpochId ||
+                        !epoch.Privacy.AllowsSensing)
+                    {
+                        DiagnosticLog.Write(
+                            "PERSIST.UI_STALE_DROP",
+                            $"sampleEpoch={sample.EpochId} " +
+                            $"currentEpoch={epoch?.Id ?? 0}");
+
+                        return;
+                    }
+
+                    PersistentChangeStatusText.Text =
+                        $"RUNNING | " +
+                        $"{sample.Change.Classification} | " +
+                        $"pixels {sample.Change.ChangedPixelRatio:P2} | " +
+                        $"tiles {sample.Change.ChangedTileRatio:P2} | " +
+                        $"process {sample.ProcessingMilliseconds:0.0} ms | " +
+                        $"diff {sample.Change.DiffMilliseconds:0.0} ms | " +
+                        $"frames {sample.FramesArrived} | " +
+                        $"replaced {sample.FramesReplaced} | " +
+                        $"samples {sample.SamplesProcessed} | " +
+                        $"recreate {sample.FramePoolRecreates}";
+
+                    DiagnosticLog.Write(
+                        "PERSIST.UI_SAMPLE",
+                        $"epoch={sample.EpochId} " +
+                        $"classification={sample.Change.Classification} " +
+                        $"samples={sample.SamplesProcessed}");
+                });
+
+        if (!queued)
+        {
+            DiagnosticLog.Write(
+                "PERSIST.UI_QUEUE_REJECT",
+                $"epoch={sample.EpochId} " +
+                "event=sample");
+        }
+    }
+
+    private void PersistentChangeDetectionService_SessionEnded(
+        PersistentChangeSessionEnded ended)
+    {
+        bool queued =
+            _uiDispatcher.TryEnqueue(
+                DispatcherQueuePriority.Normal,
+                () =>
+                {
+                    ContextEpoch? epoch =
+                        _currentEpoch;
+
+                    if (
+                        epoch is null ||
+                        epoch.Id !=
+                            ended.EpochId)
+                    {
+                        DiagnosticLog.Write(
+                            "PERSIST.END_UI_STALE",
+                            $"endedEpoch={ended.EpochId} " +
+                            $"currentEpoch={epoch?.Id ?? 0} " +
+                            $"reason={ended.Reason}");
+
+                        return;
+                    }
+
+                    PersistentChangeStatusText.Text =
+                        ended.HadError
+                            ? $"Stopped with error | {ended.ErrorType}: {ended.ErrorMessage}"
+                            : $"Stopped | {ended.Reason} | " +
+                              $"frames {ended.FramesArrived} | " +
+                              $"replaced {ended.FramesReplaced} | " +
+                              $"samples {ended.SamplesProcessed} | " +
+                              $"recreate {ended.FramePoolRecreates}";
+                });
+
+        if (!queued)
+        {
+            DiagnosticLog.Write(
+                "PERSIST.UI_QUEUE_REJECT",
+                $"epoch={ended.EpochId} " +
+                "event=session_end");
         }
     }
 }
