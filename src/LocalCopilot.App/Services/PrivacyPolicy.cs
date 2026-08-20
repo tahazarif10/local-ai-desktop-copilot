@@ -1,6 +1,7 @@
 ﻿using LocalCopilot_App.Diagnostics;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace LocalCopilot_App.Services;
 
@@ -12,6 +13,7 @@ public enum PrivacyDisposition
 
 public sealed record PrivacyEvaluation(
     PrivacyDisposition Disposition,
+    string RuleId,
     string Reason)
 {
     public bool AllowsSensing =>
@@ -23,27 +25,33 @@ public sealed class PrivacyPolicy
     private readonly HashSet<string>
         _blockedProcesses;
 
+    private readonly bool
+        _diagnosticNotepadRuleEnabled;
+
     private PrivacyPolicy(
-        HashSet<string> blockedProcesses)
+        HashSet<string> blockedProcesses,
+        bool diagnosticNotepadRuleEnabled)
     {
         _blockedProcesses =
             blockedProcesses;
+
+        _diagnosticNotepadRuleEnabled =
+            diagnosticNotepadRuleEnabled;
     }
 
     public static PrivacyPolicy CreateDefault()
     {
-        HashSet<string> blockedProcesses =
-            new(StringComparer.OrdinalIgnoreCase)
-            {
-                "1password.exe",
-                "bitwarden.exe",
-                "keepass.exe",
-                "keepassxc.exe"
-            };
+        bool diagnosticNotepadRuleEnabled =
+            DiagnosticLog.IsEnabled;
 
-        // Deterministic privacy test:
-        // Notepad is blocked only during diagnostic runs.
-        if (DiagnosticLog.IsEnabled)
+        HashSet<string> blockedProcesses =
+            new(
+                StringComparer.OrdinalIgnoreCase);
+
+        // Deterministic acceptance-test fixture only.
+        // Product defaults must not silently blacklist
+        // unrelated applications.
+        if (diagnosticNotepadRuleEnabled)
         {
             blockedProcesses.Add(
                 "notepad.exe");
@@ -52,28 +60,94 @@ public sealed class PrivacyPolicy
         DiagnosticLog.Write(
             "PRIVACY.POLICY_READY",
             $"blockedProcessCount={blockedProcesses.Count} " +
-            $"diagnosticNotepadRule={DiagnosticLog.IsEnabled}");
+            $"diagnosticNotepadRule={diagnosticNotepadRuleEnabled}");
 
         return new PrivacyPolicy(
-            blockedProcesses);
+            blockedProcesses,
+            diagnosticNotepadRuleEnabled);
     }
 
     public PrivacyEvaluation Evaluate(
-        ForegroundWindowSnapshot snapshot)
+        ForegroundWindowIdentity identity)
     {
         ArgumentNullException.ThrowIfNull(
-            snapshot);
+            identity);
+
+        string normalizedProcessName =
+            NormalizeProcessName(
+                identity.ProcessName);
+
+        DiagnosticLog.Write(
+            "PRIVACY.CHECK",
+            $"hwnd=0x{identity.Handle.ToInt64():X} " +
+            $"pid={identity.ProcessId} " +
+            $"process={identity.ProcessName}");
 
         if (_blockedProcesses.Contains(
-                snapshot.ProcessName))
+                normalizedProcessName))
         {
-            return new PrivacyEvaluation(
-                PrivacyDisposition.Blocked,
-                "process_rule");
+            string ruleId =
+                _diagnosticNotepadRuleEnabled &&
+                normalizedProcessName.Equals(
+                    "notepad.exe",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? "diagnostic_notepad"
+                    : "process_blocklist";
+
+            PrivacyEvaluation denied =
+                new(
+                    PrivacyDisposition.Blocked,
+                    ruleId,
+                    "process_rule");
+
+            DiagnosticLog.Write(
+                "PRIVACY.DENY",
+                $"hwnd=0x{identity.Handle.ToInt64():X} " +
+                $"pid={identity.ProcessId} " +
+                $"process={identity.ProcessName} " +
+                $"rule={denied.RuleId} " +
+                $"reason={denied.Reason}");
+
+            return denied;
         }
 
-        return new PrivacyEvaluation(
-            PrivacyDisposition.Allowed,
-            "allowed");
+        PrivacyEvaluation allowed =
+            new(
+                PrivacyDisposition.Allowed,
+                "default_allow",
+                "allowed");
+
+        DiagnosticLog.Write(
+            "PRIVACY.ALLOW",
+            $"hwnd=0x{identity.Handle.ToInt64():X} " +
+            $"pid={identity.ProcessId} " +
+            $"process={identity.ProcessName} " +
+            $"rule={allowed.RuleId}");
+
+        return allowed;
+    }
+
+    private static string NormalizeProcessName(
+        string processName)
+    {
+        if (string.IsNullOrWhiteSpace(
+                processName))
+        {
+            return string.Empty;
+        }
+
+        string normalized =
+            Path.GetFileName(
+                processName.Trim());
+
+        if (!normalized.EndsWith(
+                ".exe",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            normalized +=
+                ".exe";
+        }
+
+        return normalized;
     }
 }

@@ -115,26 +115,31 @@ public sealed partial class MainPage : Page
                 "PAGE.LOADED",
                 $"observerRunning={_foregroundWindowObserver.IsRunning}");
 
-            ForegroundWindowSnapshot? snapshot =
+            ForegroundWindowObservation? observation =
                 _foregroundWindowService.GetCurrent(
+                    _privacyPolicy,
                     _ownProcessId);
 
-            if (snapshot is null)
+            if (observation is null)
             {
                 DiagnosticLog.Write(
                     "PAGE.INITIAL",
-                    "Initial snapshot=null.");
+                    "Initial observation=null.");
 
                 return;
             }
 
+            ForegroundWindowSnapshot snapshot =
+                observation.Snapshot;
+
             DiagnosticLog.Write(
                 "PAGE.INITIAL",
                 $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
-                $"process={snapshot.ProcessName}");
+                $"process={snapshot.ProcessName} " +
+                $"privacy={observation.Privacy.Disposition}");
 
-            ApplySnapshot(
-                snapshot);
+            ApplyObservation(
+                observation);
         }
         catch (Exception ex)
         {
@@ -165,7 +170,13 @@ public sealed partial class MainPage : Page
             "PAGE.UNLOADED",
             $"observerStopped={stopped}");
 
-        _contextEpochManager.Dispose();
+        _contextEpochManager.Reset();
+
+        _currentEpoch =
+            null;
+
+        _lastSnapshot =
+            null;
 
         _changeDetectionProbeService.ResetAll();
     }
@@ -190,27 +201,32 @@ public sealed partial class MainPage : Page
 
                     try
                     {
-                        ForegroundWindowSnapshot? snapshot =
+                        ForegroundWindowObservation? observation =
                             _foregroundWindowService.GetFromHandle(
                                 hwnd,
+                                _privacyPolicy,
                                 _ownProcessId);
 
-                        if (snapshot is null)
+                        if (observation is null)
                         {
                             DiagnosticLog.Write(
                                 "PAGE.QUEUE_RESULT",
-                                "snapshot=null");
+                                "observation=null");
 
                             return;
                         }
 
+                        ForegroundWindowSnapshot snapshot =
+                            observation.Snapshot;
+
                         DiagnosticLog.Write(
                             "PAGE.QUEUE_RESULT",
                             $"process={snapshot.ProcessName} " +
-                            $"hwnd=0x{snapshot.Handle.ToInt64():X}");
+                            $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
+                            $"privacy={observation.Privacy.Disposition}");
 
-                        ApplySnapshot(
-                            snapshot);
+                        ApplyObservation(
+                            observation);
                     }
                     catch (Exception ex)
                     {
@@ -225,17 +241,27 @@ public sealed partial class MainPage : Page
             $"hwnd=0x{hwnd.ToInt64():X} queued={queued}");
     }
 
-    private void ApplySnapshot(
-        ForegroundWindowSnapshot snapshot)
+    private void ApplyObservation(
+        ForegroundWindowObservation observation)
     {
+        ArgumentNullException.ThrowIfNull(
+            observation);
+
+        ForegroundWindowSnapshot snapshot =
+            observation.Snapshot;
+
         PrivacyEvaluation privacy =
-            _privacyPolicy.Evaluate(
-                snapshot);
+            observation.Privacy;
 
         ContextEpoch epoch =
-            _contextEpochManager.Advance(
+            _contextEpochManager.GetOrAdvance(
                 snapshot,
                 privacy);
+
+        bool contextChanged =
+            !ReferenceEquals(
+                _currentEpoch,
+                epoch);
 
         _lastSnapshot =
             snapshot;
@@ -249,10 +275,12 @@ public sealed partial class MainPage : Page
         DiagnosticLog.Write(
             "CONTEXT.APPLY",
             $"epoch={epoch.Id} " +
+            $"contextChanged={contextChanged} " +
             $"process={snapshot.ProcessName} " +
             $"pid={snapshot.ProcessId} " +
             $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
             $"privacy={privacy.Disposition} " +
+            $"rule={privacy.RuleId} " +
             $"reason={privacy.Reason}");
 
         ProcessNameText.Text =
@@ -279,13 +307,29 @@ public sealed partial class MainPage : Page
             CapturedFrameStatusText.Text =
                 "Blocked by privacy policy.";
 
+            ChangeDetectionStatusText.Text =
+                "Blocked by privacy policy.";
+
             DiagnosticLog.Write(
-                "PRIVACY.BLOCK",
+                "PAGE.PRIVACY_BLOCKED",
                 $"epoch={epoch.Id} " +
                 $"process={snapshot.ProcessName} " +
+                $"rule={privacy.RuleId} " +
                 $"reason={privacy.Reason}");
 
             return;
+        }
+
+        if (contextChanged)
+        {
+            CaptureTargetStatusText.Text =
+                "Not tested";
+
+            CapturedFrameStatusText.Text =
+                "Not captured";
+
+            ChangeDetectionStatusText.Text =
+                "No change samples yet";
         }
 
         WindowTitleText.Text =
@@ -295,16 +339,10 @@ public sealed partial class MainPage : Page
                 : snapshot.WindowTitle;
 
         DiagnosticLog.Write(
-            "PRIVACY.ALLOW",
-            $"epoch={epoch.Id} " +
-            $"process={snapshot.ProcessName}");
-
-        DiagnosticLog.Write(
             "PAGE.DISPLAY_DONE",
             $"epoch={epoch.Id} " +
             $"process={snapshot.ProcessName}");
     }
-
     private ContextEpoch? GetAllowedEpoch(
         string operation)
     {
@@ -333,6 +371,7 @@ public sealed partial class MainPage : Page
                 $"operation={operation} " +
                 $"epoch={epoch.Id} " +
                 $"process={epoch.Snapshot.ProcessName} " +
+                $"rule={epoch.Privacy.RuleId} " +
                 $"reason={epoch.Privacy.Reason}");
 
             return null;
