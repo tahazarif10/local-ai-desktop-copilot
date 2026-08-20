@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Windows.Graphics.Capture;
 
 namespace LocalCopilot_App;
@@ -28,6 +29,9 @@ public sealed partial class MainPage : Page
 
     private readonly ContextEpochManager
         _contextEpochManager;
+
+    private readonly ChangeDetectionProbeService
+        _changeDetectionProbeService;
 
     private ForegroundWindowSnapshot?
         _lastSnapshot;
@@ -68,6 +72,9 @@ public sealed partial class MainPage : Page
 
         _contextEpochManager =
             new ContextEpochManager();
+
+        _changeDetectionProbeService =
+            new ChangeDetectionProbeService();
 
         _uiDispatcher =
             DispatcherQueue.GetForCurrentThread()
@@ -159,6 +166,8 @@ public sealed partial class MainPage : Page
             $"observerStopped={stopped}");
 
         _contextEpochManager.Dispose();
+
+        _changeDetectionProbeService.ResetAll();
     }
 
     private void ForegroundWindowObserver_ForegroundWindowChanged(
@@ -233,6 +242,9 @@ public sealed partial class MainPage : Page
 
         _currentEpoch =
             epoch;
+
+        _changeDetectionProbeService.ObserveContext(
+            epoch);
 
         DiagnosticLog.Write(
             "CONTEXT.APPLY",
@@ -515,6 +527,143 @@ public sealed partial class MainPage : Page
             DiagnosticLog.Write(
                 "CAPTURE.BITMAP_ERROR",
                 ex.ToString());
+        }
+    }
+    private async void Change640Button_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await RunChangeDetectionSampleAsync(
+            640);
+    }
+
+    private async void Change960Button_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await RunChangeDetectionSampleAsync(
+            960);
+    }
+
+    private async Task RunChangeDetectionSampleAsync(
+        int profileWidth)
+    {
+        ContextEpoch? epoch =
+            GetAllowedEpoch(
+                $"change_{profileWidth}");
+
+        if (epoch is null)
+        {
+            ChangeDetectionStatusText.Text =
+                _currentEpoch is not null &&
+                !_currentEpoch.Privacy.AllowsSensing
+                    ? "Blocked by privacy policy."
+                    : "No allowed change-detection target.";
+
+            return;
+        }
+
+        DiagnosticLog.Write(
+            "CHANGE.SAMPLE_BEGIN",
+            $"epoch={epoch.Id} " +
+            $"profile={profileWidth} " +
+            $"hwnd=0x{epoch.Snapshot.Handle.ToInt64():X} " +
+            $"pid={epoch.Snapshot.ProcessId} " +
+            $"process={epoch.Snapshot.ProcessName}");
+
+        ChangeDetectionStatusText.Text =
+            $"Sampling {profileWidth}px...";
+
+        try
+        {
+            ChangeProbeResult probe =
+                await _changeDetectionProbeService.SampleAsync(
+                    epoch,
+                    profileWidth,
+                    TimeSpan.FromSeconds(5));
+
+            if (epoch.CancellationToken.IsCancellationRequested ||
+                !ReferenceEquals(
+                    _currentEpoch,
+                    epoch))
+            {
+                DiagnosticLog.Write(
+                    "CHANGE.SAMPLE_STALE",
+                    $"epoch={epoch.Id} " +
+                    $"profile={profileWidth} " +
+                    $"currentEpoch={_currentEpoch?.Id ?? 0}");
+
+                ChangeDetectionStatusText.Text =
+                    "Ignored stale change sample.";
+
+                return;
+            }
+
+            ChangeResult change =
+                probe.Change;
+
+            ChangeDetectionCaptureFrame capture =
+                probe.Capture;
+
+            string region =
+                change.ChangedRegion is null
+                    ? "none"
+                    : $"{change.ChangedRegion.X}," +
+                      $"{change.ChangedRegion.Y}," +
+                      $"{change.ChangedRegion.Width}," +
+                      $"{change.ChangedRegion.Height}";
+
+            DiagnosticLog.Write(
+                "CHANGE.SAMPLE_OK",
+                $"epoch={probe.EpochId} " +
+                $"profile={probe.ProfileWidth} " +
+                $"classification={change.Classification} " +
+                $"reason={change.Reason} " +
+                $"input={capture.SourceWidth}x{capture.SourceHeight} " +
+                $"output={capture.OutputWidth}x{capture.OutputHeight} " +
+                $"captureMs={capture.TotalMilliseconds:0.000} " +
+                $"frameMs={capture.FrameMilliseconds:0.000} " +
+                $"resizeMs={capture.ResizeMilliseconds:0.000} " +
+                $"readbackMs={capture.ReadbackMilliseconds:0.000} " +
+                $"lumaMs={capture.LuminanceMilliseconds:0.000} " +
+                $"diffMs={change.DiffMilliseconds:0.000} " +
+                $"totalMs={probe.TotalMilliseconds:0.000} " +
+                $"changedPixelRatio={change.ChangedPixelRatio:0.000000} " +
+                $"changedTileRatio={change.ChangedTileRatio:0.000000} " +
+                $"globalDifference={change.MeanAbsoluteDifference:0.000000} " +
+                $"changedPixels={change.ChangedPixelCount} " +
+                $"changedTiles={change.ChangedTileCount}/{change.TotalTileCount} " +
+                $"region={region}");
+
+            ChangeDetectionStatusText.Text =
+                $"{profileWidth}px | " +
+                $"{change.Classification} | " +
+                $"pixels {change.ChangedPixelRatio:P2} | " +
+                $"tiles {change.ChangedTileRatio:P2} | " +
+                $"diff {change.DiffMilliseconds:0.0} ms | " +
+                $"total {probe.TotalMilliseconds:0.0} ms";
+        }
+        catch (OperationCanceledException)
+        {
+            DiagnosticLog.Write(
+                "CHANGE.SAMPLE_CANCELLED",
+                $"epoch={epoch.Id} " +
+                $"profile={profileWidth}");
+
+            ChangeDetectionStatusText.Text =
+                "Change sample cancelled.";
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLog.Write(
+                "CHANGE.SAMPLE_ERROR",
+                $"epoch={epoch.Id} " +
+                $"profile={profileWidth} " +
+                $"type={ex.GetType().Name} " +
+                $"message={ex.Message}");
+
+            ChangeDetectionStatusText.Text =
+                $"Change sample failed: {ex.Message}";
         }
     }
 }
