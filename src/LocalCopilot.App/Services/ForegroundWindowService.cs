@@ -61,7 +61,8 @@ public sealed class ForegroundWindowService
     {
         DiagnosticLog.Write(
             "SERVICE.BEGIN",
-            $"hwnd=0x{hwnd.ToInt64():X} excludedPid={excludedProcessId}");
+            $"hwnd=0x{hwnd.ToInt64():X} " +
+            $"excludedPid={excludedProcessId}");
 
         if (hwnd == nint.Zero)
         {
@@ -118,25 +119,25 @@ public sealed class ForegroundWindowService
         {
             DiagnosticLog.Write(
                 "SERVICE.PROCESS_ERROR",
-                ex.ToString());
+                $"type={ex.GetType().Name}");
         }
 
         int titleLength =
-            GetWindowTextLengthW(hwnd);
-
-        DiagnosticLog.Write(
-            "SERVICE.TITLE_LENGTH",
-            $"hwnd=0x{hwnd.ToInt64():X} length={titleLength}");
+            GetWindowTextLengthW(
+                hwnd);
 
         string title =
             string.Empty;
+
+        int copied =
+            0;
 
         if (titleLength > 0)
         {
             StringBuilder buffer =
                 new(titleLength + 1);
 
-            int copied =
+            copied =
                 GetWindowTextW(
                     hwnd,
                     buffer,
@@ -144,39 +145,34 @@ public sealed class ForegroundWindowService
 
             title =
                 buffer.ToString();
+        }
 
-            DiagnosticLog.Write(
-                "SERVICE.TITLE",
-                $"copied={copied} title=[{title}]");
-        }
-        else
-        {
-            DiagnosticLog.Write(
-                "SERVICE.TITLE",
-                "Empty title.");
-        }
+        DiagnosticLog.Write(
+            "SERVICE.TITLE",
+            $"hwnd=0x{hwnd.ToInt64():X} " +
+            $"titleLength={titleLength} " +
+            $"copied={copied} " +
+            $"hasTitle={!string.IsNullOrWhiteSpace(title)}");
 
         DiagnosticLog.Write(
             "SERVICE.RESULT",
             $"hwnd=0x{hwnd.ToInt64():X} " +
             $"pid={processId} " +
             $"process={processName} " +
-            $"title=[{title}]");
+            $"titleLength={title.Length}");
 
-        // M1.3: ignore transient Explorer shell windows.
-        //
-        // Windows may briefly foreground an Explorer-owned
-        // shell surface (taskbar / switcher transition) before
-        // another application becomes active. Those windows
-        // have no useful semantic title and must not replace
-        // the last meaningful foreground context.
         if (processName.Equals(
                 "explorer.exe",
                 StringComparison.OrdinalIgnoreCase) &&
             string.IsNullOrWhiteSpace(title))
         {
+            DiagnosticLog.Write(
+                "SERVICE.REJECT",
+                "Transient Explorer shell window.");
+
             return null;
         }
+
         return new ForegroundWindowSnapshot(
             hwnd,
             processId,

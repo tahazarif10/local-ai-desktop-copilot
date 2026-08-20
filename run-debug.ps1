@@ -235,35 +235,15 @@ public static class LocalCopilotForegroundProbe
                             [LocalCopilotForegroundProbe]::
                             GetWindowTextLengthW($hwnd)
 
-                        $title = ""
-
-                        if ($length -gt 0) {
-                            $buffer =
-                                New-Object `
-                                    System.Text.StringBuilder `
-                                    ($length + 1)
-
-                            [void]
-                            [LocalCopilotForegroundProbe]::
-                            GetWindowTextW(
-                                $hwnd,
-                                $buffer,
-                                $buffer.Capacity
-                            )
-
-                            $title =
-                                $buffer.ToString()
-                        }
-
                         $line =
-                            "{0:o} | HWND=0x{1:X} | PID={2} | WThread={3} | Process={4} | Title=[{5}]" -f `
+                            "{0:o} | HWND=0x{1:X} | PID={2} | WThread={3} | Process={4} | TitleLength={5} | HasTitle={6}" -f `
                             (Get-Date),
                             $hwnd.ToInt64(),
                             $targetProcessId,
                             $windowThread,
                             $processName,
-                            $title
-
+                            $length,
+                            ($length -gt 0)
                         [System.IO.File]::AppendAllText(
                             $probeLog,
                             $line +
@@ -364,28 +344,42 @@ public static class LocalCopilotForegroundProbe
                     "================================================="
                 )
 
-                $excludedNames = @(
-                    "m1-3-debug-bundle.txt",
-                    "m1-3-debug-bundle.tmp",
-                    "m1-3-os-foreground.log",
-                    "m1-3-session-meta.txt",
-                    "m1-3-probe.stop",
-                    "m1-3-bundle.stop",
-                    "diagnostics.enabled"
-                )
+                # Explicit diagnostic whitelist.
+                # Never scan unrelated cache files into the bundle.
+                $candidateFiles =
+                    @()
+
+                $knownDiagnosticFiles =
+                    @(
+                        "m1-3-app.log"
+                    )
+
+                foreach ($name in $knownDiagnosticFiles) {
+                    $candidatePath =
+                        Join-Path $cache $name
+
+                    if (-not (Test-Path $candidatePath)) {
+                        continue
+                    }
+
+                    $candidate =
+                        Get-Item `
+                            -LiteralPath $candidatePath `
+                            -ErrorAction SilentlyContinue
+
+                    if (
+                        $candidate -and
+                        $candidate.LastWriteTime -ge
+                            $sessionStart.AddSeconds(-2)
+                    ) {
+                        $candidateFiles +=
+                            $candidate
+                    }
+                }
 
                 $candidateFiles =
-                    Get-ChildItem `
-                        $cache `
-                        -File `
-                        -ErrorAction SilentlyContinue |
-                    Where-Object {
-                        $_.Name -notin $excludedNames -and
-                        $_.LastWriteTime -ge
-                            $sessionStart.AddSeconds(-2)
-                    } |
+                    $candidateFiles |
                     Sort-Object LastWriteTime
-
                 if (-not $candidateFiles) {
                     [void]$builder.AppendLine(
                         "No application diagnostic file has changed yet."
