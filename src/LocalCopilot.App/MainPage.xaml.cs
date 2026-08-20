@@ -11,7 +11,8 @@ namespace LocalCopilot_App;
 
 public sealed partial class MainPage : Page
 {
-    private readonly uint _ownProcessId;
+    private readonly uint
+        _ownProcessId;
 
     private readonly ForegroundWindowService
         _foregroundWindowService;
@@ -22,8 +23,17 @@ public sealed partial class MainPage : Page
     private readonly DispatcherQueue
         _uiDispatcher;
 
+    private readonly PrivacyPolicy
+        _privacyPolicy;
+
+    private readonly ContextEpochManager
+        _contextEpochManager;
+
     private ForegroundWindowSnapshot?
         _lastSnapshot;
+
+    private ContextEpoch?
+        _currentEpoch;
 
     public MainPage()
     {
@@ -52,6 +62,12 @@ public sealed partial class MainPage : Page
 
         _foregroundWindowObserver =
             new ForegroundWindowObserver();
+
+        _privacyPolicy =
+            PrivacyPolicy.CreateDefault();
+
+        _contextEpochManager =
+            new ContextEpochManager();
 
         _uiDispatcher =
             DispatcherQueue.GetForCurrentThread()
@@ -107,10 +123,11 @@ public sealed partial class MainPage : Page
 
             DiagnosticLog.Write(
                 "PAGE.INITIAL",
-                $"snapshot hwnd=0x{snapshot.Handle.ToInt64():X} " +
+                $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
                 $"process={snapshot.ProcessName}");
 
-            DisplaySnapshot(snapshot);
+            ApplySnapshot(
+                snapshot);
         }
         catch (Exception ex)
         {
@@ -140,6 +157,8 @@ public sealed partial class MainPage : Page
         DiagnosticLog.Write(
             "PAGE.UNLOADED",
             $"observerStopped={stopped}");
+
+        _contextEpochManager.Dispose();
     }
 
     private void ForegroundWindowObserver_ForegroundWindowChanged(
@@ -181,7 +200,7 @@ public sealed partial class MainPage : Page
                             $"process={snapshot.ProcessName} " +
                             $"hwnd=0x{snapshot.Handle.ToInt64():X}");
 
-                        DisplaySnapshot(
+                        ApplySnapshot(
                             snapshot);
                     }
                     catch (Exception ex)
@@ -197,22 +216,144 @@ public sealed partial class MainPage : Page
             $"hwnd=0x{hwnd.ToInt64():X} queued={queued}");
     }
 
+    private void ApplySnapshot(
+        ForegroundWindowSnapshot snapshot)
+    {
+        PrivacyEvaluation privacy =
+            _privacyPolicy.Evaluate(
+                snapshot);
+
+        ContextEpoch epoch =
+            _contextEpochManager.Advance(
+                snapshot,
+                privacy);
+
+        _lastSnapshot =
+            snapshot;
+
+        _currentEpoch =
+            epoch;
+
+        DiagnosticLog.Write(
+            "CONTEXT.APPLY",
+            $"epoch={epoch.Id} " +
+            $"process={snapshot.ProcessName} " +
+            $"pid={snapshot.ProcessId} " +
+            $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
+            $"privacy={privacy.Disposition} " +
+            $"reason={privacy.Reason}");
+
+        ProcessNameText.Text =
+            snapshot.ProcessName;
+
+        ProcessIdText.Text =
+            snapshot.ProcessId.ToString();
+
+        WindowHandleText.Text =
+            $"0x{snapshot.Handle.ToInt64():X}";
+
+        LastObservedText.Text =
+            DateTime.Now.ToString(
+                "HH:mm:ss.fff");
+
+        if (!privacy.AllowsSensing)
+        {
+            WindowTitleText.Text =
+                "[Privacy blocked]";
+
+            CaptureTargetStatusText.Text =
+                "Blocked by privacy policy.";
+
+            CapturedFrameStatusText.Text =
+                "Blocked by privacy policy.";
+
+            DiagnosticLog.Write(
+                "PRIVACY.BLOCK",
+                $"epoch={epoch.Id} " +
+                $"process={snapshot.ProcessName} " +
+                $"reason={privacy.Reason}");
+
+            return;
+        }
+
+        WindowTitleText.Text =
+            string.IsNullOrWhiteSpace(
+                snapshot.WindowTitle)
+                ? "(no title)"
+                : snapshot.WindowTitle;
+
+        DiagnosticLog.Write(
+            "PRIVACY.ALLOW",
+            $"epoch={epoch.Id} " +
+            $"process={snapshot.ProcessName}");
+
+        DiagnosticLog.Write(
+            "PAGE.DISPLAY_DONE",
+            $"epoch={epoch.Id} " +
+            $"process={snapshot.ProcessName}");
+    }
+
+    private ContextEpoch? GetAllowedEpoch(
+        string operation)
+    {
+        ContextEpoch? epoch =
+            _currentEpoch;
+
+        DiagnosticLog.Write(
+            "SENSING.GATE",
+            $"operation={operation} " +
+            $"epoch={epoch?.Id ?? 0} " +
+            $"privacy={epoch?.Privacy.Disposition.ToString() ?? "None"}");
+
+        if (epoch is null)
+        {
+            DiagnosticLog.Write(
+                "SENSING.GATE_REJECT",
+                $"operation={operation} reason=no_epoch");
+
+            return null;
+        }
+
+        if (!epoch.Privacy.AllowsSensing)
+        {
+            DiagnosticLog.Write(
+                "CAPTURE.PRIVACY_REJECT",
+                $"operation={operation} " +
+                $"epoch={epoch.Id} " +
+                $"process={epoch.Snapshot.ProcessName} " +
+                $"reason={epoch.Privacy.Reason}");
+
+            return null;
+        }
+
+        if (epoch.CancellationToken.IsCancellationRequested)
+        {
+            DiagnosticLog.Write(
+                "SENSING.GATE_REJECT",
+                $"operation={operation} " +
+                $"epoch={epoch.Id} reason=cancelled");
+
+            return null;
+        }
+
+        return epoch;
+    }
+
     private void CaptureTargetProbeButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        DiagnosticLog.Write(
-            "CAPTURE.PROBE_CLICK",
-            $"hasSnapshot={_lastSnapshot is not null}");
+        ContextEpoch? epoch =
+            GetAllowedEpoch(
+                "target_probe");
 
-        if (_lastSnapshot is null)
+        if (epoch is null)
         {
             CaptureTargetStatusText.Text =
-                "No external foreground window has been observed yet.";
-
-            DiagnosticLog.Write(
-                "CAPTURE.PROBE_REJECT",
-                "reason=no_snapshot");
+                _currentEpoch is not null &&
+                !_currentEpoch.Privacy.AllowsSensing
+                    ? "Blocked by privacy policy."
+                    : "No allowed capture target.";
 
             return;
         }
@@ -236,18 +377,21 @@ public sealed partial class MainPage : Page
             return;
         }
 
+        ForegroundWindowSnapshot snapshot =
+            epoch.Snapshot;
+
         DiagnosticLog.Write(
             "CAPTURE.PROBE_BEGIN",
-            $"hwnd=0x{_lastSnapshot.Handle.ToInt64():X} " +
-            $"pid={_lastSnapshot.ProcessId} " +
-            $"process={_lastSnapshot.ProcessName} " +
-            $"title=[{_lastSnapshot.WindowTitle}]");
+            $"epoch={epoch.Id} " +
+            $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
+            $"pid={snapshot.ProcessId} " +
+            $"process={snapshot.ProcessName}");
 
         try
         {
             GraphicsCaptureItem item =
                 GraphicsCaptureItemFactory.CreateForWindow(
-                    _lastSnapshot.Handle);
+                    snapshot.Handle);
 
             CaptureTargetStatusText.Text =
                 $"OK | {item.Size.Width} x {item.Size.Height}" +
@@ -255,9 +399,9 @@ public sealed partial class MainPage : Page
 
             DiagnosticLog.Write(
                 "CAPTURE.PROBE_OK",
-                $"hwnd=0x{_lastSnapshot.Handle.ToInt64():X} " +
-                $"size={item.Size.Width}x{item.Size.Height} " +
-                $"displayName=[{item.DisplayName}]");
+                $"epoch={epoch.Id} " +
+                $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
+                $"size={item.Size.Width}x{item.Size.Height}");
         }
         catch (Exception ex)
         {
@@ -269,43 +413,46 @@ public sealed partial class MainPage : Page
                 ex.ToString());
         }
     }
+
     private async void CaptureOneFrameButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        DiagnosticLog.Write(
-            "CAPTURE.FRAME_CLICK",
-            $"hasSnapshot={_lastSnapshot is not null}");
+        ContextEpoch? epoch =
+            GetAllowedEpoch(
+                "single_frame");
 
-        if (_lastSnapshot is null)
+        if (epoch is null)
         {
             CapturedFrameStatusText.Text =
-                "No capture target available.";
-
-            DiagnosticLog.Write(
-                "CAPTURE.FRAME_REJECT",
-                "reason=no_snapshot");
+                _currentEpoch is not null &&
+                !_currentEpoch.Privacy.AllowsSensing
+                    ? "Blocked by privacy policy."
+                    : "No allowed capture target.";
 
             return;
         }
 
+        ForegroundWindowSnapshot snapshot =
+            epoch.Snapshot;
+
         DiagnosticLog.Write(
             "CAPTURE.FRAME_BEGIN",
-            $"hwnd=0x{_lastSnapshot.Handle.ToInt64():X} " +
-            $"pid={_lastSnapshot.ProcessId} " +
-            $"process={_lastSnapshot.ProcessName} " +
-            $"title=[{_lastSnapshot.WindowTitle}]");
+            $"epoch={epoch.Id} " +
+            $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
+            $"pid={snapshot.ProcessId} " +
+            $"process={snapshot.ProcessName}");
 
         try
         {
             GraphicsCaptureItem item =
                 GraphicsCaptureItemFactory.CreateForWindow(
-                    _lastSnapshot.Handle);
+                    snapshot.Handle);
 
             DiagnosticLog.Write(
                 "CAPTURE.FRAME_ITEM",
-                $"itemSize={item.Size.Width}x{item.Size.Height} " +
-                $"displayName=[{item.DisplayName}]");
+                $"epoch={epoch.Id} " +
+                $"itemSize={item.Size.Width}x{item.Size.Height}");
 
             SingleFrameCaptureInfo frame =
                 await SingleFrameCaptureService.CaptureAsync(
@@ -313,14 +460,32 @@ public sealed partial class MainPage : Page
                     TimeSpan.FromSeconds(5),
                     2560);
 
+            if (epoch.CancellationToken.IsCancellationRequested ||
+                !ReferenceEquals(
+                    _currentEpoch,
+                    epoch))
+            {
+                DiagnosticLog.Write(
+                    "CAPTURE.FRAME_STALE_DROP",
+                    $"epoch={epoch.Id} " +
+                    $"currentEpoch={_currentEpoch?.Id ?? 0}");
+
+                CapturedFrameStatusText.Text =
+                    "Ignored stale capture result.";
+
+                return;
+            }
+
             DiagnosticLog.Write(
                 "CAPTURE.FRAME_OK",
+                $"epoch={epoch.Id} " +
                 $"content={frame.ContentWidth}x{frame.ContentHeight} " +
                 $"surface={frame.SurfaceWidth}x{frame.SurfaceHeight} " +
                 $"frameMs={frame.FrameMilliseconds:0.0}");
 
             DiagnosticLog.Write(
                 "CAPTURE.RESIZE_OK",
+                $"epoch={epoch.Id} " +
                 $"source={frame.ContentWidth}x{frame.ContentHeight} " +
                 $"output={frame.OutputWidth}x{frame.OutputHeight} " +
                 $"scale={frame.ScaleFactor:0.0000} " +
@@ -328,6 +493,7 @@ public sealed partial class MainPage : Page
 
             DiagnosticLog.Write(
                 "CAPTURE.BITMAP_OK",
+                $"epoch={epoch.Id} " +
                 $"bitmap={frame.OutputWidth}x{frame.OutputHeight} " +
                 $"format={frame.BitmapPixelFormat} " +
                 $"stride={frame.PlaneStride} " +
@@ -350,41 +516,5 @@ public sealed partial class MainPage : Page
                 "CAPTURE.BITMAP_ERROR",
                 ex.ToString());
         }
-    }
-    private void DisplaySnapshot(
-        ForegroundWindowSnapshot snapshot)
-    {
-        _lastSnapshot =
-            snapshot;
-
-        DiagnosticLog.Write(
-            "PAGE.DISPLAY",
-            $"process={snapshot.ProcessName} " +
-            $"pid={snapshot.ProcessId} " +
-            $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
-            $"title=[{snapshot.WindowTitle}]");
-
-        ProcessNameText.Text =
-            snapshot.ProcessName;
-
-        WindowTitleText.Text =
-            string.IsNullOrWhiteSpace(
-                snapshot.WindowTitle)
-                ? "(no title)"
-                : snapshot.WindowTitle;
-
-        ProcessIdText.Text =
-            snapshot.ProcessId.ToString();
-
-        WindowHandleText.Text =
-            $"0x{snapshot.Handle.ToInt64():X}";
-
-        LastObservedText.Text =
-            DateTime.Now.ToString(
-                "HH:mm:ss.fff");
-
-        DiagnosticLog.Write(
-            "PAGE.DISPLAY_DONE",
-            $"ProcessNameText={ProcessNameText.Text}");
     }
 }
