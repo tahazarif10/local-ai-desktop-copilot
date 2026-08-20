@@ -36,6 +36,9 @@ public sealed partial class MainPage : Page
     private readonly PersistentChangeDetectionService
         _persistentChangeDetectionService;
 
+    private readonly SensingOrchestrator
+        _sensingOrchestrator;
+
     private ForegroundWindowSnapshot?
         _lastSnapshot;
 
@@ -87,9 +90,17 @@ public sealed partial class MainPage : Page
             ?? throw new InvalidOperationException(
                 "UI DispatcherQueue unavailable.");
 
+        _sensingOrchestrator =
+            new SensingOrchestrator(
+                _persistentChangeDetectionService,
+                _uiDispatcher);
+
         DiagnosticLog.Write(
             "PAGE.DISPATCHER",
             $"HasThreadAccess={_uiDispatcher.HasThreadAccess}");
+
+        _sensingOrchestrator.StatusChanged +=
+            SensingOrchestrator_StatusChanged;
 
         _persistentChangeDetectionService.SampleReady +=
             PersistentChangeDetectionService_SampleReady;
@@ -182,7 +193,7 @@ public sealed partial class MainPage : Page
             "PAGE.UNLOADED",
             $"observerStopped={stopped}");
 
-        _persistentChangeDetectionService.Stop(
+        _sensingOrchestrator.Disarm(
             "page_unloaded");
 
         _contextEpochManager.Reset();
@@ -285,6 +296,9 @@ public sealed partial class MainPage : Page
             epoch;
 
         _changeDetectionProbeService.ObserveContext(
+            epoch);
+
+        _sensingOrchestrator.ObserveContext(
             epoch);
 
         DiagnosticLog.Write(
@@ -729,10 +743,90 @@ public sealed partial class MainPage : Page
                 $"Change sample failed: {ex.Message}";
         }
     }
+    private void ArmSensingOrchestratorButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_sensingOrchestrator.IsArmed)
+        {
+            OrchestratorStatusText.Text =
+                "Already armed.";
+
+            return;
+        }
+
+        if (_persistentChangeDetectionService
+            .HasActiveSession)
+        {
+            OrchestratorStatusText.Text =
+                "Stop the manual persistent session before arming.";
+
+            DiagnosticLog.Write(
+                "ORCH.ARM_REJECT",
+                "reason=manual_session_active");
+
+            return;
+        }
+
+        OrchestratorStatusText.Text =
+            "ARMED | evaluating current context...";
+
+        _sensingOrchestrator.Arm(
+            _currentEpoch);
+    }
+
+    private void DisarmSensingOrchestratorButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        OrchestratorStatusText.Text =
+            "Disarming...";
+
+        _sensingOrchestrator.Disarm(
+            "user_disarm");
+
+        OrchestratorStatusText.Text =
+            "OFF";
+    }
+
+    private void SensingOrchestrator_StatusChanged(
+        SensingOrchestratorUpdate update)
+    {
+        bool queued =
+            _uiDispatcher.TryEnqueue(
+                DispatcherQueuePriority.Normal,
+                () =>
+                {
+                    OrchestratorStatusText.Text =
+                        $"{update.Phase} | " +
+                        $"epoch {update.EpochId} | " +
+                        $"{update.Reason}";
+                });
+
+        if (!queued)
+        {
+            DiagnosticLog.Write(
+                "ORCH.UI_QUEUE_REJECT",
+                $"epoch={update.EpochId} " +
+                $"phase={update.Phase}");
+        }
+    }
     private void StartPersistentChangeButton_Click(
         object sender,
         RoutedEventArgs e)
     {
+        if (_sensingOrchestrator.IsArmed)
+        {
+            PersistentChangeStatusText.Text =
+                "Disarm auto sensing before manual start.";
+
+            DiagnosticLog.Write(
+                "PERSIST.MANUAL_REJECT",
+                "operation=start reason=orchestrator_armed");
+
+            return;
+        }
+
         ContextEpoch? epoch =
             GetAllowedEpoch(
                 "persistent_start");
@@ -784,6 +878,18 @@ public sealed partial class MainPage : Page
         object sender,
         RoutedEventArgs e)
     {
+        if (_sensingOrchestrator.IsArmed)
+        {
+            PersistentChangeStatusText.Text =
+                "Use Disarm auto sensing to stop orchestrated capture.";
+
+            DiagnosticLog.Write(
+                "PERSIST.MANUAL_REJECT",
+                "operation=stop reason=orchestrator_armed");
+
+            return;
+        }
+
         try
         {
             _persistentChangeDetectionService.Stop(

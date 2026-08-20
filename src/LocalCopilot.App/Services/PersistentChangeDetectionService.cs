@@ -31,6 +31,18 @@ public sealed class PersistentChangeDetectionService
     public event Action<PersistentChangeSessionEnded>?
         SessionEnded;
 
+    public bool HasActiveSession
+    {
+        get
+        {
+            lock (_lifecycleGate)
+            {
+                return
+                    _active is not null;
+            }
+        }
+    }
+
     public bool IsRunning
     {
         get

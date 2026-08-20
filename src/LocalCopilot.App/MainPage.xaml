@@ -13,7 +13,7 @@
                 FontWeight="SemiBold" />
 
             <TextBlock
-                Text="M2.2  Persistent Change Detection"
+                Text="M2.3  Sensing Orchestrator"
                 FontSize="18"
                 Opacity="0.7"
                 Margin="0,0,0,18" />
@@ -141,6 +141,35 @@
             <TextBlock
                 x:Name="PersistentChangeStatusText"
                 Text="Stopped"
+                TextWrapping="Wrap"
+                Margin="0,6,0,0" />
+
+            <TextBlock
+                Text="M2.3 auto sensing orchestrator"
+                FontWeight="SemiBold"
+                Margin="0,22,0,0" />
+
+            <TextBlock
+                Text="Explicit activation only  default OFF"
+                Opacity="0.7" />
+
+            <StackPanel
+                Orientation="Horizontal"
+                Spacing="8"
+                Margin="0,6,0,0">
+
+                <Button
+                    Content="Arm auto sensing"
+                    Click="ArmSensingOrchestratorButton_Click" />
+
+                <Button
+                    Content="Disarm auto sensing"
+                    Click="DisarmSensingOrchestratorButton_Click" />
+            </StackPanel>
+
+            <TextBlock
+                x:Name="OrchestratorStatusText"
+                Text="OFF"
                 TextWrapping="Wrap"
                 Margin="0,6,0,0" />
         </StackPanel>
