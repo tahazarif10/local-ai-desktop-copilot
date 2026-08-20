@@ -39,6 +39,15 @@ public sealed partial class MainPage : Page
     private readonly SensingOrchestrator
         _sensingOrchestrator;
 
+    private readonly DiagnosticTimeline
+        _diagnosticTimeline;
+
+    private readonly InputActivityTracker
+        _inputActivityTracker;
+
+    private readonly ChangeCorrelationService
+        _changeCorrelationService;
+
     private ForegroundWindowSnapshot?
         _lastSnapshot;
 
@@ -85,6 +94,16 @@ public sealed partial class MainPage : Page
         _persistentChangeDetectionService =
             new PersistentChangeDetectionService();
 
+        _diagnosticTimeline =
+            new DiagnosticTimeline();
+
+        _inputActivityTracker =
+            new InputActivityTracker();
+
+        _changeCorrelationService =
+            new ChangeCorrelationService(
+                _diagnosticTimeline);
+
         _uiDispatcher =
             DispatcherQueue.GetForCurrentThread()
             ?? throw new InvalidOperationException(
@@ -107,6 +126,9 @@ public sealed partial class MainPage : Page
 
         _persistentChangeDetectionService.SessionEnded +=
             PersistentChangeDetectionService_SessionEnded;
+
+        _inputActivityTracker.ActivityObserved +=
+            InputActivityTracker_ActivityObserved;
 
         _foregroundWindowObserver.ForegroundWindowChanged +=
             ForegroundWindowObserver_ForegroundWindowChanged;
@@ -194,6 +216,9 @@ public sealed partial class MainPage : Page
             $"observerStopped={stopped}");
 
         _sensingOrchestrator.Disarm(
+            "page_unloaded");
+
+        StopInputTracking(
             "page_unloaded");
 
         _contextEpochManager.Reset();
@@ -300,6 +325,12 @@ public sealed partial class MainPage : Page
 
         _sensingOrchestrator.ObserveContext(
             epoch);
+
+        RefreshInputTracking(
+            epoch,
+            contextChanged
+                ? "context_changed"
+                : "context_reused");
 
         DiagnosticLog.Write(
             "CONTEXT.APPLY",
@@ -773,6 +804,10 @@ public sealed partial class MainPage : Page
 
         _sensingOrchestrator.Arm(
             _currentEpoch);
+
+        RefreshInputTracking(
+            _currentEpoch,
+            "user_arm");
     }
 
     private void DisarmSensingOrchestratorButton_Click(
@@ -783,6 +818,9 @@ public sealed partial class MainPage : Page
             "Disarming...";
 
         _sensingOrchestrator.Disarm(
+            "user_disarm");
+
+        StopInputTracking(
             "user_disarm");
 
         OrchestratorStatusText.Text =
@@ -910,9 +948,63 @@ public sealed partial class MainPage : Page
         }
     }
 
+    private void RefreshInputTracking(
+        ContextEpoch? epoch,
+        string reason)
+    {
+        if (
+            !_sensingOrchestrator.IsArmed ||
+            epoch is null ||
+            !epoch.Privacy.AllowsSensing)
+        {
+            StopInputTracking(
+                reason);
+
+            return;
+        }
+
+        _diagnosticTimeline.BeginEpoch(
+            epoch.Id);
+
+        try
+        {
+            _inputActivityTracker.Start(
+                epoch.Id);
+        }
+        catch (Exception ex)
+        {
+            _diagnosticTimeline.Reset();
+
+            DiagnosticLog.Write(
+                "INPUT.TRACKING_START_ERROR",
+                $"epoch={epoch.Id} " +
+                $"type={ex.GetType().Name} " +
+                $"hresult=0x{ex.HResult:X8}");
+        }
+    }
+
+    private void StopInputTracking(
+        string reason)
+    {
+        _inputActivityTracker.Stop(
+            reason);
+
+        _diagnosticTimeline.Reset();
+    }
+
+    private void InputActivityTracker_ActivityObserved(
+        InputActivityEvent activity)
+    {
+        _diagnosticTimeline.Record(
+            activity);
+    }
+
     private void PersistentChangeDetectionService_SampleReady(
         PersistentChangeSample sample)
     {
+        _changeCorrelationService.Observe(
+            sample);
+
         bool queued =
             _uiDispatcher.TryEnqueue(
                 DispatcherQueuePriority.Normal,
