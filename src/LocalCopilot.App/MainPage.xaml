@@ -13,12 +13,14 @@
                 FontWeight="SemiBold" />
 
             <TextBlock
-                Text="M2.0  Privacy Gate + Context Epoch"
+                Text="M2.1  Low-Resolution Change Detection"
                 FontSize="18"
                 Opacity="0.7"
                 Margin="0,0,0,18" />
 
-            <TextBlock Text="Process" FontWeight="SemiBold" />
+            <TextBlock
+                Text="Process"
+                FontWeight="SemiBold" />
 
             <TextBlock
                 x:Name="ProcessNameText"
@@ -78,6 +80,7 @@
                 x:Name="CaptureTargetStatusText"
                 Text="Not tested"
                 TextWrapping="Wrap" />
+
             <Button
                 Content="Capture one frame (RAM)"
                 Click="CaptureOneFrameButton_Click"
@@ -93,6 +96,28 @@
                 x:Name="CapturedFrameStatusText"
                 Text="Not captured"
                 TextWrapping="Wrap" />
+
+            <TextBlock
+                Text="M2.1 change detection probe"
+                FontWeight="SemiBold"
+                Margin="0,22,0,0" />
+
+            <Button
+                Content="Sample change @ 640 px"
+                Click="Change640Button_Click"
+                HorizontalAlignment="Left"
+                Margin="0,6,0,0" />
+
+            <Button
+                Content="Sample change @ 960 px"
+                Click="Change960Button_Click"
+                HorizontalAlignment="Left" />
+
+            <TextBlock
+                x:Name="ChangeDetectionStatusText"
+                Text="No change samples yet"
+                TextWrapping="Wrap"
+                Margin="0,6,0,0" />
 
         </StackPanel>
     </ScrollViewer>
