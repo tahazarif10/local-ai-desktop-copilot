@@ -8,9 +8,8 @@ using System;
 namespace LocalCopilot_App;
 
 /// <summary>
-/// The application window. This hosts a Frame that displays pages. Add your
-/// UI and logic to MainPage.xaml / MainPage.xaml.cs instead of here so you
-/// can use Page features such as navigation events and the Loaded lifecycle.
+/// Hosts the diagnostic view while the application-owned coordinator retains
+/// sensing composition and lifetime responsibility.
 /// </summary>
 public sealed partial class MainWindow : Window
 {

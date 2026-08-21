@@ -24,11 +24,7 @@
             </TitleBar.IconSource>
         </TitleBar>
 
-        <!--
-            The Frame hosts pages for your application content. Add your UI to
-            MainPage.xaml rather than here so you can use Page features such as
-            navigation events and the Loaded lifecycle.
-        -->
+        <!-- The page is a view/command surface over the application-owned coordinator. -->
         <Frame x:Name="RootFrame" Grid.Row="1" />
     </Grid>
 </Window>
