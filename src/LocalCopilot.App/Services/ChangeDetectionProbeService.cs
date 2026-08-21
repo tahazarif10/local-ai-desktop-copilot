@@ -9,6 +9,9 @@ namespace LocalCopilot_App.Services;
 
 public sealed class ChangeDetectionProbeService
 {
+    private readonly IForegroundWindowIdentityValidator
+        _identityValidator;
+
     private readonly object
         _stateGate =
             new();
@@ -32,6 +35,15 @@ public sealed class ChangeDetectionProbeService
 
     private bool
         _hasObservedTarget;
+
+    public ChangeDetectionProbeService(
+        IForegroundWindowIdentityValidator identityValidator)
+    {
+        _identityValidator =
+            identityValidator ??
+            throw new ArgumentNullException(
+                nameof(identityValidator));
+    }
 
     public void ObserveContext(
         ContextEpoch epoch)
@@ -96,6 +108,13 @@ public sealed class ChangeDetectionProbeService
         }
 
         epoch.CancellationToken.ThrowIfCancellationRequested();
+
+        if (!_identityValidator.IsCurrent(
+                epoch.Snapshot))
+        {
+            throw new InvalidOperationException(
+                "Capture target identity changed.");
+        }
 
         await _sampleGate.WaitAsync(
             epoch.CancellationToken).ConfigureAwait(

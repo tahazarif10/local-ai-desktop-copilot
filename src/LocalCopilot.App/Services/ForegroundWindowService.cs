@@ -6,7 +6,8 @@ using System.Text;
 
 namespace LocalCopilot_App.Services;
 
-public sealed class ForegroundWindowService
+public sealed class ForegroundWindowService :
+    IForegroundWindowIdentityValidator
 {
     [DllImport("user32.dll")]
     private static extern nint GetForegroundWindow();
@@ -33,6 +34,31 @@ public sealed class ForegroundWindowService
         nint hWnd,
         StringBuilder lpString,
         int nMaxCount);
+
+    public bool IsCurrent(
+        ForegroundWindowSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(
+            snapshot);
+
+        uint windowThreadId =
+            GetWindowThreadProcessId(
+                snapshot.Handle,
+                out uint processId);
+
+        bool isCurrent =
+            windowThreadId != 0 &&
+            processId == snapshot.ProcessId;
+
+        DiagnosticLog.Write(
+            "SERVICE.IDENTITY_REVALIDATE",
+            $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
+            $"expectedPid={snapshot.ProcessId} " +
+            $"actualPid={processId} " +
+            $"success={isCurrent}");
+
+        return isCurrent;
+    }
 
     public ForegroundWindowObservation? GetCurrent(
         PrivacyPolicy privacyPolicy,

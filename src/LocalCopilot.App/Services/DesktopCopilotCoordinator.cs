@@ -328,6 +328,19 @@ public sealed class DesktopCopilotCoordinator :
 
         try
         {
+            if (!_foregroundWindowService.IsCurrent(
+                    snapshot))
+            {
+                SetCaptureTargetStatus(
+                    "Capture target changed; retry.");
+
+                DiagnosticLog.Write(
+                    "CAPTURE.PROBE_REJECT",
+                    $"epoch={epoch.Id} reason=identity_changed");
+
+                return;
+            }
+
             GraphicsCaptureItem item =
                 GraphicsCaptureItemFactory.CreateForWindow(
                     snapshot.Handle);
@@ -387,6 +400,19 @@ public sealed class DesktopCopilotCoordinator :
 
         try
         {
+            if (!_foregroundWindowService.IsCurrent(
+                    snapshot))
+            {
+                SetCapturedFrameStatus(
+                    "Capture target changed; retry.");
+
+                DiagnosticLog.Write(
+                    "CAPTURE.FRAME_REJECT",
+                    $"epoch={epoch.Id} reason=identity_changed");
+
+                return;
+            }
+
             GraphicsCaptureItem item =
                 GraphicsCaptureItemFactory.CreateForWindow(
                     snapshot.Handle);

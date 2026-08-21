@@ -11,9 +11,13 @@ public static class ApplicationCompositionRoot
         ArgumentNullException.ThrowIfNull(
             uiDispatcher);
 
+        ForegroundWindowService foregroundWindowService =
+            new();
+
         PersistentChangeDetectionService
             persistentChangeDetectionService =
-                new();
+                new(
+                    foregroundWindowService);
 
         DiagnosticTimeline diagnosticTimeline =
             new();
@@ -22,11 +26,12 @@ public static class ApplicationCompositionRoot
             unchecked(
                 (uint)Environment.ProcessId),
             uiDispatcher,
-            new ForegroundWindowService(),
+            foregroundWindowService,
             new ForegroundWindowObserver(),
             PrivacyPolicy.CreateDefault(),
             new ContextEpochManager(),
-            new ChangeDetectionProbeService(),
+            new ChangeDetectionProbeService(
+                foregroundWindowService),
             persistentChangeDetectionService,
             new SensingOrchestrator(
                 persistentChangeDetectionService,

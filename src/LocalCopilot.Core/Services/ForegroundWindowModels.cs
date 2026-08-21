@@ -14,3 +14,9 @@ public sealed record ForegroundWindowSnapshot(
 public sealed record ForegroundWindowObservation(
     ForegroundWindowSnapshot Snapshot,
     PrivacyEvaluation Privacy);
+
+public interface IForegroundWindowIdentityValidator
+{
+    bool IsCurrent(
+        ForegroundWindowSnapshot snapshot);
+}
