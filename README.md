@@ -39,13 +39,13 @@ This is a product-grade system, not a screenshot-to-LLM demo. It uses the smalle
 
 | Item | Current truth |
 | --- | --- |
-| Last verified functional code baseline | `dd6f56300fd32d9329f01e6d8515af925e0014bd` (later documentation-only commits may be descendants) |
+| Last verified functional code baseline | `a9c0adb877d010305a551cf705b87f952532c511` (later documentation-only commits may be descendants) |
 | Baseline date | 2026-08-21 (Windows runtime acceptance) |
-| Completed | Foreground context, RAM-only capture, privacy/epoch gate, low-resolution change detection, persistent latest-wins capture, sensing orchestration, diagnostic input correlation, portable core characterization/CI, and application-owned composition/lifecycle |
-| Current implementation shape | One packaged WinUI 3 process split into a Windows/UI app assembly and a portable core assembly; `App` owns a composition root/coordinator while `MainPage` is a view/command adapter; persistent capture/input correlation require explicit Arm and default OFF |
-| Next implementation milestone | `M2.4.3 Capability-based Privacy Policy` on `dev/m2-4-3-capability-privacy` |
+| Completed | Foreground context, RAM-only capture, capability privacy/epochs, low-resolution change detection, persistent latest-wins capture, sensing orchestration, diagnostic input correlation, portable core characterization/CI, and application-owned composition/lifecycle |
+| Current implementation shape | One packaged WinUI 3 process split into a Windows/UI app assembly and a portable core assembly; `App` owns a composition root/coordinator; screen observation is truly Off until Arm; title/pixel/retention and future semantic/egress permissions are independent |
+| Next implementation milestone | `M2.4.4 Diagnostics and Input Hardening` on `dev/m2-4-4-diagnostics-input-hardening` |
 | Next product capability after hardening | `M3 UI Understanding` through read-only Windows UI Automation |
-| Automated tests / CI | 49 deterministic core tests; 49/49 passed locally and on Ubuntu/Windows CI, and Windows CI passed the canonical `Debug/win-x64` app build at the M2.4.2 validation head |
+| Automated tests / CI | 58 deterministic core tests; 58/58 passed locally and on Ubuntu/Windows CI, and Windows CI passed the canonical `Debug/win-x64` app build at the M2.4.3 validation head |
 | Cloud use | Forbidden by the product architecture |
 | Autonomous input/actions | Out of scope |
 

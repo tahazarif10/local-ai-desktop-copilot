@@ -62,7 +62,7 @@ Exit criteria:
 
 Accepted evidence: [PR #12](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/12), 49 deterministic tests, Ubuntu/Windows CI, canonical `Debug/win-x64` build, and a physical Windows regression covering privacy denial/recovery, same-context reuse, unavailable-target recovery, Disarm/Re-arm, and close while Armed with clean hook/session/input/subscription disposal.
 
-### ▶ M2.4.3 Capability-based privacy policy
+### ✅ M2.4.3 Capability-based privacy policy
 
 Scope:
 
@@ -79,7 +79,9 @@ Exit criteria:
 - Tests cover deny precedence, capability separation, rule changes, and stale results.
 - No raw content appears in diagnostics.
 
-### ◻ M2.4.4 Diagnostics and input hardening
+Accepted evidence: [PR #13](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/13), 58 deterministic tests, Ubuntu/Windows CI, canonical `Debug/win-x64 --warnaserror` build, and a physical Windows regression proving true Off, exact Notepad deny before content, automatic recovery, pre-WGC HWND/PID revalidation, Disarm/Re-arm, correct stale rejection, and clean armed shutdown.
+
+### ▶ M2.4.4 Diagnostics and input hardening
 
 Scope:
 

@@ -99,4 +99,4 @@ A milestone is complete only when all of the following are true:
 
 ## Current handoff
 
-The last verified functional code baseline is `dd6f56300fd32d9329f01e6d8515af925e0014bd`; later documentation-only commits may be descendants. M2.4.2 composition/lifecycle separation is accepted through PR #12, and the next implementation gate is M2.4.3 capability-based privacy policy on `dev/m2-4-3-capability-privacy`. Resolve live `main` HEAD from GitHub/Git, then compare it with `docs/PROJECT_STATE.md` before working.
+The last verified functional code baseline is `a9c0adb877d010305a551cf705b87f952532c511`; later documentation-only commits may be descendants. M2.4.3 capability-based privacy is accepted through PR #13, and the next implementation gate is M2.4.4 diagnostics/input hardening on `dev/m2-4-4-diagnostics-input-hardening`. Resolve live `main` HEAD from GitHub/Git, then compare it with `docs/PROJECT_STATE.md` before working.
