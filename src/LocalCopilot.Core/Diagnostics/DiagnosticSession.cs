@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
@@ -71,15 +72,16 @@ internal static class DiagnosticSessionParser
             8);
 
     public static bool TryParse(
-        string? launchArguments,
+        IReadOnlyList<string>? processArguments,
         DateTimeOffset utcNow,
         out DiagnosticSession? session)
     {
         session =
             null;
 
-        if (string.IsNullOrWhiteSpace(
-                launchArguments))
+        if (
+            processArguments is null ||
+            processArguments.Count == 0)
         {
             return false;
         }
@@ -87,14 +89,12 @@ internal static class DiagnosticSessionParser
         string? token =
             null;
 
-        string[] arguments =
-            launchArguments.Split(
-                [' ', '\t', '\r', '\n'],
-                StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (string argument in arguments)
+        foreach (string? argument in processArguments)
         {
-            if (!argument.StartsWith(
+            if (
+                string.IsNullOrEmpty(
+                    argument) ||
+                !argument.StartsWith(
                     ArgumentPrefix,
                     StringComparison.Ordinal))
             {

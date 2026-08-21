@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -40,10 +41,10 @@ public static class DiagnosticLog
     }
 
     public static void Initialize(
-        string? launchArguments)
+        IReadOnlyList<string>? processArguments)
     {
         Initialize(
-            launchArguments,
+            processArguments,
             DateTimeOffset.UtcNow);
     }
 
@@ -159,7 +160,7 @@ public static class DiagnosticLog
     }
 
     internal static void Initialize(
-        string? launchArguments,
+        IReadOnlyList<string>? processArguments,
         DateTimeOffset utcNow)
     {
         lock (Gate)
@@ -173,7 +174,7 @@ public static class DiagnosticLog
                 true;
 
             if (DiagnosticSessionParser.TryParse(
-                    launchArguments,
+                    processArguments,
                     utcNow,
                     out DiagnosticSession? session))
             {

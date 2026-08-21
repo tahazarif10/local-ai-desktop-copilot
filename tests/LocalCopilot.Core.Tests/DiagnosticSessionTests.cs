@@ -15,7 +15,7 @@ public sealed class DiagnosticSessionTests
     }
 
     [TestMethod]
-    public void TryParse_ValidLaunchToken_ResolvesSessionLog()
+    public void TryParse_ValidProcessArguments_ResolvesSessionLog()
     {
         DateTimeOffset now =
             new(
@@ -34,7 +34,7 @@ public sealed class DiagnosticSessionTests
             CreateSessionDirectory(
                 sessionId);
 
-        string arguments =
+        IReadOnlyList<string> arguments =
             CreateArguments(
                 CreateDescriptor(
                     sessionId,
@@ -79,7 +79,7 @@ public sealed class DiagnosticSessionTests
         Guid sessionId =
             Guid.NewGuid();
 
-        string valid =
+        IReadOnlyList<string> valid =
             CreateArguments(
                 CreateDescriptor(
                     sessionId,
@@ -118,13 +118,19 @@ public sealed class DiagnosticSessionTests
 
         Assert.IsFalse(
             TryParse(
-                valid + " " + valid,
+                [
+                    "LocalCopilot.App.exe",
+                    valid[^1],
+                    valid[^1]
+                ],
                 now));
 
         Assert.IsFalse(
             TryParse(
-                DiagnosticSessionParser.ArgumentPrefix +
-                "not-base64",
+                [
+                    DiagnosticSessionParser.ArgumentPrefix +
+                    "not-base64"
+                ],
                 now));
 
         Assert.IsFalse(
@@ -181,7 +187,7 @@ public sealed class DiagnosticSessionTests
         Guid sessionId =
             Guid.NewGuid();
 
-        string valid =
+        IReadOnlyList<string> valid =
             CreateArguments(
                 CreateDescriptor(
                     sessionId,
@@ -190,7 +196,7 @@ public sealed class DiagnosticSessionTests
                     now));
 
         DiagnosticLog.Initialize(
-            launchArguments: null,
+            processArguments: null,
             utcNow: now);
 
         DiagnosticLog.Initialize(
@@ -300,7 +306,7 @@ public sealed class DiagnosticSessionTests
     }
 
     private static bool TryParse(
-        string? arguments,
+        IReadOnlyList<string>? arguments,
         DateTimeOffset now)
     {
         return DiagnosticSessionParser.TryParse(
@@ -331,7 +337,7 @@ public sealed class DiagnosticSessionTests
         };
     }
 
-    private static string CreateArguments(
+    private static IReadOnlyList<string> CreateArguments(
         DiagnosticLaunchDescriptor descriptor)
     {
         byte[] json =
@@ -350,9 +356,12 @@ public sealed class DiagnosticSessionTests
                     '_');
 
         return
-            "--unrelated=value " +
+        [
+            @"C:\Program Files\LocalCopilot\LocalCopilot.App.exe",
+            "--unrelated=value",
             DiagnosticSessionParser.ArgumentPrefix +
-            token;
+            token
+        ];
     }
 
     private static string CreateSessionDirectory(

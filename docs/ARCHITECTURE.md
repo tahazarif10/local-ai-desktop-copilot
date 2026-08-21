@@ -332,7 +332,7 @@ LocalCopilot.Core
 LocalCopilot.Core.Tests -> LocalCopilot.Core
 ```
 
-The split deliberately keeps deterministic logic out of the WinUI target so it can be characterized without XAML, capture, hooks, UI Automation, or a live desktop. It does not add a process or trust boundary. `App` creates and owns one coordinator; the coordinator owns long-running sensing resources and service subscriptions; `MainPage` attaches/detaches only as an `IDesktopCopilotView` and forwards user commands. `DiagnosticLog` remains a static compatibility facade in Core, but its sink is initialized once from a validated, expiring packaged-app launch token and writes only to that session's fixed `app.log` filename. Normal launch arguments cannot activate diagnostics accidentally.
+The split deliberately keeps deterministic logic out of the WinUI target so it can be characterized without XAML, capture, hooks, UI Automation, or a live desktop. It does not add a process or trust boundary. `App` creates and owns one coordinator; the coordinator owns long-running sensing resources and service subscriptions; `MainPage` attaches/detaches only as an `IDesktopCopilotView` and forwards user commands. `DiagnosticLog` remains a static compatibility facade in Core, but its sink is initialized once from a validated, expiring packaged-app launch token read from `Environment.GetCommandLineArgs()` and writes only to that session's fixed `app.log` filename. WinUI desktop `OnLaunched` arguments are intentionally not used because that property is always empty for desktop apps. Normal process arguments cannot activate diagnostics accidentally.
 
 ### 7.2 Incremental target
 

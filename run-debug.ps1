@@ -11,6 +11,7 @@ $sessionDirectory = $null
 $bundlePath = $null
 $probeLog = $null
 $metaPath = $null
+$appLogPath = $null
 $probeStop = $null
 $probeJob = $null
 $runnerError = $null
@@ -142,6 +143,11 @@ try {
             $sessionDirectory `
             "session-meta.txt"
 
+    $appLogPath =
+        Join-Path `
+            $sessionDirectory `
+            "app.log"
+
     $probeStop =
         Join-Path `
             $sessionDirectory `
@@ -164,6 +170,7 @@ Dotnet: $dotnetVersion
 PowerShell: $($PSVersionTable.PSVersion)
 OS: $([Environment]::OSVersion.VersionString)
 Diagnostic activation: launch-scoped, expiring token
+Application argument source: process command line
 Application log: app.log
 
 Git status:
@@ -411,6 +418,30 @@ public static class LocalCopilotForegroundProbe
         throw "Application run failed."
     }
 
+    if (-not (Test-Path -LiteralPath $appLogPath)) {
+        $applicationResult = "FAIL"
+        throw "Diagnostic activation handshake failed."
+    }
+
+    $appLogContent =
+        [System.IO.File]::ReadAllText(
+            $appLogPath
+        )
+
+    $expectedSessionMarker =
+        "sessionId=" +
+        $sessionId.ToString("D")
+
+    if (
+        $appLogContent.IndexOf(
+            $expectedSessionMarker,
+            [System.StringComparison]::Ordinal
+        ) -lt 0
+    ) {
+        $applicationResult = "FAIL"
+        throw "Diagnostic session handshake mismatch."
+    }
+
     $applicationResult = "PASS"
 }
 catch {
@@ -562,7 +593,7 @@ Runner Error HRESULT: $errorHResult
                     },
                     [pscustomobject]@{
                         Name = "app.log"
-                        Path = Join-Path $sessionDirectory "app.log"
+                        Path = $appLogPath
                     },
                     [pscustomobject]@{
                         Name = "os-foreground.log"

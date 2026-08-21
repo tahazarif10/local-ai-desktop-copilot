@@ -145,7 +145,7 @@ Current behavior:
 - records session ID, branch, SHA, .NET, PowerShell, OS, and Git status;
 - builds `Debug/win-x64 --warnaserror`;
 - runs an independent metadata-only foreground probe;
-- enables application diagnostics only through an expiring launch argument passed by the packaged-app run target;
+- enables application diagnostics only through an expiring launch argument passed by the packaged-app run target and read from the desktop process command line;
 - uses no persistent enable flag, so a later normal launch is Off even after abnormal termination;
 - stops the probe before reading bundle sources;
 - creates the final bundle only from the exact session's explicit three-file whitelist;
@@ -167,7 +167,7 @@ To select another root without changing product code:
 .\run-debug.ps1 -DiagnosticRoot "D:\LocalCopilotDiagnostics"
 ```
 
-The app accepts the diagnostic token only when its schema, GUID, absolute session path, folder/session binding, creation time, expiry, and maximum lifetime validate. Base64url is transport encoding, not encryption or authorization; explicit possession of the launch argument is the opt-in mechanism.
+The app reads the argument vector with `Environment.GetCommandLineArgs()` because `Microsoft.UI.Xaml.LaunchActivatedEventArgs.Arguments` is always empty for WinUI desktop apps. It accepts the diagnostic token only when its schema, GUID, absolute session path, folder/session binding, creation time, expiry, and maximum lifetime validate. The runner treats a missing or mismatched `app.log` session marker as a failed activation handshake. Base64url is transport encoding, not encryption or authorization; explicit possession of the launch argument is the opt-in mechanism.
 
 Each input-hook lifetime ends with one `INPUT.HOOK_HEALTH` record. It reports callback/activity counts, callback/subscriber errors, installing-thread mismatches, average/maximum callback duration, fixed latency buckets, and both unhook results. It contains no key, text, scan-code, coordinate, clipboard, or target-control data.
 

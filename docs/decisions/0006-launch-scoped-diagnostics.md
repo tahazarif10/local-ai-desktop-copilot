@@ -6,15 +6,15 @@
 
 ## Context
 
-The accepted M2 runner enabled diagnostics through a file at a developer-specific `H:` path and wrote milestone-named files into one shared directory. A fixed flag can survive an abnormal runner termination, a shared log can mix sessions, and exception messages can carry content discovered by future providers. Packaged WinUI launch also means ordinary child-process environment inheritance is not a sufficient activation contract.
+The accepted M2 runner enabled diagnostics through a file at a developer-specific `H:` path and wrote milestone-named files into one shared directory. A fixed flag can survive an abnormal runner termination, a shared log can mix sessions, and exception messages can carry content discovered by future providers. Packaged WinUI launch also means ordinary child-process environment inheritance is not a sufficient activation contract. In WinUI desktop apps, `Microsoft.UI.Xaml.LaunchActivatedEventArgs.Arguments` is always empty; the supported process-command-line API must be used instead.
 
 Diagnostics remain necessary for physical Windows acceptance, but they must be explicit, fail-closed, reproducible, and safe to paste as one bundle.
 
 ## Decision
 
-`run-debug.ps1` creates a unique session directory beneath a repository-relative ignored root by default, with an optional caller-supplied root. It passes a bounded base64url JSON descriptor through the packaged-app `WinAppLaunchArgs` property. The app accepts it only when schema, GUID, absolute path, directory/session binding, creation time, expiry, and maximum lifetime validate.
+`run-debug.ps1` creates a unique session directory beneath a repository-relative ignored root by default, with an optional caller-supplied root. It passes a bounded base64url JSON descriptor through the packaged-app `WinAppLaunchArgs` property. The app reads the real argument vector with `Environment.GetCommandLineArgs()` and accepts the descriptor only when schema, GUID, absolute path, directory/session binding, creation time, expiry, and maximum lifetime validate. This follows Microsoft's WinUI desktop guidance for command-line arguments: <https://learn.microsoft.com/windows/windows-app-sdk/api/winrt/microsoft.ui.xaml.launchactivatedeventargs.arguments>.
 
-There is no persistent enable flag. The application initializes its diagnostic sink once at launch and writes the fixed `app.log` filename only inside the validated session. The runner stops its independent probe before creating a final bundle from the explicit `session-meta.txt`, `app.log`, and `os-foreground.log` whitelist.
+There is no persistent enable flag. The application initializes its diagnostic sink once at launch and writes the fixed `app.log` filename only inside the validated session. After the packaged process exits, the runner requires `app.log` to contain the expected session marker; a missing or mismatched marker makes the run fail. The runner stops its independent probe before creating a final bundle from the explicit `session-meta.txt`, `app.log`, and `os-foreground.log` whitelist.
 
 Exception diagnostics contain type and HRESULT rather than provider message/stack text. Low-level input callbacks perform no file logging; one teardown summary records content-free health counters, latency buckets, thread consistency, and unhook results. The current synchronous hook path remains until target-hardware evidence justifies a dedicated hook thread or Raw Input.
 

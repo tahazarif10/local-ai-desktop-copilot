@@ -41,7 +41,7 @@ public partial class App : Application
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
         DiagnosticLog.Initialize(
-            args.Arguments);
+            Environment.GetCommandLineArgs());
 
         DiagnosticLog.ResetSession();
 

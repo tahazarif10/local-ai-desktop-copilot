@@ -207,7 +207,7 @@ Exception `.Message` values from content-bearing providers must be treated as po
 
 The bundle builder must use an explicit filename whitelist and diagnostic session boundary. The user reviews the bundle before public sharing.
 
-Diagnostic activation is launch-scoped: `run-debug.ps1` passes one validated, expiring token to the packaged app and the app binds its fixed `app.log` filename to that token's unique session directory. There is no persistent enable flag. The final bundle includes only `session-meta.txt`, `app.log`, and `os-foreground.log` from the same session. Base64url only makes the launch descriptor command-line safe; it is not encryption and contains no captured content.
+Diagnostic activation is launch-scoped: `run-debug.ps1` passes one validated, expiring token to the packaged app, the desktop process reads its actual argument vector, and the app binds its fixed `app.log` filename to that token's unique session directory. There is no persistent enable flag. The final bundle includes only `session-meta.txt`, `app.log`, and `os-foreground.log` from the same session. Base64url only makes the launch descriptor command-line safe; it is not encryption and contains no captured content.
 
 Application exception diagnostics use exception type and HRESULT, never `.Message` or stack text from a content-bearing provider. Input-hook health records contain counts, durations, thread consistency, and teardown results only.
 
