@@ -39,13 +39,13 @@ This is a product-grade system, not a screenshot-to-LLM demo. It uses the smalle
 
 | Item | Current truth |
 | --- | --- |
-| Last verified functional code baseline | `c29099a1c96680229f82f7b6b400cf962e51b5cc` (later documentation-only commits may be descendants) |
+| Last verified functional code baseline | `833a0af915a5ed58dd61642c1e188c623d3b90d4` (later documentation-only commits may be descendants) |
 | Baseline date | 2026-08-21 (Windows runtime acceptance) |
-| Completed | Foreground context, RAM-only capture, privacy/epoch gate, low-resolution change detection, persistent latest-wins capture, sensing orchestration, diagnostic input correlation |
+| Completed | Foreground context, RAM-only capture, privacy/epoch gate, low-resolution change detection, persistent latest-wins capture, sensing orchestration, diagnostic input correlation, portable core characterization, and CI foundation |
 | Current implementation shape | One packaged WinUI 3 process split into a Windows/UI app assembly and a portable core assembly; the diagnostic page still owns composition; persistent capture/input correlation require explicit Arm and default OFF |
-| Next implementation milestone | `M2.4.1 Characterization Tests and CI Foundation` has a validated candidate in [PR #10](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/10); merge is pending, then M2.4.2 lifecycle separation follows |
+| Next implementation milestone | `M2.4.2 Composition and Lifecycle Separation` on `dev/m2-4-2-composition-lifecycle` |
 | Next product capability after hardening | `M3 UI Understanding` through read-only Windows UI Automation |
-| Automated tests / CI | M2.4.1 has 43 deterministic core tests: 43/43 passed locally and on both CI runners; Windows CI also passed the canonical `Debug/win-x64` app build at the PR candidate |
+| Automated tests / CI | M2.4.1 is merged with 43 deterministic core tests; 43/43 passed locally and on Ubuntu/Windows CI, and Windows CI passed the canonical `Debug/win-x64` app build |
 | Cloud use | Forbidden by the product architecture |
 | Autonomous input/actions | Out of scope |
 

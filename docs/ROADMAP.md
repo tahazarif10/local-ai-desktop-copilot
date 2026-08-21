@@ -29,7 +29,7 @@ This roadmap is dependency-ordered. It is not a promise that every later impleme
 
 M2.4 is a deliberate architecture gate added after the M2.3 audit. It prevents UIA/OCR/content logic from being coupled to the diagnostic page or a binary privacy flag.
 
-### M2.4.1 Characterization tests and CI foundation
+### ✅ M2.4.1 Characterization tests and CI foundation
 
 Scope:
 
@@ -46,7 +46,7 @@ Exit criteria:
 - CI is green, or its absence/blocker is explicitly recorded rather than silently bypassed.
 - No product behavior or diagnostic event meaning changes.
 
-### M2.4.2 Composition and lifecycle separation
+### ▶ M2.4.2 Composition and lifecycle separation
 
 Scope:
 
@@ -60,7 +60,7 @@ Exit criteria:
 - Arm/Disarm and foreground transitions behave exactly as the M2.3 baseline.
 - Existing runtime acceptance and new tests pass.
 
-### M2.4.3 Capability-based privacy policy
+### ◻ M2.4.3 Capability-based privacy policy
 
 Scope:
 
@@ -77,7 +77,7 @@ Exit criteria:
 - Tests cover deny precedence, capability separation, rule changes, and stale results.
 - No raw content appears in diagnostics.
 
-### M2.4.4 Diagnostics and input hardening
+### ◻ M2.4.4 Diagnostics and input hardening
 
 Scope:
 
