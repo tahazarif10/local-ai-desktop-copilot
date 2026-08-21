@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 238" role="img" aria-labelledby="title desc">
   <title id="title">Project milestone progress</title>
-  <desc id="desc">M1 context and M2 sensing are complete. M2.4 foundation hardening is active. UI understanding, vision, memory, local AI, and productization are planned.</desc>
+  <desc id="desc">M1 context, M2 sensing, and M2.4 foundation hardening are complete. The M3.1 UIA worker probe is active. Vision, memory, local AI, and productization are planned.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="238" gradientUnits="userSpaceOnUse">
       <stop stop-color="#091423"/>
@@ -21,9 +21,9 @@
   <text x="1530" y="49" text-anchor="end" fill="#8296B5" font-size="16" font-weight="650" letter-spacing="1.5">VERIFIED → ACTIVE → PLANNED</text>
 
   <path d="M132 122H1460" stroke="#2A3B59" stroke-width="8" stroke-linecap="round"/>
-  <path d="M132 122H518" stroke="#34D399" stroke-width="8" stroke-linecap="round"/>
-  <path d="M518 122H700" stroke="url(#active)" stroke-width="8" stroke-linecap="round"/>
-  <path d="M700 122H1460" stroke="#4A5870" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 13"/>
+  <path d="M132 122H610" stroke="#34D399" stroke-width="8" stroke-linecap="round"/>
+  <path d="M610 122H858" stroke="url(#active)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M858 122H1460" stroke="#4A5870" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 13"/>
 
   <g transform="translate(132 122)">
     <circle r="27" fill="#09251F" stroke="#34D399" stroke-width="4"/>
@@ -38,17 +38,17 @@
     <text y="80" text-anchor="middle" fill="#AFC2DC" class="name">Sensing</text>
   </g>
   <g transform="translate(610 122)">
+    <circle r="27" fill="#09251F" stroke="#34D399" stroke-width="4"/>
+    <path d="M-10 0L-2 8L12-8" fill="none" stroke="#6EE7B7" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text y="57" text-anchor="middle" fill="#6EE7B7" class="code">M2.4</text>
+    <text y="80" text-anchor="middle" fill="#AFC2DC" class="name">Hardening</text>
+  </g>
+  <g transform="translate(858 122)">
     <circle r="46" fill="#2A1B0B" stroke="url(#active)" stroke-width="5"/>
     <circle r="35" fill="#FBBF24" opacity="0.09"/>
     <path d="M-13 0H13M0-13V13" stroke="#FDE68A" stroke-width="5" stroke-linecap="round"/>
-    <text y="70" text-anchor="middle" fill="#FCD34D" class="code">M2.4</text>
-    <text y="93" text-anchor="middle" fill="#FFE8A3" class="name">Hardening</text>
-  </g>
-  <g transform="translate(858 122)">
-    <circle r="24" fill="#101A2D" stroke="#526784" stroke-width="3"/>
-    <circle r="5" fill="#818CF8"/>
-    <text y="57" text-anchor="middle" fill="#AAB8D0" class="code">M3</text>
-    <text y="80" text-anchor="middle" fill="#7F91AE" class="name">UIA</text>
+    <text y="70" text-anchor="middle" fill="#FCD34D" class="code">M3.1</text>
+    <text y="93" text-anchor="middle" fill="#FFE8A3" class="name">UIA Probe</text>
   </g>
   <g transform="translate(1058 122)">
     <circle r="24" fill="#101A2D" stroke="#526784" stroke-width="3"/>

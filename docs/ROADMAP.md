@@ -25,7 +25,7 @@ This roadmap is dependency-ordered. It is not a promise that every later impleme
 - ✅ **M2.3 Sensing orchestrator** — explicit Arm/Disarm, settling, context reuse, blocked/unavailable/error states, session handover.
 - ✅ **M2.3.1 Diagnostic correlation** — bounded input-activity kinds and possible-trigger timing for Meaningful/Large changes.
 
-## ▶ M2.4 — Foundation hardening before semantic content
+## ✅ M2.4 — Foundation hardening before semantic content
 
 M2.4 is a deliberate architecture gate added after the M2.3 audit. It prevents UIA/OCR/content logic from being coupled to the diagnostic page or a binary privacy flag.
 
@@ -81,12 +81,12 @@ Exit criteria:
 
 Accepted evidence: [PR #13](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/13), 58 deterministic tests, Ubuntu/Windows CI, canonical `Debug/win-x64 --warnaserror` build, and a physical Windows regression proving true Off, exact Notepad deny before content, automatic recovery, pre-WGC HWND/PID revalidation, Disarm/Re-arm, correct stale rejection, and clean armed shutdown.
 
-### ▶ M2.4.4 Diagnostics and input hardening
+### ✅ M2.4.4 Diagnostics and input hardening
 
 Scope:
 
 - Replace fixed `H:` paths and legacy milestone filenames with a configurable, session-scoped location while retaining one-command bundle collection.
-- Keep an explicit diagnostic whitelist and reliable flag cleanup.
+- Replace the persistent enable flag with a validated, expiring launch token, exact session handshake, and explicit diagnostic whitelist.
 - Measure low-level hook health; decide, with evidence, whether a dedicated hook thread or Raw Input is required.
 
 Exit criteria:
@@ -96,11 +96,15 @@ Exit criteria:
 - Bundle contents are documented, minimized, and automatically copied as before.
 - Existing MouseClick/MouseWheel/KeyboardActivity/None correlation behavior regresses cleanly.
 
-## ◻ M3 — Read-only UI understanding
+Accepted evidence: [PR #14](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/14), 68 deterministic tests, Ubuntu/Windows CI, Windows PowerShell runner parsing, strict `Debug/win-x64 --warnaserror` build, successful default/custom-root sessions, an unchanged 14-file snapshot after normal launch, all four correlation outcomes, 1,965 callbacks with zero errors/mismatches and sub-millisecond maximum latency, and clean Disarm/Re-arm/armed-shutdown teardown.
+
+Decision: keep the measured synchronous diagnostic-only hooks. Reconsider a dedicated hook thread or Raw Input only after a reproducible target-hardware regression.
+
+## ▶ M3 — Read-only UI understanding
 
 UI Automation is a semantic source, not an automation/action feature.
 
-### M3.1 UIA capability and worker probe
+### ▶ M3.1 UIA capability and worker probe
 
 - Resolve the foreground root element from its HWND only after the capability privacy gate.
 - Run all UIA calls on a dedicated COM MTA worker, never the WinUI thread.

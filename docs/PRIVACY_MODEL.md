@@ -4,7 +4,7 @@
 
 Privacy is a control-plane boundary, not a filter applied after capture.
 
-The accepted M2.4.3 implementation evaluates process identity before content, keeps all target observation Off until explicit Arm, and uses independent typed capabilities rather than a single sensing Boolean. The foreground hook, identity lookup, title read, WGC, and input correlation all stop on Disarm. Every current capture entry point requires `CapturePixels` and revalidates HWND/PID immediately before WGC creation.
+The accepted M2.4.3 implementation evaluates process identity before content, keeps all target observation Off until explicit Arm, and uses independent typed capabilities rather than a single sensing Boolean. The foreground hook, identity lookup, title read, WGC, and input correlation all stop on Disarm. Every current capture entry point requires `CapturePixels` and revalidates HWND/PID immediately before WGC creation. M2.4.4 adds validated launch-scoped diagnostics, isolated whitelisted bundles, exception type/HRESULT redaction, and measured content-free input-hook health; a normal launch has no diagnostic sink.
 
 The policy configuration boundary supports emergency deny, normalized exact-application rules, global grants, strict precedence, immutable revisioned snapshots, and change notification. Product defaults grant only Armed ephemeral identity/title/pixel work; derived-event retention is added only by the opt-in diagnostic configuration. UIA, OCR, microphone, and local-server transmission capabilities remain denied because those features do not yet exist. Notepad remains an exact deny fixture only while diagnostic mode is enabled.
 
@@ -241,7 +241,7 @@ M2.4 closes privacy gaps in this order:
 1. ✅ characterize current privacy/epoch behavior with tests (M2.4.1);
 2. ✅ separate lifetime/composition from the page (M2.4.2);
 3. ✅ implement capability decisions, a product policy configuration boundary, true Off semantics, and cancel-on-policy-change (M2.4.3);
-4. ▶ remove fixed diagnostic paths/content-risky exception logging and measure input-hook hardening (M2.4.4);
-5. only then introduce UIA structure/text in M3.
+4. ✅ remove fixed diagnostic paths/content-risky exception logging and measure input-hook hardening (M2.4.4);
+5. ▶ introduce the capability-gated UIA worker probe in M3.1; UIA text remains a later, separately authorized slice.
 
 See [ADR 0001](decisions/0001-privacy-before-content.md) and [ADR 0005](decisions/0005-foundation-hardening-before-uia.md).

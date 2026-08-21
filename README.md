@@ -13,7 +13,7 @@
   <img alt="Runtime: .NET 10" src="https://img.shields.io/badge/Runtime-.NET_10-512BD4?style=for-the-badge&amp;logo=dotnet&amp;logoColor=white" />
   <img alt="UI: WinUI 3" src="https://img.shields.io/badge/UI-WinUI_3-2563EB?style=for-the-badge" />
   <img alt="Privacy: local only" src="https://img.shields.io/badge/Privacy-Local_Only-15803D?style=for-the-badge" />
-  <img alt="Current gate: M2.4" src="https://img.shields.io/badge/Current_Gate-M2.4-F59E0B?style=for-the-badge" />
+  <img alt="Current gate: M3.1" src="https://img.shields.io/badge/Current_Gate-M3.1-F59E0B?style=for-the-badge" />
   <a href="https://github.com/tahazarif10/local-ai-desktop-copilot/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/tahazarif10/local-ai-desktop-copilot/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
 </p>
 
@@ -39,20 +39,20 @@ This is a product-grade system, not a screenshot-to-LLM demo. It uses the smalle
 
 | Item | Current truth |
 | --- | --- |
-| Last verified functional code baseline | `a9c0adb877d010305a551cf705b87f952532c511` (later documentation-only commits may be descendants) |
+| Last verified functional code baseline | `cfcc4806b266bd8654fa93745783e8c8ae6b5b60` (later documentation-only or merge commits may be descendants) |
 | Baseline date | 2026-08-21 (Windows runtime acceptance) |
-| Completed | Foreground context, RAM-only capture, capability privacy/epochs, low-resolution change detection, persistent latest-wins capture, sensing orchestration, diagnostic input correlation, portable core characterization/CI, and application-owned composition/lifecycle |
-| Current implementation shape | One packaged WinUI 3 process split into a Windows/UI app assembly and a portable core assembly; `App` owns a composition root/coordinator; screen observation is truly Off until Arm; title/pixel/retention and future semantic/egress permissions are independent |
-| Next implementation milestone | `M2.4.4 Diagnostics and Input Hardening` on `dev/m2-4-4-diagnostics-input-hardening` |
-| Next product capability after hardening | `M3 UI Understanding` through read-only Windows UI Automation |
-| Automated tests / CI | 58 deterministic core tests; 58/58 passed locally and on Ubuntu/Windows CI, and Windows CI passed the canonical `Debug/win-x64` app build at the M2.4.3 validation head |
+| Completed | Foreground context, RAM-only capture, capability privacy/epochs, low-resolution change detection, persistent latest-wins capture, sensing orchestration, diagnostic input correlation, portable core characterization/CI, application-owned composition/lifecycle, and launch-scoped diagnostics/input-hook hardening |
+| Current implementation shape | One packaged WinUI 3 process split into a Windows/UI app assembly and a portable core assembly; `App` owns a composition root/coordinator; screen observation is truly Off until Arm; capabilities are independent; diagnostics require an expiring launch token and an isolated session |
+| Next implementation milestone | `M3.1 UIA Capability and Worker Probe` on `dev/m3-1-uia-worker-probe` |
+| Current product capability target | `M3 Read-only UI Understanding`, beginning with a dedicated COM MTA worker probe |
+| Automated tests / CI | 68 deterministic core tests; 68/68 passed on Ubuntu/Windows CI, Windows PowerShell parsed the diagnostic runner, and Windows CI passed the strict `Debug/win-x64` app build at the M2.4.4 validation head |
 | Cloud use | Forbidden by the product architecture |
 | Autonomous input/actions | Out of scope |
 
 The detailed, evidence-backed state is in [Project State](docs/PROJECT_STATE.md). Do not infer implementation status from the target architecture or roadmap.
 
 <p align="center">
-  <img src="docs/assets/milestone-strip.svg" width="100%" alt="M1 and M2 complete, M2.4 foundation hardening active, later milestones planned" />
+  <img src="docs/assets/milestone-strip.svg" width="100%" alt="M1 through M2.4 complete, M3.1 UIA worker probing active, later milestones planned" />
 </p>
 
 ## Start here in a new AI or engineering session
@@ -95,7 +95,7 @@ The server is a local-LAN trust boundary, not “the cloud.” Nothing may cross
 ## Non-negotiable invariants
 
 - Priority order: **Correctness > Reliability > Privacy > Performance > Maintainability**.
-- Target product sensing is explicit and defaults to OFF. Current M2 Arm already gates persistent capture/input, while complete Off semantics are an M2.4 requirement.
+- Target product sensing is explicit and defaults to OFF. The accepted Arm/Disarm path stops and restarts foreground observation, capture, and input tracking as one application-owned lifecycle.
 - Process identity is evaluated before title, pixels, UIA text, OCR, memory, or network access.
 - A blocked context produces no title read, capture, UIA, OCR, memory, or network request.
 - Every asynchronous result is bound to a context epoch and discarded if stale.
@@ -135,7 +135,7 @@ WinEvent foreground hook
   -> optional diagnostic correlation with mouse/keyboard activity kind
 ```
 
-The activity tracker records only `MouseClick`, `MouseWheel`, or `KeyboardActivity` plus an epoch and monotonic timestamp. It does not record keys, text, mouse coordinates, clipboard data, or target controls.
+The activity tracker records only `MouseClick`, `MouseWheel`, or `KeyboardActivity` plus an epoch and monotonic timestamp. It does not record keys, text, mouse coordinates, clipboard data, or target controls. M2.4.4 measured 1,965 callbacks across four physical hook lifetimes with zero callback/subscriber errors, zero installing-thread mismatches, successful keyboard/mouse unhook, a weighted mean of 92.8 microseconds, and a maximum of 929.8 microseconds; the current synchronous diagnostic-only hook path therefore remains accepted.
 
 Current stack: C#/.NET 10, packaged WinUI 3, Windows App SDK 2.4.0, Win2D 1.4.0, and Windows Graphics Capture. Only the explicit `Debug/win-x64` path has runtime acceptance. Model/OCR/STT/TTS backends are not selected yet; early candidate names are not commitments.
 

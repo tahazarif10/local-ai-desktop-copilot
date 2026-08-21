@@ -58,7 +58,7 @@ Read `docs/PRIVACY_MODEL.md` before adding any new source of content.
 ## Architecture discipline
 
 - Preserve the verified M2 sensing path unless a failing test or measured problem requires change.
-- Do not add M3 UIA code before M2.4 exit criteria are satisfied.
+- M2.4 foundation hardening is complete. Begin semantic work only through the bounded M3.1 UIA capability/worker probe; do not skip directly to traversal, text extraction, OCR, or orchestration.
 - Keep Win32/WinRT/COM adapters behind narrow contracts; pure policy and event logic must be unit-testable without Windows interop.
 - UI code must not become the lifetime owner and orchestration implementation for new product services. M2.4.2 moved composition/lifecycle out of `MainPage`; preserve the application-owned coordinator boundary.
 - UI Automation calls belong on a dedicated COM MTA worker, never the WinUI thread. Scope traversal to the foreground HWND, use Control/Content views and property caching, and enforce node/depth/text/time budgets.
@@ -99,4 +99,4 @@ A milestone is complete only when all of the following are true:
 
 ## Current handoff
 
-The last verified functional code baseline is `a9c0adb877d010305a551cf705b87f952532c511`; later documentation-only commits may be descendants. M2.4.3 capability-based privacy is accepted through PR #13, and the next implementation gate is M2.4.4 diagnostics/input hardening on `dev/m2-4-4-diagnostics-input-hardening`. Resolve live `main` HEAD from GitHub/Git, then compare it with `docs/PROJECT_STATE.md` before working.
+The last verified functional code baseline is `cfcc4806b266bd8654fa93745783e8c8ae6b5b60`; later documentation-only or merge commits may be descendants. M2.4.4 diagnostics/input hardening is accepted through PR #14. The only approved next implementation gate is M3.1 UIA capability and worker probe on `dev/m3-1-uia-worker-probe`. Resolve live `main` HEAD from GitHub/Git, then compare it with `docs/PROJECT_STATE.md` before working.
