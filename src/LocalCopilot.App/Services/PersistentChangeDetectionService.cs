@@ -22,8 +22,20 @@ public sealed class PersistentChangeDetectionService
         _lifecycleGate =
             new();
 
+    private readonly IForegroundWindowIdentityValidator
+        _identityValidator;
+
     private PersistentRunState?
         _active;
+
+    public PersistentChangeDetectionService(
+        IForegroundWindowIdentityValidator identityValidator)
+    {
+        _identityValidator =
+            identityValidator ??
+            throw new ArgumentNullException(
+                nameof(identityValidator));
+    }
 
     public event Action<PersistentChangeSample>?
         SampleReady;
@@ -78,7 +90,8 @@ public sealed class PersistentChangeDetectionService
                 nameof(sampleInterval));
         }
 
-        if (!epoch.Privacy.AllowsSensing)
+        if (!epoch.Privacy.Allows(
+                PrivacyCapability.CapturePixels))
         {
             throw new UnauthorizedAccessException(
                 "Privacy policy blocks persistent sensing.");
@@ -86,6 +99,13 @@ public sealed class PersistentChangeDetectionService
 
         epoch.CancellationToken
             .ThrowIfCancellationRequested();
+
+        if (!_identityValidator.IsCurrent(
+                epoch.Snapshot))
+        {
+            throw new InvalidOperationException(
+                "Capture target identity changed.");
+        }
 
         if (!GraphicsCaptureSession.IsSupported())
         {

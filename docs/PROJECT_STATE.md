@@ -1,10 +1,10 @@
 ---
 state_schema: 1
-reference_code_commit: dd6f56300fd32d9329f01e6d8515af925e0014bd
+reference_code_commit: a9c0adb877d010305a551cf705b87f952532c511
 last_verified_date: 2026-08-21
-completed_through: M2.4.2
-next_milestone: M2.4.3
-next_milestone_name: Capability-based Privacy Policy
+completed_through: M2.4.3
+next_milestone: M2.4.4
+next_milestone_name: Diagnostics and Input Hardening
 ---
 
 # Project state
@@ -13,11 +13,11 @@ This document separates verified implementation from target architecture. Update
 
 ## Executive state
 
-The implementation at `dd6f56300fd32d9329f01e6d8515af925e0014bd` is the accepted M2.4.2 functional baseline. [PR #12](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/12) moved sensing composition, subscriptions, and lifecycle into an application-owned coordinator while retaining `MainPage` as a view/command adapter. The canonical Windows `win-x64` build, 49 deterministic tests, CI, and the full physical-client sensing/privacy/teardown regression passed. Documentation-only descendants may follow this SHA without changing the accepted runtime behavior; always resolve live HEAD from GitHub/Git.
+The implementation at `a9c0adb877d010305a551cf705b87f952532c511` is the accepted M2.4.3 functional baseline. [PR #13](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/13) replaced the binary privacy decision with capability-specific policy, made Off stop all target observation, added policy revision to epoch identity, and revalidated HWND/PID immediately before every current capture entry point. The canonical Windows `win-x64` build, 58 deterministic tests, CI, and the full physical-client privacy/capture/teardown regression passed. Documentation-only descendants may follow this SHA without changing the accepted runtime behavior; always resolve live HEAD from GitHub/Git.
 
-There is no known blocking defect in the accepted M2 path or M2.4.2 lifecycle foundation. No rework is required unless a reproducible regression appears.
+There is no known blocking defect in the accepted M2 path or M2.4.3 privacy foundation. No rework is required unless a reproducible regression appears.
 
-The repository is not yet a complete copilot. It is a diagnostic WinUI shell around the sensing foundation. The next implementation work is M2.4.3 capability-based privacy policy before diagnostics hardening and any UI Automation content collection.
+The repository is not yet a complete copilot. It is a diagnostic WinUI shell around the sensing foundation. The next implementation work is M2.4.4 diagnostics and input hardening before any UI Automation content collection.
 
 ## Accepted milestone evidence
 
@@ -33,6 +33,7 @@ The repository is not yet a complete copilot. It is a diagnostic WinUI shell aro
 | M2.3.1 Diagnostic correlation | Complete | [PR #7](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/7) | MouseWheel, MouseClick, KeyboardActivity, and expired `None`; final run processed 33 samples with `staleDropped=0`; clean `hadError=False` shutdown and hook removal |
 | M2.4.1 Characterization tests and CI foundation | Complete | [PR #10](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/10), squash `833a0af` | 43/43 deterministic tests locally and on Ubuntu/Windows CI; canonical Windows build; unchanged M2 path passed the physical-client regression and privacy scan |
 | M2.4.2 Composition and lifecycle separation | Complete | [PR #12](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/12), validated code head `dd6f563` | 49/49 deterministic tests locally and on Ubuntu/Windows CI; canonical Windows build; application-owned coordinator passed lifecycle, privacy, recovery, unavailable-target, and armed-shutdown regression |
+| M2.4.3 Capability-based privacy policy | Complete | [PR #13](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/13), validated code head `a9c0adb` | 58/58 deterministic tests locally and on Ubuntu/Windows CI; canonical Windows build; true Off, capability gates, deny/recovery, identity revalidation, Disarm/Re-arm, stale rejection, and armed shutdown passed |
 
 PR #7 was squash-merged as `c29099a`. Its feature-branch head (`abcbf08`) is not the `main` baseline.
 
@@ -68,6 +69,23 @@ The behavior-bearing code was validated at PR #12 head `dd6f56300fd32d9329f01e6d
 
 Verdict: **accepted**. PR #12 is the merge record. M2.4.3 is the only approved next implementation gate; this evidence does not authorize M3 work.
 
+### M2.4.3 acceptance evidence
+
+The behavior-bearing code was validated at PR #13 head `a9c0adb877d010305a551cf705b87f952532c511` on 2026-08-21. The runtime bundle recorded the exact branch/SHA and an empty working tree.
+
+- Local Windows test run: 58 passed, 0 failed, 0 skipped.
+- Local canonical app build: `Debug/win-x64 --warnaserror`, 0 warnings, 0 errors.
+- [CI run #12](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32492536649): 58/58 core tests passed on Ubuntu and Windows; the Windows `Debug/win-x64 --warnaserror` app build passed.
+- Capability tests covered independent grants, deny precedence, exact application overrides, safe product defaults, diagnostic-only derived retention, invalid configuration, policy revision/change notifications, and epoch cancellation when capabilities or policy revision change.
+- Physical-client Off proof: after startup and again for the full Disarm interval, the independent OS probe observed Chrome/Explorer transitions while the application produced no foreground hook callback, identity lookup, title read, capture sample, or input-tracking event.
+- Every persistent session began only after a successful `SERVICE.IDENTITY_REVALIDATE` with matching expected/actual PID. This included Chrome, Explorer, post-deny recovery, and Re-arm.
+- Diagnostic Notepad was denied with capability mask zero before any title read or WGC session. The previous allowed epoch/session was cancelled, input tracking stopped, and returning to Explorer advanced to a fresh allowed epoch automatically.
+- Four sessions ended without error: context transition, privacy denial, user Disarm, and application shutdown. Three reported `staleDropped=0`; one in-flight sample during Disarm reported `staleDropped=1` and was correctly rejected rather than published.
+- The foreground hook stopped successfully on Disarm and shutdown. Re-arm installed a fresh hook; final shutdown stopped capture/input, reset/disposed the epoch, detached subscriptions, disposed the coordinator, and rejected the queued session-end UI notification as stale.
+- Diagnostic privacy scan found only approved metadata and activity kinds. No raw title, key/text value, coordinate, clipboard content, pixel payload, audio, prompt, or response was recorded; the independent OS probe retained title length only.
+
+Verdict: **accepted**. PR #13 is the review/merge record. M2.4.4 is the only approved next implementation gate; this evidence does not authorize M3 work.
+
 ## Current implementation map
 
 ### Current stack
@@ -77,8 +95,8 @@ Verdict: **accepted**. PR #12 is the merge record. M2.4.3 is the only approved n
 | Language/runtime | C# on .NET 10 | `net10.0-windows10.0.26100.0` |
 | Desktop UI | Packaged WinUI 3 | `Microsoft.WindowsAppSDK` 2.4.0 |
 | Portable logic | `LocalCopilot.Core` class library | `net10.0`; no WinUI/Windows API dependency |
-| Characterization tests | MSTest 4.3.3 | 49 deterministic tests; 49/49 passed locally and on both CI runners at the accepted M2.4.2 baseline |
-| Continuous integration | GitHub Actions | [PR #12 code-head run](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32487234647) passed core tests on Ubuntu/Windows and the `Debug/win-x64` app build on Windows |
+| Characterization tests | MSTest 4.3.3 | 58 deterministic tests; 58/58 passed locally and on both CI runners at the accepted M2.4.3 baseline |
+| Continuous integration | GitHub Actions | [PR #13 code-head run](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32492536649) passed core tests on Ubuntu/Windows and the `Debug/win-x64` app build on Windows |
 | Capture/image interop | Windows Graphics Capture + Win2D | `Microsoft.Graphics.Win2D` 1.4.0 |
 | Packaging/trust | MSIX tooling, full-trust desktop app | Development package identity used by `dotnet run` |
 | Canonical validated target | `Debug`, `win-x64` | Physical Windows client acceptance |
@@ -92,9 +110,9 @@ Qwen3-VL-2B appeared as an early candidate in the original product prompt. It is
 | File/component | Implemented responsibility | Important current boundary |
 | --- | --- | --- |
 | `ForegroundWindowObserver` | Out-of-context foreground WinEvent hook and latest pending HWND dispatch | External foreground changes only; own process skipped |
-| `ForegroundWindowService` | HWND/PID/process identity, privacy evaluation, then allowed title read | Process identity is the privacy bootstrap data |
-| `PrivacyPolicy` | Binary allow/block evaluation | Product policy configuration is not implemented; normal default is allow |
-| `ContextEpochManager` | Immutable context identity, cancellation, reuse, stale-work boundary | Epoch changes on HWND/PID/privacy decision changes |
+| `ForegroundWindowService` | HWND/PID/process identity, privacy evaluation, allowed title read, and immediate pre-capture identity revalidation | Process identity is the privacy bootstrap data |
+| `PrivacyPolicy` | Eleven independent capability grants, strict emergency/app/global precedence, normalized exact-app rules, immutable snapshots, revisioning, and change notification | Configuration boundary exists; settings UI and persistence do not |
+| `ContextEpochManager` | Immutable context identity, cancellation, reuse, stale-work boundary | Epoch changes on HWND/PID/capability/rule/reason/policy-revision changes |
 | `GraphicsCaptureItemFactory` | HWND to WGC capture target COM interop | Unavailable target is a typed failure |
 | `SingleFrameCaptureService` | Explicit one-frame WGC diagnostic capture | RAM-only result metadata; no image persistence |
 | `ChangeDetector` | Luminance frame comparison and region/classification | Pure CPU logic; Baseline/Insignificant/Meaningful/Large only, not semantic importance |
@@ -112,9 +130,11 @@ Qwen3-VL-2B appeared as an early candidate in the original product prompt. It is
 
 ## Verified current invariants
 
-- Auto sensing is OFF until the user explicitly arms it.
-- The foreground observer and allowed title read currently begin on page load even while auto sensing is OFF; this is a documented diagnostic-shell gap, not the target privacy behavior.
+- Screen observation is OFF until the user explicitly arms it; Off has no foreground hook, target identity lookup, title read, capture, or input tracking.
+- Disarm stops the observer, capture and input sources, cancels/resets the epoch, and Re-arm begins from no prior context.
 - Privacy is checked from HWND/PID/process identity before an allowed title read.
+- Every current WGC entry point requires `CapturePixels` and revalidates HWND/PID immediately before capture-item/session creation.
+- Title, pixels, UIA structure/text, OCR, derived retention, microphone, and local-server text/pixel/audio transmission are independent grants; one never implies another.
 - A blocked context does not create a capture target or start persistent sensing.
 - Repeated notifications for the same allowed HWND/PID reuse the epoch.
 - Context changes cancel prior work; stale UI/sample results are dropped.
@@ -130,8 +150,7 @@ Qwen3-VL-2B appeared as an early candidate in the original product prompt. It is
 
 The following capabilities do not exist in `main` and must not be described as complete:
 
-- Product privacy settings, per-application deny rules, pause controls, or persisted policy
-- Capability-specific privacy decisions for title/pixels/UIA/OCR/memory/local-server data
+- Product privacy settings UI, pause control, or persisted policy configuration
 - UI Automation client or semantic UI snapshot
 - Dialog/error/notification semantic detection
 - OCR or changed-region text extraction
@@ -151,11 +170,9 @@ The `systemAIModels` manifest capability is present, but no Windows AI model API
 
 ### Must be resolved before M3 continuous semantic sensing
 
-M2.4.1 resolved the missing automated characterization/CI foundation, and M2.4.2 resolved page-owned composition/lifetime. The remaining findings are:
+M2.4.1 resolved the missing automated characterization/CI foundation, M2.4.2 resolved page-owned composition/lifetime, and M2.4.3 resolved the binary/default-on privacy gaps. The remaining finding before semantic sensing is:
 
-1. **Privacy is binary and not product-configurable.** `AllowsSensing` cannot express different permissions for title, pixels, UIA text, memory, or LAN transfer. It also has no user-managed deny rules. M2.4.3 introduces the capability contract and configuration boundary before UIA exposes richer text.
-2. **Off is not yet a complete screen-privacy state.** The application-owned foreground observer and allowed title read begin at application startup; Arm gates persistent WGC/input tracking only. M2.4.3 must make Off/Paused stop target-window content reads.
-3. **No UIA execution boundary exists.** Official Windows guidance requires UIA client calls on a separate COM MTA worker, not the UI thread. Bounded traversal, caching, time budgets, and recovery/isolation are M3 acceptance requirements.
+1. **No UIA execution boundary exists.** Official Windows guidance requires UIA client calls on a separate COM MTA worker, not the UI thread. Bounded traversal, caching, time budgets, and recovery/isolation are M3 acceptance requirements.
 
 ### Important hardening debt
 
@@ -165,6 +182,7 @@ M2.4.1 resolved the missing automated characterization/CI foundation, and M2.4.2
 4. Only `win-x64` has runtime acceptance. x86 and ARM64 are declared project platforms but are not verified targets.
 5. `main` is not branch-protected and has no required checks.
 6. Error strings may be displayed in the diagnostic UI. Future content-bearing errors need redaction before logs, bundles, or server transmission.
+7. The capability policy has a validated configuration boundary and exact per-app behavior, but a user-facing settings UI, pause state, and persisted rules remain future product work.
 
 ## Current hardware and deployment assumptions
 
@@ -180,10 +198,10 @@ These are fixed design inputs, not upgrade suggestions:
 The next implementation branch is:
 
 ```text
-dev/m2-4-3-capability-privacy
+dev/m2-4-4-diagnostics-input-hardening
 ```
 
-M2.4.2 is accepted through PR #12. M2.4.3 must replace binary sensing permission with explicit capability decisions and true Off/Paused semantics while preserving the accepted sensing, lifecycle, test, CI, privacy-negative, and teardown evidence. It must not introduce UIA implementation, diagnostic-path refactoring, local-server transport, or other later-slice behavior.
+M2.4.3 is accepted through PR #13. M2.4.4 must replace fixed diagnostic paths/legacy names, preserve the one-command full-bundle workflow, harden diagnostic cleanup/content whitelisting, and measure the current low-level input-hook behavior before choosing a replacement. It must not introduce UIA, OCR, local-server transport, or other later-slice behavior.
 
 Do not start M3.1 UIA code directly from the M2.3 baseline.
 

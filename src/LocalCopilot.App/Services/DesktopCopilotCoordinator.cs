@@ -168,56 +168,12 @@ public sealed class DesktopCopilotCoordinator :
 
         AttachServiceSubscriptions();
 
-        try
-        {
-            _foregroundWindowObserver.Start();
+        SetOrchestratorStatus(
+            "OFF");
 
-            DiagnosticLog.Write(
-                "COORD.OBSERVER_START",
-                $"observerRunning={_foregroundWindowObserver.IsRunning}");
-
-            ForegroundWindowObservation? observation =
-                _foregroundWindowService.GetCurrent(
-                    _privacyPolicy,
-                    _ownProcessId);
-
-            if (observation is null)
-            {
-                DiagnosticLog.Write(
-                    "COORD.INITIAL",
-                    "Initial observation=null.");
-
-                return;
-            }
-
-            DiagnosticLog.Write(
-                "COORD.INITIAL",
-                $"hwnd=0x{observation.Snapshot.Handle.ToInt64():X} " +
-                $"process={observation.Snapshot.ProcessName} " +
-                $"privacy={observation.Privacy.Disposition}");
-
-            ApplyObservation(
-                observation);
-        }
-        catch (Exception ex)
-        {
-            DiagnosticLog.Write(
-                "COORD.START_ERROR",
-                ex.ToString());
-
-            UpdateViewState(
-                state =>
-                    state with
-                    {
-                        ProcessName =
-                            "Observer start failed",
-                        WindowTitle =
-                            ex.Message
-                    });
-
-            Stop(
-                "start_failed");
-        }
+        DiagnosticLog.Write(
+            "COORD.PRIVACY_OFF",
+            "Foreground observation remains stopped until explicit Arm.");
     }
 
     public void Stop(
@@ -326,13 +282,15 @@ public sealed class DesktopCopilotCoordinator :
 
         ContextEpoch? epoch =
             GetAllowedEpoch(
-                "target_probe");
+                "target_probe",
+                PrivacyCapability.CapturePixels);
 
         if (epoch is null)
         {
             SetCaptureTargetStatus(
                 _currentEpoch is not null &&
-                !_currentEpoch.Privacy.AllowsSensing
+                !_currentEpoch.Privacy.Allows(
+                    PrivacyCapability.CapturePixels)
                     ? "Blocked by privacy policy."
                     : "No allowed capture target.");
 
@@ -370,6 +328,19 @@ public sealed class DesktopCopilotCoordinator :
 
         try
         {
+            if (!_foregroundWindowService.IsCurrent(
+                    snapshot))
+            {
+                SetCaptureTargetStatus(
+                    "Capture target changed; retry.");
+
+                DiagnosticLog.Write(
+                    "CAPTURE.PROBE_REJECT",
+                    $"epoch={epoch.Id} reason=identity_changed");
+
+                return;
+            }
+
             GraphicsCaptureItem item =
                 GraphicsCaptureItemFactory.CreateForWindow(
                     snapshot.Handle);
@@ -402,13 +373,15 @@ public sealed class DesktopCopilotCoordinator :
 
         ContextEpoch? epoch =
             GetAllowedEpoch(
-                "single_frame");
+                "single_frame",
+                PrivacyCapability.CapturePixels);
 
         if (epoch is null)
         {
             SetCapturedFrameStatus(
                 _currentEpoch is not null &&
-                !_currentEpoch.Privacy.AllowsSensing
+                !_currentEpoch.Privacy.Allows(
+                    PrivacyCapability.CapturePixels)
                     ? "Blocked by privacy policy."
                     : "No allowed capture target.");
 
@@ -427,6 +400,19 @@ public sealed class DesktopCopilotCoordinator :
 
         try
         {
+            if (!_foregroundWindowService.IsCurrent(
+                    snapshot))
+            {
+                SetCapturedFrameStatus(
+                    "Capture target changed; retry.");
+
+                DiagnosticLog.Write(
+                    "CAPTURE.FRAME_REJECT",
+                    $"epoch={epoch.Id} reason=identity_changed");
+
+                return;
+            }
+
             GraphicsCaptureItem item =
                 GraphicsCaptureItemFactory.CreateForWindow(
                     snapshot.Handle);
@@ -508,13 +494,15 @@ public sealed class DesktopCopilotCoordinator :
 
         ContextEpoch? epoch =
             GetAllowedEpoch(
-                $"change_{profileWidth}");
+                $"change_{profileWidth}",
+                PrivacyCapability.CapturePixels);
 
         if (epoch is null)
         {
             SetChangeDetectionStatus(
                 _currentEpoch is not null &&
-                !_currentEpoch.Privacy.AllowsSensing
+                !_currentEpoch.Privacy.Allows(
+                    PrivacyCapability.CapturePixels)
                     ? "Blocked by privacy policy."
                     : "No allowed change-detection target.");
 
@@ -655,7 +643,32 @@ public sealed class DesktopCopilotCoordinator :
             "ARMED | evaluating current context...");
 
         _sensingOrchestrator.Arm(
-            _currentEpoch);
+            currentEpoch: null);
+
+        try
+        {
+            _foregroundWindowObserver.Start();
+
+            DiagnosticLog.Write(
+                "COORD.OBSERVER_START",
+                $"observerRunning={_foregroundWindowObserver.IsRunning}");
+
+            ObserveCurrentForeground(
+                "user_arm");
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLog.Write(
+                "COORD.ARM_ERROR",
+                $"type={ex.GetType().Name} " +
+                $"hresult=0x{ex.HResult:X8}");
+
+            Disarm();
+            SetOrchestratorStatus(
+                "Arm failed.");
+
+            return;
+        }
 
         RefreshInputTracking(
             _currentEpoch,
@@ -673,8 +686,19 @@ public sealed class DesktopCopilotCoordinator :
         _sensingOrchestrator.Disarm(
             "user_disarm");
 
+        bool observerStopped =
+            _foregroundWindowObserver.Stop();
+
+        DiagnosticLog.Write(
+            "COORD.OBSERVER_STOP",
+            $"reason=user_disarm success={observerStopped}");
+
         StopInputTracking(
             "user_disarm");
+
+        _contextEpochManager.Reset();
+        _currentEpoch = null;
+        _changeDetectionProbeService.ResetAll();
 
         SetOrchestratorStatus(
             "OFF");
@@ -699,13 +723,15 @@ public sealed class DesktopCopilotCoordinator :
 
         ContextEpoch? epoch =
             GetAllowedEpoch(
-                "persistent_start");
+                "persistent_start",
+                PrivacyCapability.CapturePixels);
 
         if (epoch is null)
         {
             SetPersistentChangeStatus(
                 _currentEpoch is not null &&
-                !_currentEpoch.Privacy.AllowsSensing
+                !_currentEpoch.Privacy.Allows(
+                    PrivacyCapability.CapturePixels)
                     ? "Blocked by privacy policy."
                     : "No allowed persistent target.");
 
@@ -881,6 +907,99 @@ public sealed class DesktopCopilotCoordinator :
             $"hwnd=0x{hwnd.ToInt64():X} queued={queued}");
     }
 
+    private void ObserveCurrentForeground(
+        string reason)
+    {
+        ForegroundWindowObservation? observation =
+            _foregroundWindowService.GetCurrent(
+                _privacyPolicy,
+                _ownProcessId);
+
+        DiagnosticLog.Write(
+            "COORD.CURRENT_OBSERVATION",
+            $"reason={reason} " +
+            $"hasObservation={observation is not null}");
+
+        if (observation is not null)
+        {
+            ApplyObservation(
+                observation);
+        }
+    }
+
+    private void PrivacyPolicy_Changed(
+        PrivacyPolicyChanged change)
+    {
+        if (_uiDispatcher.HasThreadAccess)
+        {
+            ApplyPolicyChange(
+                change);
+
+            return;
+        }
+
+        bool queued =
+            _uiDispatcher.TryEnqueue(
+                DispatcherQueuePriority.High,
+                () => ApplyPolicyChange(change));
+
+        DiagnosticLog.Write(
+            "COORD.POLICY_CHANGE_ENQUEUE",
+            $"previousRevision={change.PreviousRevision} " +
+            $"currentRevision={change.CurrentRevision} " +
+            $"queued={queued}");
+    }
+
+    private void ApplyPolicyChange(
+        PrivacyPolicyChanged change)
+    {
+        if (!_lifecycle.IsRunning ||
+            !_sensingOrchestrator.IsArmed)
+        {
+            return;
+        }
+
+        ContextEpoch? current =
+            _currentEpoch;
+
+        if (current is null)
+        {
+            ObserveCurrentForeground(
+                "policy_changed");
+
+            return;
+        }
+
+        ForegroundWindowObservation? observation =
+            _foregroundWindowService.GetFromHandle(
+                current.Snapshot.Handle,
+                _privacyPolicy,
+                _ownProcessId);
+
+        if (observation is null)
+        {
+            _contextEpochManager.Reset();
+            _currentEpoch = null;
+            _sensingOrchestrator.Disarm(
+                "policy_changed_unavailable");
+            _sensingOrchestrator.Arm(
+                currentEpoch: null);
+            StopInputTracking(
+                "policy_changed_unavailable");
+
+            return;
+        }
+
+        DiagnosticLog.Write(
+            "COORD.POLICY_CHANGE_APPLY",
+            $"previousRevision={change.PreviousRevision} " +
+            $"currentRevision={change.CurrentRevision} " +
+            $"epoch={current.Id}");
+
+        ApplyObservation(
+            observation);
+    }
+
     private void ApplyObservation(
         ForegroundWindowObservation observation)
     {
@@ -946,7 +1065,8 @@ public sealed class DesktopCopilotCoordinator :
                                 "HH:mm:ss.fff")
                     };
 
-                if (!privacy.AllowsSensing)
+                if (!privacy.Allows(
+                        PrivacyCapability.ObserveIdentity))
                 {
                     return updated with
                     {
@@ -967,10 +1087,13 @@ public sealed class DesktopCopilotCoordinator :
                     updated with
                     {
                         WindowTitle =
-                            string.IsNullOrWhiteSpace(
-                                snapshot.WindowTitle)
-                                ? "(no title)"
-                                : snapshot.WindowTitle
+                            !privacy.Allows(
+                                PrivacyCapability.ReadWindowTitle)
+                                ? "[Title blocked]"
+                                : string.IsNullOrWhiteSpace(
+                                    snapshot.WindowTitle)
+                                    ? "(no title)"
+                                    : snapshot.WindowTitle
                     };
 
                 if (!contextChanged)
@@ -993,7 +1116,8 @@ public sealed class DesktopCopilotCoordinator :
                 };
             });
 
-        if (!privacy.AllowsSensing)
+        if (!privacy.Allows(
+                PrivacyCapability.ObserveIdentity))
         {
             DiagnosticLog.Write(
                 "COORD.PRIVACY_BLOCKED",
@@ -1012,7 +1136,8 @@ public sealed class DesktopCopilotCoordinator :
     }
 
     private ContextEpoch? GetAllowedEpoch(
-        string operation)
+        string operation,
+        PrivacyCapability requiredCapability)
     {
         ContextEpoch? epoch =
             _currentEpoch;
@@ -1021,6 +1146,7 @@ public sealed class DesktopCopilotCoordinator :
             "SENSING.GATE",
             $"operation={operation} " +
             $"epoch={epoch?.Id ?? 0} " +
+            $"capability={requiredCapability} " +
             $"privacy={epoch?.Privacy.Disposition.ToString() ?? "None"}");
 
         if (epoch is null)
@@ -1032,12 +1158,14 @@ public sealed class DesktopCopilotCoordinator :
             return null;
         }
 
-        if (!epoch.Privacy.AllowsSensing)
+        if (!epoch.Privacy.Allows(
+                requiredCapability))
         {
             DiagnosticLog.Write(
                 "CAPTURE.PRIVACY_REJECT",
                 $"operation={operation} " +
                 $"epoch={epoch.Id} " +
+                $"capability={requiredCapability} " +
                 $"process={epoch.Snapshot.ProcessName} " +
                 $"rule={epoch.Privacy.RuleId} " +
                 $"reason={epoch.Privacy.Reason}");
@@ -1088,7 +1216,8 @@ public sealed class DesktopCopilotCoordinator :
         if (
             !_sensingOrchestrator.IsArmed ||
             epoch is null ||
-            !epoch.Privacy.AllowsSensing)
+            !epoch.Privacy.Allows(
+                PrivacyCapability.RetainDerivedEvent))
         {
             StopInputTracking(
                 reason);
@@ -1150,7 +1279,8 @@ public sealed class DesktopCopilotCoordinator :
                         epoch is null ||
                         epoch.Id !=
                             sample.EpochId ||
-                        !epoch.Privacy.AllowsSensing)
+                        !epoch.Privacy.Allows(
+                            PrivacyCapability.CapturePixels))
                     {
                         DiagnosticLog.Write(
                             "PERSIST.UI_STALE_DROP",
@@ -1254,6 +1384,9 @@ public sealed class DesktopCopilotCoordinator :
         _foregroundWindowObserver.ForegroundWindowChanged +=
             ForegroundWindowObserver_ForegroundWindowChanged;
 
+        _privacyPolicy.Changed +=
+            PrivacyPolicy_Changed;
+
         _subscriptionsAttached =
             true;
 
@@ -1268,6 +1401,9 @@ public sealed class DesktopCopilotCoordinator :
         {
             return;
         }
+
+        _privacyPolicy.Changed -=
+            PrivacyPolicy_Changed;
 
         _foregroundWindowObserver.ForegroundWindowChanged -=
             ForegroundWindowObserver_ForegroundWindowChanged;

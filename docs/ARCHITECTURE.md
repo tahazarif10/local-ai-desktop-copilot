@@ -171,7 +171,7 @@ Responsibilities:
 - capability-specific authorization;
 - fail-closed decisions and rule provenance.
 
-Current implementation has `PrivacyPolicy` with a binary decision. M2.4 replaces that single meaning with the contract in [Privacy Model](PRIVACY_MODEL.md).
+Current implementation has a revisioned capability-based `PrivacyPolicy` with strict emergency-deny, exact-application, and global-grant precedence. Capability and policy revision participate in epoch identity; existing title, capture, and diagnostic-retention call sites request their own permission. A settings UI and persisted policy store are not yet implemented. See [Privacy Model](PRIVACY_MODEL.md).
 
 ### 6.2 Foreground context service
 

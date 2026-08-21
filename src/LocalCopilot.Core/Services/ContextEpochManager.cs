@@ -182,6 +182,10 @@ public sealed class ContextEpochManager :
                 StringComparison.OrdinalIgnoreCase) &&
             current.Privacy.Disposition ==
                 privacy.Disposition &&
+            current.Privacy.GrantedCapabilities ==
+                privacy.GrantedCapabilities &&
+            current.Privacy.PolicyRevision ==
+                privacy.PolicyRevision &&
             string.Equals(
                 current.Privacy.RuleId,
                 privacy.RuleId,
