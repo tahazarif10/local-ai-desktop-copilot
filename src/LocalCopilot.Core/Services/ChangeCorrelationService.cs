@@ -15,9 +15,22 @@ public sealed class ChangeCorrelationService
 
     private readonly TimeSpan _lookback;
 
+    private readonly Func<long> _getTimestamp;
+
     public ChangeCorrelationService(
         DiagnosticTimeline timeline,
         TimeSpan? lookback = null)
+        : this(
+            timeline,
+            lookback,
+            Stopwatch.GetTimestamp)
+    {
+    }
+
+    internal ChangeCorrelationService(
+        DiagnosticTimeline timeline,
+        TimeSpan? lookback,
+        Func<long> getTimestamp)
     {
         _timeline =
             timeline ??
@@ -34,6 +47,11 @@ public sealed class ChangeCorrelationService
             throw new ArgumentOutOfRangeException(
                 nameof(lookback));
         }
+
+        _getTimestamp =
+            getTimestamp ??
+            throw new ArgumentNullException(
+                nameof(getTimestamp));
     }
 
     public ChangeCorrelationResult? Observe(
@@ -52,7 +70,7 @@ public sealed class ChangeCorrelationService
         }
 
         long observedAtTicks =
-            Stopwatch.GetTimestamp();
+            _getTimestamp();
 
         bool activeEpoch =
             _timeline.TryReadMostRecent(

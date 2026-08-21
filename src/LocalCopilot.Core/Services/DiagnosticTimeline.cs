@@ -25,6 +25,17 @@ public sealed class DiagnosticTimeline
 
     private long _currentEpochId;
 
+    internal int EventCount
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _events.Count;
+            }
+        }
+    }
+
     public DiagnosticTimeline(
         int capacity = DefaultCapacity,
         TimeSpan? retention = null)

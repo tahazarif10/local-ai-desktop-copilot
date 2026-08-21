@@ -19,6 +19,8 @@ There is no known blocking defect in the accepted M2 path. No further M2.3 rewor
 
 The repository is not yet a complete copilot. It is a diagnostic WinUI shell around the sensing foundation. The next implementation work is M2.4 foundation hardening before any UI Automation content collection.
 
+The active M2.4.1 candidate on `dev/m2-4-1-characterization-tests` extracts deterministic logic into `LocalCopilot.Core`, defines 43 characterization tests, and adds Linux/Windows CI. This is implementation-in-validation, not accepted milestone evidence: `c29099a` remains the last verified functional baseline until the core suite, canonical Windows build, and required CI jobs pass.
+
 ## Accepted milestone evidence
 
 | Milestone | Status | Merged evidence | Runtime evidence |
@@ -42,6 +44,9 @@ PR #7 was squash-merged as `c29099a`. Its feature-branch head (`abcbf08`) is not
 | --- | --- | --- |
 | Language/runtime | C# on .NET 10 | `net10.0-windows10.0.26100.0` |
 | Desktop UI | Packaged WinUI 3 | `Microsoft.WindowsAppSDK` 2.4.0 |
+| Portable logic | `LocalCopilot.Core` class library | `net10.0`; no WinUI/Windows API dependency |
+| Characterization tests | MSTest 4.3.3 | 43 deterministic tests defined; acceptance evidence pending |
+| Continuous integration | GitHub Actions | Core tests on Ubuntu/Windows; `Debug/win-x64` app build on Windows |
 | Capture/image interop | Windows Graphics Capture + Win2D | `Microsoft.Graphics.Win2D` 1.4.0 |
 | Packaging/trust | MSIX tooling, full-trust desktop app | Development package identity used by `dotnet run` |
 | Canonical validated target | `Debug`, `win-x64` | Physical Windows client acceptance |
@@ -101,7 +106,7 @@ The following capabilities do not exist in `main` and must not be described as c
 - Question/answer pipeline
 - Microphone, VAD, STT, TTS, or conversational activation
 - Tray/background product experience
-- Automated tests, CI workflow, or protected `main` branch
+- Required CI checks or a protected `main` branch
 - Production installer, update path, or release pipeline
 
 The `systemAIModels` manifest capability is present, but no Windows AI model API is currently used. It is not evidence of model integration.
@@ -110,7 +115,7 @@ The `systemAIModels` manifest capability is present, but no Windows AI model API
 
 ### Must be resolved before M3 continuous semantic sensing
 
-1. **No automated characterization tests.** Pure logic exists for privacy, epochs, change classification, timeline, and correlation, but there is no test project or CI. M2.4.1 adds tests around accepted behavior before refactoring it.
+1. **Characterization coverage is not accepted yet.** The active M2.4.1 candidate defines portable tests for privacy, epochs, change classification, timeline, and correlation plus two-runner CI. It remains incomplete until the full suite, canonical Windows build, and CI jobs pass without changing runtime behavior.
 2. **UI owns product composition and lifetime.** `MainPage.xaml.cs` constructs and coordinates every service. M2.4 separates a composition/lifecycle boundary without changing accepted behavior.
 3. **Privacy is binary and not product-configurable.** `AllowsSensing` cannot express different permissions for title, pixels, UIA text, memory, or LAN transfer. It also has no user-managed deny rules. M2.4 introduces the capability contract and configuration boundary before UIA exposes richer text.
 4. **Off is not yet a complete screen-privacy state.** The foreground observer and allowed title read run on page load; Arm gates persistent WGC/input tracking only. M2.4 must make Off/Paused stop target-window content reads.

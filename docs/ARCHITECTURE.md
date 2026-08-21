@@ -315,16 +315,21 @@ Audio has its own permission, mute state, retention rule, and instrumentation. A
 
 ### 7.1 Current repository
 
-Today there is one project and one process:
+Today there are two production assemblies in one desktop process plus a portable test project:
 
 ```text
 LocalCopilot.App
   MainPage (composition + diagnostic UI + integration)
-  Services (domain logic mixed with Windows adapters)
-  Diagnostics
+  Windows adapters (WinEvent, WGC, Win32 input)
+        |
+        v
+LocalCopilot.Core
+  privacy policy, epochs, change classification, timeline/correlation models
+
+LocalCopilot.Core.Tests -> LocalCopilot.Core
 ```
 
-This is acceptable for the completed end-to-end probes but not the final product boundary.
+The split deliberately keeps deterministic logic out of the WinUI target so it can be characterized without XAML, capture, hooks, UI Automation, or a live desktop. It does not add a process or trust boundary, and `MainPage` still owns too much composition/lifetime work. `DiagnosticLog` temporarily lives in Core to preserve accepted diagnostic behavior without introducing a logging refactor in M2.4.1; its static, fixed-path design remains M2.4.4 debt.
 
 ### 7.2 Incremental target
 
