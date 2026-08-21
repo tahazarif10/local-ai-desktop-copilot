@@ -46,7 +46,7 @@ Exit criteria:
 - CI is green, or its absence/blocker is explicitly recorded rather than silently bypassed.
 - No product behavior or diagnostic event meaning changes.
 
-### ▶ M2.4.2 Composition and lifecycle separation
+### ✅ M2.4.2 Composition and lifecycle separation
 
 Scope:
 
@@ -60,7 +60,9 @@ Exit criteria:
 - Arm/Disarm and foreground transitions behave exactly as the M2.3 baseline.
 - Existing runtime acceptance and new tests pass.
 
-### ◻ M2.4.3 Capability-based privacy policy
+Accepted evidence: [PR #12](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/12), 49 deterministic tests, Ubuntu/Windows CI, canonical `Debug/win-x64` build, and a physical Windows regression covering privacy denial/recovery, same-context reuse, unavailable-target recovery, Disarm/Re-arm, and close while Armed with clean hook/session/input/subscription disposal.
+
+### ▶ M2.4.3 Capability-based privacy policy
 
 Scope:
 

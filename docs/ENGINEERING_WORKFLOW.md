@@ -119,7 +119,7 @@ The accepted M2.3 baseline `c29099a` had no automated tests. M2.4.1 added a port
 dotnet test .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj -c Release --settings .\tests\LocalCopilot.Core.Tests\.runsettings
 ```
 
-The suite currently contains 43 deterministic tests for `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, and `ChangeCorrelationService`. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, global hooks, UI Automation, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build above.
+The suite currently contains 49 deterministic tests for `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, `ChangeCorrelationService`, and the one-shot `ApplicationLifecycleGate`. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, global hooks, UI Automation, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build above.
 
 The CI workflow runs the core suite on both Ubuntu and Windows, then builds the packaged app as `Debug/win-x64` on Windows. Test-result artifacts are retained for failed as well as successful runs. Do not write “all tests passed” unless the relevant local/CI run is identified and actually passed; report build, test, CI, and physical runtime evidence as separate facts.
 

@@ -6,14 +6,14 @@ Privacy is a control-plane boundary, not a filter applied after capture.
 
 The current M2 implementation correctly evaluates process identity before title/capture and blocks capture for denied contexts. It is still a diagnostic foundation, not the final product privacy system. In particular:
 
-- the foreground observer starts when `MainPage` loads, independently of the Arm button;
+- the application-owned coordinator starts the foreground observer at application launch, independently of the Arm button;
 - an allowed window title is read and displayed even while auto capture sensing is OFF;
 - the Arm button gates persistent WGC and diagnostic input tracking, not all foreground awareness;
 - policy is a binary `AllowsSensing` decision;
 - normal product configuration defaults to allow because no user blocklist/settings UI exists;
 - Notepad is denied only as a deterministic fixture while diagnostic mode is enabled.
 
-Therefore the accurate current claim is **“automatic capture sensing defaults OFF”**, not “all screen observation defaults OFF.” M2.4 must close this gap before semantic UI text is introduced.
+Therefore the accurate current claim is **“automatic capture sensing defaults OFF”**, not “all screen observation defaults OFF.” M2.4.3 must close this gap before semantic UI text is introduced.
 
 ## 2. Privacy goals
 
@@ -239,11 +239,10 @@ A content-bearing milestone cannot pass unless tests/runtime evidence show:
 
 M2.4 closes privacy gaps in this order:
 
-1. characterize current privacy/epoch behavior with tests;
-2. separate lifetime/composition from the page;
-3. implement capability decisions and true Off/Paused semantics;
-4. add user-configurable policy boundary and cancel-on-policy-change;
-5. remove fixed diagnostic path/content-risky exception logging;
-6. only then introduce UIA structure/text in M3.
+1. ✅ characterize current privacy/epoch behavior with tests (M2.4.1);
+2. ✅ separate lifetime/composition from the page (M2.4.2);
+3. ▶ implement capability decisions, a user-configurable policy boundary, true Off/Paused semantics, and cancel-on-policy-change (M2.4.3);
+4. ◻ remove fixed diagnostic paths/content-risky exception logging and measure input-hook hardening (M2.4.4);
+5. only then introduce UIA structure/text in M3.
 
 See [ADR 0001](decisions/0001-privacy-before-content.md) and [ADR 0005](decisions/0005-foundation-hardening-before-uia.md).

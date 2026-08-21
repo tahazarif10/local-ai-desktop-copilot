@@ -319,17 +319,20 @@ Today there are two production assemblies in one desktop process plus a portable
 
 ```text
 LocalCopilot.App
-  MainPage (composition + diagnostic UI + integration)
+  App + ApplicationCompositionRoot (process/window composition and lifetime)
+  DesktopCopilotCoordinator (integration, subscriptions, commands, view state)
+  MainPage (diagnostic rendering + command forwarding)
   Windows adapters (WinEvent, WGC, Win32 input)
         |
         v
 LocalCopilot.Core
-  privacy policy, epochs, change classification, timeline/correlation models
+  privacy policy, epochs, lifecycle gate, change classification,
+  timeline/correlation models
 
 LocalCopilot.Core.Tests -> LocalCopilot.Core
 ```
 
-The split deliberately keeps deterministic logic out of the WinUI target so it can be characterized without XAML, capture, hooks, UI Automation, or a live desktop. It does not add a process or trust boundary, and `MainPage` still owns too much composition/lifetime work. `DiagnosticLog` temporarily lives in Core to preserve accepted diagnostic behavior without introducing a logging refactor in M2.4.1; its static, fixed-path design remains M2.4.4 debt.
+The split deliberately keeps deterministic logic out of the WinUI target so it can be characterized without XAML, capture, hooks, UI Automation, or a live desktop. It does not add a process or trust boundary. `App` creates and owns one coordinator; the coordinator owns long-running sensing resources and service subscriptions; `MainPage` attaches/detaches only as an `IDesktopCopilotView` and forwards user commands. `DiagnosticLog` temporarily lives in Core to preserve accepted diagnostic behavior without introducing a logging refactor in M2.4.1; its static, fixed-path design remains M2.4.4 debt.
 
 ### 7.2 Incremental target
 
@@ -345,7 +348,7 @@ LocalCopilot.Inference.Server   local endpoint, resource manager, runtime adapte
 *.Tests                         pure, contract, and Windows integration suites
 ```
 
-M2.4 first separates logical composition and tests. It must not create all future projects at once.
+M2.4.1 established the portable test boundary and M2.4.2 separated application composition/lifecycle from the page. Later milestones must not create all future projects at once.
 
 ## 8. Threading and lifecycle model
 
@@ -360,7 +363,20 @@ M2.4 first separates logical composition and tests. It must not create all futur
 | Event normalization/memory | Single-owner worker or explicitly synchronized bounded pipeline |
 | Local inference | AI server worker with deadlines/resource arbitration |
 
-Application lifetime, not page navigation, must ultimately own long-running services. Shutdown order is:
+Application lifetime, not page navigation, owns the current long-running services. The accepted M2.4.2 implementation uses a one-shot lifecycle gate and this concrete shutdown sequence:
+
+1. mark the coordinator stopped so new commands/foreground events are rejected;
+2. remove the foreground hook on its installing UI thread;
+3. disarm and stop the active persistent capture session;
+4. stop content-free input tracking and reset the diagnostic timeline;
+5. reset/cancel the active epoch and capture probes;
+6. detach service subscriptions;
+7. dispose the input tracker, foreground observer, and epoch manager;
+8. detach the view when XAML unloads.
+
+Already-queued sample/session UI notifications still pass through the epoch publication gate; the accepted shutdown run dropped them as stale after reset without rendering or touching disposed sensing resources.
+
+The target order for later content-bearing workers remains:
 
 1. stop accepting commands/events;
 2. cancel active epoch and pending operations;

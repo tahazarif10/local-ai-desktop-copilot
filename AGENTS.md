@@ -60,7 +60,7 @@ Read `docs/PRIVACY_MODEL.md` before adding any new source of content.
 - Preserve the verified M2 sensing path unless a failing test or measured problem requires change.
 - Do not add M3 UIA code before M2.4 exit criteria are satisfied.
 - Keep Win32/WinRT/COM adapters behind narrow contracts; pure policy and event logic must be unit-testable without Windows interop.
-- UI code must not become the lifetime owner and orchestration implementation for new product services. M2.4 moves composition/lifecycle out of `MainPage`.
+- UI code must not become the lifetime owner and orchestration implementation for new product services. M2.4.2 moved composition/lifecycle out of `MainPage`; preserve the application-owned coordinator boundary.
 - UI Automation calls belong on a dedicated COM MTA worker, never the WinUI thread. Scope traversal to the foreground HWND, use Control/Content views and property caching, and enforce node/depth/text/time budgets.
 - Do not assume `Task` cancellation can interrupt a blocked cross-process COM provider. Continuous UIA must have a measured recovery/isolation strategy before acceptance.
 - Do not make OCR or VLM always-on. Use the semantic escalation ladder: UIA, then changed-region OCR, then VLM only if required.
@@ -99,4 +99,4 @@ A milestone is complete only when all of the following are true:
 
 ## Current handoff
 
-The last verified functional code baseline is `833a0af915a5ed58dd61642c1e188c623d3b90d4`; later documentation-only `main` commits may be descendants. M2.4.1 is complete, and the next implementation gate is M2.4.2 composition and lifecycle separation on `dev/m2-4-2-composition-lifecycle`. Resolve live `main` HEAD from GitHub/Git, then compare it with `docs/PROJECT_STATE.md` before working.
+The last verified functional code baseline is `dd6f56300fd32d9329f01e6d8515af925e0014bd`; later documentation-only commits may be descendants. M2.4.2 composition/lifecycle separation is accepted through PR #12, and the next implementation gate is M2.4.3 capability-based privacy policy on `dev/m2-4-3-capability-privacy`. Resolve live `main` HEAD from GitHub/Git, then compare it with `docs/PROJECT_STATE.md` before working.
