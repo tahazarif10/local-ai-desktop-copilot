@@ -277,7 +277,7 @@ public sealed class ChangeDetectorTests
         Assert.AreEqual(
             "dimensions_changed",
             result.Reason);
-        CollectionAssert.AreEqual(
+        Assert.AreSequenceEqual(
             new byte[16],
             first);
     }
@@ -303,7 +303,7 @@ public sealed class ChangeDetectorTests
 
         Assert.IsFalse(
             detector.HasBaseline);
-        CollectionAssert.AreEqual(
+        Assert.AreSequenceEqual(
             new byte[16],
             frame);
 
