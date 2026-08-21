@@ -245,7 +245,7 @@ internal static class DiagnosticSessionParser
                     '/');
 
         normalized =
-            normalized.Length % 4 switch
+            (normalized.Length % 4) switch
             {
                 0 => normalized,
                 2 => normalized + "==",
