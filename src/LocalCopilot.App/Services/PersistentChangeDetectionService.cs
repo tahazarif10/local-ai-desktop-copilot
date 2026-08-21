@@ -296,7 +296,7 @@ public sealed class PersistentChangeDetectionService
         string? errorType =
             null;
 
-        string? errorMessage =
+        int? errorHResult =
             null;
 
         bool hadError =
@@ -413,17 +413,16 @@ public sealed class PersistentChangeDetectionService
             errorType =
                 ex.GetType().Name;
 
-            errorMessage =
-                ex.Message;
+            errorHResult =
+                ex.HResult;
 
             state.SetStopReasonIfUnset(
                 "error");
 
-            DiagnosticLog.Write(
+            DiagnosticLog.WriteException(
                 "PERSIST.SESSION_ERROR",
-                $"epoch={state.Epoch.Id} " +
-                $"type={errorType} " +
-                $"message={errorMessage}");
+                ex,
+                $"epoch={state.Epoch.Id}");
         }
         finally
         {
@@ -480,7 +479,7 @@ public sealed class PersistentChangeDetectionService
                     stopReason,
                     hadError,
                     errorType,
-                    errorMessage,
+                    errorHResult,
                     framesArrived,
                     framesReplaced,
                     samplesProcessed,
@@ -530,11 +529,10 @@ public sealed class PersistentChangeDetectionService
         }
         catch (Exception ex)
         {
-            DiagnosticLog.Write(
+            DiagnosticLog.WriteException(
                 "PERSIST.FRAME_ERROR",
-                $"epoch={state.Epoch.Id} " +
-                $"type={ex.GetType().Name} " +
-                $"message={ex.Message}");
+                ex,
+                $"epoch={state.Epoch.Id}");
 
             state.SetStopReasonIfUnset(
                 "frame_error");

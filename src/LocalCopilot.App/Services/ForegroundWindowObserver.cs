@@ -272,9 +272,9 @@ public sealed class ForegroundWindowObserver : IDisposable
                 }
                 catch (Exception ex)
                 {
-                    DiagnosticLog.Write(
+                    DiagnosticLog.WriteException(
                         "HOOK.RAISE_ERROR",
-                        ex.ToString());
+                        ex);
                 }
             }
         }

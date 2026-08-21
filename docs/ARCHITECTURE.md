@@ -226,7 +226,7 @@ The current low-level hooks record only activity kind and monotonic time within 
 
 Future event records must preserve that uncertainty. Do not turn `MouseClick within 2 s` into “the click caused this change.”
 
-The callbacks must remain constant-time and content-free. Microsoft notes that low-level hooks can be silently removed after callback timeout and recommends dedicated-thread handoff or Raw Input for robust monitoring; M2.4 measures before replacing the accepted implementation.
+The callbacks must remain constant-time and content-free. Microsoft notes that low-level hooks can be silently removed after callback timeout and recommends dedicated-thread handoff or Raw Input for robust monitoring. M2.4.4 measured 1,965 target-client callbacks across four hook lifetimes with zero errors/mismatches, successful unhook, a 92.8-microsecond weighted mean, and a 929.8-microsecond maximum; the synchronous diagnostic-only path remains accepted until a reproducible regression justifies replacement.
 
 ### 6.7 UI Automation semantic reader
 
@@ -332,7 +332,7 @@ LocalCopilot.Core
 LocalCopilot.Core.Tests -> LocalCopilot.Core
 ```
 
-The split deliberately keeps deterministic logic out of the WinUI target so it can be characterized without XAML, capture, hooks, UI Automation, or a live desktop. It does not add a process or trust boundary. `App` creates and owns one coordinator; the coordinator owns long-running sensing resources and service subscriptions; `MainPage` attaches/detaches only as an `IDesktopCopilotView` and forwards user commands. `DiagnosticLog` temporarily lives in Core to preserve accepted diagnostic behavior without introducing a logging refactor in M2.4.1; its static, fixed-path design remains M2.4.4 debt.
+The split deliberately keeps deterministic logic out of the WinUI target so it can be characterized without XAML, capture, hooks, UI Automation, or a live desktop. It does not add a process or trust boundary. `App` creates and owns one coordinator; the coordinator owns long-running sensing resources and service subscriptions; `MainPage` attaches/detaches only as an `IDesktopCopilotView` and forwards user commands. `DiagnosticLog` remains a static compatibility facade in Core, but its sink is initialized once from a validated, expiring packaged-app launch token read from `Environment.GetCommandLineArgs()` and writes only to that session's fixed `app.log` filename. WinUI desktop `OnLaunched` arguments are intentionally not used because that property is always empty for desktop apps. Normal process arguments cannot activate diagnostics accidentally.
 
 ### 7.2 Incremental target
 
@@ -348,7 +348,7 @@ LocalCopilot.Inference.Server   local endpoint, resource manager, runtime adapte
 *.Tests                         pure, contract, and Windows integration suites
 ```
 
-M2.4.1 established the portable test boundary and M2.4.2 separated application composition/lifecycle from the page. Later milestones must not create all future projects at once.
+M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, and M2.4.4 hardened diagnostics/input evidence. M3.1 may introduce only the smallest UIA worker boundary required by its probe; later milestones must not create all future projects at once.
 
 ## 8. Threading and lifecycle model
 
@@ -460,6 +460,8 @@ Required counters/budgets include:
 - CPU, RAM, GPU/VRAM when reliable measurement exists;
 - payload and prompt sizes;
 - model load/unload and degraded-mode transitions.
+
+The current diagnostic-only low-level input hooks expose a bounded health summary at teardown: callback/activity counts, callback and subscriber failures, installing-thread mismatches, latency buckets, average/maximum callback duration, and unhook results. No per-callback file I/O occurs. M2.4.4 physical evidence accepted the synchronous path; moving it to a dedicated hook thread or Raw Input now requires a new measured failure or regression, not a theoretical preference.
 
 Do not publish a fixed performance claim from an estimate. Keep benchmark environment, sample count, warmup, percentile, and exact hardware with the result.
 

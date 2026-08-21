@@ -2,6 +2,7 @@ using LocalCopilot_App.Diagnostics;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 
 namespace LocalCopilot_App.Services;
@@ -50,6 +51,9 @@ public sealed class InputActivityTracker :
 
     private nint _mouseHook;
 
+    private InputHookHealthMonitor?
+        _healthMonitor;
+
     private long _epochId;
 
     private bool _enabled;
@@ -79,6 +83,8 @@ public sealed class InputActivityTracker :
 
         bool reused;
 
+        uint installThreadId;
+
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(
@@ -101,13 +107,18 @@ public sealed class InputActivityTracker :
 
             _enabled =
                 true;
+
+            installThreadId =
+                _healthMonitor?.InstallThreadId ??
+                0;
         }
 
         DiagnosticLog.Write(
             reused
                 ? "INPUT.TRACKING_REUSE"
                 : "INPUT.TRACKING_START",
-            $"epoch={epochId}");
+            $"epoch={epochId} " +
+            $"installThreadId={installThreadId}");
     }
 
     public void Stop(
@@ -137,6 +148,16 @@ public sealed class InputActivityTracker :
 
     private void InstallHooks()
     {
+        uint installThreadId =
+            GetCurrentThreadId();
+
+        InputHookHealthMonitor healthMonitor =
+            new(
+                installThreadId);
+
+        _healthMonitor =
+            healthMonitor;
+
         nint moduleHandle =
             GetModuleHandleW(
                 null);
@@ -144,6 +165,9 @@ public sealed class InputActivityTracker :
         if (moduleHandle ==
             nint.Zero)
         {
+            _healthMonitor =
+                null;
+
             throw new Win32Exception(
                 Marshal.GetLastWin32Error(),
                 "Unable to resolve the application module handle.");
@@ -159,6 +183,9 @@ public sealed class InputActivityTracker :
         if (keyboardHook ==
             nint.Zero)
         {
+            _healthMonitor =
+                null;
+
             throw new Win32Exception(
                 Marshal.GetLastWin32Error(),
                 "Unable to install the keyboard activity hook.");
@@ -180,6 +207,9 @@ public sealed class InputActivityTracker :
             UnhookWindowsHookEx(
                 keyboardHook);
 
+            _healthMonitor =
+                null;
+
             throw new Win32Exception(
                 error,
                 "Unable to install the mouse activity hook.");
@@ -190,6 +220,11 @@ public sealed class InputActivityTracker :
 
         _mouseHook =
             mouseHook;
+
+        DiagnosticLog.Write(
+            "INPUT.HOOKS_INSTALLED",
+            $"installThreadId={installThreadId} " +
+            "keyboard=True mouse=True");
     }
 
     private void StopCore(
@@ -199,6 +234,7 @@ public sealed class InputActivityTracker :
         nint mouseHook;
         long previousEpoch;
         bool wasActive;
+        InputHookHealthMonitor? healthMonitor;
 
         lock (_gate)
         {
@@ -229,15 +265,40 @@ public sealed class InputActivityTracker :
 
             _mouseHook =
                 nint.Zero;
+
+            healthMonitor =
+                _healthMonitor;
         }
 
-        UnhookSafely(
-            keyboardHook,
-            "keyboard");
+        HookRemovalResult keyboardRemoval =
+            UnhookSafely(
+                keyboardHook,
+                "keyboard");
 
-        UnhookSafely(
-            mouseHook,
-            "mouse");
+        HookRemovalResult mouseRemoval =
+            UnhookSafely(
+                mouseHook,
+                "mouse");
+
+        if (healthMonitor is not null)
+        {
+            LogHealth(
+                previousEpoch,
+                healthMonitor.Snapshot(),
+                keyboardRemoval,
+                mouseRemoval);
+
+            lock (_gate)
+            {
+                if (ReferenceEquals(
+                        _healthMonitor,
+                        healthMonitor))
+                {
+                    _healthMonitor =
+                        null;
+                }
+            }
+        }
 
         if (wasActive)
         {
@@ -253,6 +314,18 @@ public sealed class InputActivityTracker :
         nuint message,
         nint data)
     {
+        long startedAt =
+            Stopwatch.GetTimestamp();
+
+        bool callbackFailed =
+            false;
+
+        bool subscriberFailed =
+            false;
+
+        InputActivityKind? activityKind =
+            null;
+
         try
         {
             if (
@@ -260,22 +333,44 @@ public sealed class InputActivityTracker :
                 IsKeyboardActivity(
                     (uint)message))
             {
-                PublishActivity(
-                    InputActivityKind.KeyboardActivity);
+                activityKind =
+                    InputActivityKind.KeyboardActivity;
+
+                subscriberFailed =
+                    !TryPublishActivity(
+                        activityKind.Value);
             }
         }
-        catch (Exception ex)
+        catch
         {
-            DiagnosticLog.Write(
-                "INPUT.HOOK_CALLBACK_ERROR",
-                $"hook=keyboard type={ex.GetType().Name}");
+            callbackFailed =
+                true;
         }
 
-        return CallNextHookEx(
-            nint.Zero,
-            code,
-            message,
-            data);
+        try
+        {
+            return CallNextHookEx(
+                nint.Zero,
+                code,
+                message,
+                data);
+        }
+        catch
+        {
+            callbackFailed =
+                true;
+
+            return nint.Zero;
+        }
+        finally
+        {
+            RecordHookCallback(
+                InputHookKind.Keyboard,
+                activityKind,
+                startedAt,
+                callbackFailed,
+                subscriberFailed);
+        }
     }
 
     private nint MouseHookCallback(
@@ -283,36 +378,67 @@ public sealed class InputActivityTracker :
         nuint message,
         nint data)
     {
+        long startedAt =
+            Stopwatch.GetTimestamp();
+
+        bool callbackFailed =
+            false;
+
+        bool subscriberFailed =
+            false;
+
+        InputActivityKind? activityKind =
+            null;
+
         try
         {
             if (code >= 0)
             {
-                InputActivityKind? kind =
+                activityKind =
                     ClassifyMouseMessage(
                         (uint)message);
 
-                if (kind is not null)
+                if (activityKind is not null)
                 {
-                    PublishActivity(
-                        kind.Value);
+                    subscriberFailed =
+                        !TryPublishActivity(
+                            activityKind.Value);
                 }
             }
         }
-        catch (Exception ex)
+        catch
         {
-            DiagnosticLog.Write(
-                "INPUT.HOOK_CALLBACK_ERROR",
-                $"hook=mouse type={ex.GetType().Name}");
+            callbackFailed =
+                true;
         }
 
-        return CallNextHookEx(
-            nint.Zero,
-            code,
-            message,
-            data);
+        try
+        {
+            return CallNextHookEx(
+                nint.Zero,
+                code,
+                message,
+                data);
+        }
+        catch
+        {
+            callbackFailed =
+                true;
+
+            return nint.Zero;
+        }
+        finally
+        {
+            RecordHookCallback(
+                InputHookKind.Mouse,
+                activityKind,
+                startedAt,
+                callbackFailed,
+                subscriberFailed);
+        }
     }
 
-    private void PublishActivity(
+    private bool TryPublishActivity(
         InputActivityKind kind)
     {
         long epochId;
@@ -323,7 +449,7 @@ public sealed class InputActivityTracker :
                 !_enabled ||
                 _epochId <= 0)
             {
-                return;
+                return true;
             }
 
             epochId =
@@ -340,13 +466,36 @@ public sealed class InputActivityTracker :
         {
             ActivityObserved?.Invoke(
                 activity);
+
+            return true;
         }
-        catch (Exception ex)
+        catch
         {
-            DiagnosticLog.Write(
-                "INPUT.ACTIVITY_EVENT_ERROR",
-                $"epoch={epochId} " +
-                $"type={ex.GetType().Name}");
+            return false;
+        }
+    }
+
+    private void RecordHookCallback(
+        InputHookKind hookKind,
+        InputActivityKind? activityKind,
+        long startedAt,
+        bool callbackFailed,
+        bool subscriberFailed)
+    {
+        try
+        {
+            _healthMonitor?.RecordCallback(
+                hookKind,
+                activityKind,
+                Stopwatch.GetTimestamp() -
+                    startedAt,
+                GetCurrentThreadId(),
+                callbackFailed,
+                subscriberFailed);
+        }
+        catch
+        {
+            // Health measurement must never affect the hook chain.
         }
     }
 
@@ -380,24 +529,85 @@ public sealed class InputActivityTracker :
         };
     }
 
-    private static void UnhookSafely(
+    private static HookRemovalResult UnhookSafely(
         nint hook,
         string hookName)
     {
         if (hook ==
             nint.Zero)
         {
-            return;
+            return new HookRemovalResult(
+                false,
+                true,
+                0);
         }
 
         if (!UnhookWindowsHookEx(
                 hook))
         {
+            int error =
+                Marshal.GetLastWin32Error();
+
             DiagnosticLog.Write(
                 "INPUT.UNHOOK_ERROR",
                 $"hook={hookName} " +
-                $"error={Marshal.GetLastWin32Error()}");
+                $"error={error}");
+
+            return new HookRemovalResult(
+                true,
+                false,
+                error);
         }
+
+        return new HookRemovalResult(
+            true,
+            true,
+            0);
+    }
+
+    private static void LogHealth(
+        long epochId,
+        InputHookHealthSnapshot health,
+        HookRemovalResult keyboardRemoval,
+        HookRemovalResult mouseRemoval)
+    {
+        DiagnosticLog.Write(
+            "INPUT.HOOK_HEALTH",
+            $"epoch={epochId} " +
+            $"installThreadId={health.InstallThreadId} " +
+            $"callbacks={health.TotalCallbacks} " +
+            $"keyboardCallbacks={health.KeyboardCallbacks} " +
+            $"mouseCallbacks={health.MouseCallbacks} " +
+            $"activities={health.TotalActivities} " +
+            $"keyboardActivities={health.KeyboardActivities} " +
+            $"mouseClicks={health.MouseClickActivities} " +
+            $"mouseWheels={health.MouseWheelActivities} " +
+            $"callbackErrors={health.CallbackErrors} " +
+            $"subscriberErrors={health.SubscriberErrors} " +
+            $"threadMismatches={health.ThreadMismatches} " +
+            $"averageUs={FormatMicroseconds(health.AverageCallbackMicroseconds)} " +
+            $"maximumUs={FormatMicroseconds(health.MaximumCallbackMicroseconds)} " +
+            $"le100us={health.UpTo100Microseconds} " +
+            $"le500us={health.UpTo500Microseconds} " +
+            $"le1ms={health.UpTo1Millisecond} " +
+            $"le5ms={health.UpTo5Milliseconds} " +
+            $"le20ms={health.UpTo20Milliseconds} " +
+            $"gt20ms={health.Over20Milliseconds} " +
+            $"keyboardUnhookAttempted={keyboardRemoval.Attempted} " +
+            $"keyboardUnhook={keyboardRemoval.Success} " +
+            $"keyboardUnhookError={keyboardRemoval.ErrorCode} " +
+            $"mouseUnhookAttempted={mouseRemoval.Attempted} " +
+            $"mouseUnhook={mouseRemoval.Success} " +
+            $"mouseUnhookError={mouseRemoval.ErrorCode} " +
+            "scope=callback_including_call_next");
+    }
+
+    private static string FormatMicroseconds(
+        double value)
+    {
+        return value.ToString(
+            "0.0",
+            CultureInfo.InvariantCulture);
     }
 
     private static string NormalizeReason(
@@ -408,6 +618,11 @@ public sealed class InputActivityTracker :
             ? "stopped"
             : reason;
     }
+
+    private readonly record struct HookRemovalResult(
+        bool Attempted,
+        bool Success,
+        int ErrorCode);
 
     [UnmanagedFunctionPointer(
         CallingConvention.Winapi)]
@@ -449,4 +664,8 @@ public sealed class InputActivityTracker :
         SetLastError = true)]
     private static extern nint GetModuleHandleW(
         string? moduleName);
+
+    [DllImport(
+        "kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
 }

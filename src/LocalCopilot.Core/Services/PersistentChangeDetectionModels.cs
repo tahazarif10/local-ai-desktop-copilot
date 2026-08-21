@@ -25,7 +25,7 @@ public sealed record PersistentChangeSessionEnded(
     string Reason,
     bool HadError,
     string? ErrorType,
-    string? ErrorMessage,
+    int? ErrorHResult,
     long FramesArrived,
     long FramesReplaced,
     long SamplesProcessed,

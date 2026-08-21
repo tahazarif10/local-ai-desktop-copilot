@@ -119,7 +119,7 @@ The accepted M2.3 baseline `c29099a` had no automated tests. M2.4.1 added a port
 dotnet test .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj -c Release --settings .\tests\LocalCopilot.Core.Tests\.runsettings
 ```
 
-The suite currently contains 58 deterministic tests for capability-based `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, `ChangeCorrelationService`, and the one-shot `ApplicationLifecycleGate`. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, global hooks, UI Automation, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build above.
+The suite currently contains 68 deterministic tests for capability-based `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, `ChangeCorrelationService`, the one-shot `ApplicationLifecycleGate`, launch-scoped `DiagnosticSession` parsing/logging, and `InputHookHealthMonitor`. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, live global hooks, UI Automation, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build above.
 
 The CI workflow runs the core suite on both Ubuntu and Windows, then builds the packaged app as `Debug/win-x64` on Windows. Test-result artifacts are retained for failed as well as successful runs. Do not write “all tests passed” unless the relevant local/CI run is identified and actually passed; report build, test, CI, and physical runtime evidence as separate facts.
 
@@ -141,23 +141,35 @@ Set-Location H:\AIProjects\local-ai-desktop-copilot
 Current behavior:
 
 - rejects launch if `LocalCopilot.App` is already running;
-- removes a stale diagnostic-enable flag before the new session;
+- creates a unique session directory under the repository-local ignored diagnostic root, or a caller-supplied root;
 - records session ID, branch, SHA, .NET, PowerShell, OS, and Git status;
-- builds `Debug/win-x64`;
+- builds `Debug/win-x64 --warnaserror`;
 - runs an independent metadata-only foreground probe;
-- enables application diagnostics only around `dotnet run`;
-- refreshes a bundle from an explicit diagnostic filename whitelist;
-- disables diagnostics first during cleanup;
-- stops jobs, performs a final refresh, and copies the bundle to clipboard.
+- enables application diagnostics only through an expiring launch argument passed by the packaged-app run target and read from the desktop process command line;
+- uses no persistent enable flag, so a later normal launch is Off even after abnormal termination;
+- stops the probe before reading bundle sources;
+- creates the final bundle only from the exact session's explicit three-file whitelist;
+- copies the complete bundle to the clipboard.
 
-Known development-only limitation:
+Default output shape:
 
 ```text
-H:\DevCache\LocalCopilot
-m1-3-*.log / m1-3-debug-bundle.txt
+<repository>\.localcopilot\diagnostics\<utc>-<session-id>\
+  session-meta.txt
+  app.log
+  os-foreground.log
+  diagnostic-bundle.txt
 ```
 
-M2.4.4 replaces the fixed drive and legacy names without losing the one-command/copy-entire-bundle workflow.
+To select another root without changing product code:
+
+```powershell
+.\run-debug.ps1 -DiagnosticRoot "D:\LocalCopilotDiagnostics"
+```
+
+The app reads the argument vector with `Environment.GetCommandLineArgs()` because `Microsoft.UI.Xaml.LaunchActivatedEventArgs.Arguments` is always empty for WinUI desktop apps. It accepts the diagnostic token only when its schema, GUID, absolute session path, folder/session binding, creation time, expiry, and maximum lifetime validate. The runner treats a missing or mismatched `app.log` session marker as a failed activation handshake. Base64url is transport encoding, not encryption or authorization; explicit possession of the launch argument is the opt-in mechanism.
+
+Each input-hook lifetime ends with one `INPUT.HOOK_HEALTH` record. It reports callback/activity counts, callback/subscriber errors, installing-thread mismatches, average/maximum callback duration, fixed latency buckets, and both unhook results. It contains no key, text, scan-code, coordinate, clipboard, or target-control data.
 
 Before sharing a bundle, check it for unexpected content. Normal logs must never include titles, UIA/OCR text, input values, coordinates, clipboard data, pixels, audio, prompts, or responses.
 
