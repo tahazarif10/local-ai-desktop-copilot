@@ -1,4 +1,24 @@
-﻿$ErrorActionPreference = "Stop"
+﻿[CmdletBinding()]
+param(
+    [string]$DiagnosticRoot
+)
+
+$ErrorActionPreference = "Stop"
+
+$repoRoot = $null
+$projectPath = $null
+$sessionDirectory = $null
+$bundlePath = $null
+$probeLog = $null
+$metaPath = $null
+$probeStop = $null
+$probeJob = $null
+$runnerError = $null
+$sessionStartUtc = $null
+$sessionId = $null
+$buildResult = "NOT_RUN"
+$applicationResult = "NOT_RUN"
+$applicationExitCode = $null
 
 try {
     $repoRoot = $PSScriptRoot
@@ -7,92 +27,144 @@ try {
         $repoRoot = (Get-Location).Path
     }
 
-    $projectPath = Join-Path $repoRoot "src\LocalCopilot.App\LocalCopilot.App.csproj"
+    $repoRoot =
+        [System.IO.Path]::GetFullPath($repoRoot)
 
-    $cache = "H:\DevCache\LocalCopilot"
+    $projectPath =
+        Join-Path `
+            $repoRoot `
+            "src\LocalCopilot.App\LocalCopilot.App.csproj"
 
-    $bundlePath =
-        Join-Path $cache "m1-3-debug-bundle.txt"
+    if ([string]::IsNullOrWhiteSpace($DiagnosticRoot)) {
+        $DiagnosticRoot =
+            Join-Path `
+                $repoRoot `
+                ".localcopilot\diagnostics"
+    }
+    elseif (-not [System.IO.Path]::IsPathRooted($DiagnosticRoot)) {
+        $DiagnosticRoot =
+            Join-Path `
+                $repoRoot `
+                $DiagnosticRoot
+    }
 
-    $probeLog =
-        Join-Path $cache "m1-3-os-foreground.log"
-
-    $metaPath =
-        Join-Path $cache "m1-3-session-meta.txt"
-
-    $probeStop =
-        Join-Path $cache "m1-3-probe.stop"
-
-    $bundleStop =
-        Join-Path $cache "m1-3-bundle.stop"
-
-    $diagnosticsFlag =
-        Join-Path $cache "diagnostics.enabled"
-
-    New-Item `
-        -ItemType Directory `
-        -Force `
-        -Path $cache |
-        Out-Null
+    $DiagnosticRoot =
+        [System.IO.Path]::GetFullPath($DiagnosticRoot)
 
     # -------------------------------------------------
     # Safety
     # -------------------------------------------------
 
     $existingApp =
-        Get-Process "LocalCopilot.App" `
+        Get-Process `
+            "LocalCopilot.App" `
             -ErrorAction SilentlyContinue
 
     if ($existingApp) {
         throw "LocalCopilot is already running. Close it first."
     }
 
-    # -------------------------------------------------
-    # A previous abnormal debug shutdown must never leave
-    # diagnostics enabled for normal application launches.
-    Remove-Item `
-        $diagnosticsFlag `
-        -Force `
-        -ErrorAction SilentlyContinue
-    # New diagnostic session
-    # -------------------------------------------------
-
-    Remove-Item `
-        $bundlePath,
-        $probeLog,
-        $metaPath,
-        $probeStop,
-        $bundleStop `
-        -Force `
-        -ErrorAction SilentlyContinue
-
-    $sessionStart = Get-Date
-    $sessionId = [Guid]::NewGuid().ToString()
-
     $branch =
-        git -C $repoRoot branch --show-current
+        (git -C $repoRoot branch --show-current |
+            Out-String).Trim()
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to resolve the Git branch."
+    }
 
     $head =
-        git -C $repoRoot rev-parse HEAD
+        (git -C $repoRoot rev-parse HEAD |
+            Out-String).Trim()
 
-    $dotnetVersion =
-        dotnet --version
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to resolve the Git HEAD."
+    }
 
     $gitStatus =
         git -C $repoRoot status --short |
-        Out-String
+        Out-String -Width 4096
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to resolve the Git status."
+    }
+
+    $dotnetVersion =
+        (dotnet --version |
+            Out-String).Trim()
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to resolve the .NET SDK version."
+    }
+
+    # -------------------------------------------------
+    # Session-scoped paths
+    # -------------------------------------------------
+
+    New-Item `
+        -ItemType Directory `
+        -Force `
+        -Path $DiagnosticRoot |
+        Out-Null
+
+    $sessionStartUtc =
+        [DateTimeOffset]::UtcNow
+
+    $sessionId =
+        [Guid]::NewGuid()
+
+    $sessionFolder =
+        "{0}-{1}" -f `
+            $sessionStartUtc.ToString("yyyyMMddTHHmmssfffZ"),
+            $sessionId.ToString("N")
+
+    $sessionDirectory =
+        Join-Path `
+            $DiagnosticRoot `
+            $sessionFolder
+
+    New-Item `
+        -ItemType Directory `
+        -Path $sessionDirectory |
+        Out-Null
+
+    $bundlePath =
+        Join-Path `
+            $sessionDirectory `
+            "diagnostic-bundle.txt"
+
+    $probeLog =
+        Join-Path `
+            $sessionDirectory `
+            "os-foreground.log"
+
+    $metaPath =
+        Join-Path `
+            $sessionDirectory `
+            "session-meta.txt"
+
+    $probeStop =
+        Join-Path `
+            $sessionDirectory `
+            "probe.stop"
+
+    $utf8 =
+        New-Object System.Text.UTF8Encoding($true)
 
     $meta = @"
 =================================================
 LOCALCOPILOT LIVE DIAGNOSTIC SESSION
 =================================================
-Session ID: $sessionId
-Session Start: $($sessionStart.ToString("o"))
+Schema: 1
+Milestone: M2.4.4
+Session ID: $($sessionId.ToString("D"))
+Session Start UTC: $($sessionStartUtc.ToString("o"))
 Branch: $branch
 HEAD: $head
 Dotnet: $dotnetVersion
 PowerShell: $($PSVersionTable.PSVersion)
 OS: $([Environment]::OSVersion.VersionString)
+Diagnostic activation: launch-scoped, expiring token
+Application log: app.log
 
 Git status:
 $gitStatus
@@ -101,26 +173,20 @@ $gitStatus
     [System.IO.File]::WriteAllText(
         $metaPath,
         $meta,
-        (New-Object System.Text.UTF8Encoding($true))
+        $utf8
     )
-
-    # Create bundle immediately so it is NEVER stale.
-    Copy-Item `
-        $metaPath `
-        $bundlePath `
-        -Force
 
     Write-Host ""
     Write-Host "=============================================="
-    Write-Host "NEW DIAGNOSTIC SESSION"
+    Write-Host "NEW M2.4.4 DIAGNOSTIC SESSION"
     Write-Host "=============================================="
-    Write-Host "Session: $sessionId"
-    Write-Host "Bundle:"
-    Write-Host $bundlePath
+    Write-Host "Session: $($sessionId.ToString("D"))"
+    Write-Host "Directory:"
+    Write-Host $sessionDirectory
     Write-Host ""
 
     # -------------------------------------------------
-    # Build
+    # Canonical strict build
     # -------------------------------------------------
 
     Write-Host "Building current source..."
@@ -128,33 +194,36 @@ $gitStatus
     & dotnet build `
         $projectPath `
         -c Debug `
-        -r win-x64
+        -r win-x64 `
+        --warnaserror
 
     if ($LASTEXITCODE -ne 0) {
+        $buildResult = "FAIL"
         throw "Build failed."
     }
+
+    $buildResult = "PASS"
 
     Write-Host ""
     Write-Host "BUILD OK"
 
     # -------------------------------------------------
-    # Independent OS foreground probe
+    # Independent metadata-only OS foreground probe
     # -------------------------------------------------
 
     $probeJob =
         Start-Job `
-        -ArgumentList $probeLog, $probeStop `
-        -ScriptBlock {
+            -ArgumentList $probeLog, $probeStop `
+            -ScriptBlock {
 
-            param(
-                $probeLog,
-                $probeStop
-            )
+                param(
+                    $probeLog,
+                    $probeStop
+                )
 
-            Add-Type -TypeDefinition @"
+                Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
-using System.Text;
 
 public static class LocalCopilotForegroundProbe
 {
@@ -172,421 +241,398 @@ public static class LocalCopilotForegroundProbe
         SetLastError = true)]
     public static extern int GetWindowTextLengthW(
         IntPtr hWnd);
-
-    [DllImport(
-        "user32.dll",
-        CharSet = CharSet.Unicode,
-        SetLastError = true)]
-    public static extern int GetWindowTextW(
-        IntPtr hWnd,
-        StringBuilder lpString,
-        int nMaxCount);
 }
 "@
 
-            $utf8 =
-                New-Object System.Text.UTF8Encoding($true)
-
-            [System.IO.File]::WriteAllText(
-                $probeLog,
-                "=== Independent OS Foreground Probe ===" +
-                [Environment]::NewLine,
-                $utf8
-            )
-
-            $lastHwnd =
-                [IntPtr]::Zero
-
-            while (-not (Test-Path $probeStop)) {
-
-                try {
-                    $hwnd =
-                        [LocalCopilotForegroundProbe]::
-                        GetForegroundWindow()
-
-                    if (
-                        $hwnd -ne [IntPtr]::Zero -and
-                        $hwnd -ne $lastHwnd
-                    ) {
-                        [uint32]$targetProcessId = 0
-
-                        $windowThread =
-                            [LocalCopilotForegroundProbe]::
-                            GetWindowThreadProcessId(
-                                $hwnd,
-                                [ref]$targetProcessId
-                            )
-
-                        $processName = "Unknown"
-
-                        try {
-                            $process =
-                                Get-Process `
-                                    -Id $targetProcessId `
-                                    -ErrorAction Stop
-
-                            $processName =
-                                $process.ProcessName + ".exe"
-                        }
-                        catch {
-                        }
-
-                        $length =
-                            [LocalCopilotForegroundProbe]::
-                            GetWindowTextLengthW($hwnd)
-
-                        $line =
-                            "{0:o} | HWND=0x{1:X} | PID={2} | WThread={3} | Process={4} | TitleLength={5} | HasTitle={6}" -f `
-                            (Get-Date),
-                            $hwnd.ToInt64(),
-                            $targetProcessId,
-                            $windowThread,
-                            $processName,
-                            $length,
-                            ($length -gt 0)
-                        [System.IO.File]::AppendAllText(
-                            $probeLog,
-                            $line +
-                            [Environment]::NewLine,
-                            $utf8
-                        )
-
-                        $lastHwnd =
-                            $hwnd
-                    }
-                }
-                catch {
-                    $errorLine =
-                        "$(Get-Date -Format o) | PROBE ERROR | $($_.Exception.Message)"
-
-                    [System.IO.File]::AppendAllText(
-                        $probeLog,
-                        $errorLine +
-                        [Environment]::NewLine,
-                        $utf8
-                    )
-                }
-
-                Start-Sleep `
-                    -Milliseconds 100
-            }
-        }
-
-    # -------------------------------------------------
-    # LIVE bundle updater
-    # -------------------------------------------------
-
-    $bundleJob =
-        Start-Job `
-        -ArgumentList `
-            $cache,
-            $bundlePath,
-            $probeLog,
-            $metaPath,
-            $bundleStop,
-            $sessionStart `
-        -ScriptBlock {
-
-            param(
-                $cache,
-                $bundlePath,
-                $probeLog,
-                $metaPath,
-                $bundleStop,
-                $sessionStart
-            )
-
-            $utf8 =
-                New-Object System.Text.UTF8Encoding($true)
-
-            function Update-Bundle {
-
-                $builder =
-                    New-Object System.Text.StringBuilder
-
-                if (Test-Path $metaPath) {
-                    [void]$builder.AppendLine(
-                        [System.IO.File]::ReadAllText(
-                            $metaPath
-                        )
-                    )
-                }
-
-                [void]$builder.AppendLine("")
-                [void]$builder.AppendLine(
-                    "================================================="
-                )
-                [void]$builder.AppendLine(
-                    "LIVE BUNDLE STATUS"
-                )
-                [void]$builder.AppendLine(
-                    "================================================="
-                )
-
-                [void]$builder.AppendLine(
-                    "Bundle refreshed: " +
-                    (Get-Date).ToString("o")
-                )
-
-                [void]$builder.AppendLine("")
-
-                # -------------------------------------
-                # Application diagnostic logs
-                # -------------------------------------
-
-                [void]$builder.AppendLine(
-                    "================================================="
-                )
-                [void]$builder.AppendLine(
-                    "CURRENT SESSION LOG FILES"
-                )
-                [void]$builder.AppendLine(
-                    "================================================="
-                )
-
-                # Explicit diagnostic whitelist.
-                # Never scan unrelated cache files into the bundle.
-                $candidateFiles =
-                    @()
-
-                $knownDiagnosticFiles =
-                    @(
-                        "m1-3-app.log"
-                    )
-
-                foreach ($name in $knownDiagnosticFiles) {
-                    $candidatePath =
-                        Join-Path $cache $name
-
-                    if (-not (Test-Path $candidatePath)) {
-                        continue
-                    }
-
-                    $candidate =
-                        Get-Item `
-                            -LiteralPath $candidatePath `
-                            -ErrorAction SilentlyContinue
-
-                    if (
-                        $candidate -and
-                        $candidate.LastWriteTime -ge
-                            $sessionStart.AddSeconds(-2)
-                    ) {
-                        $candidateFiles +=
-                            $candidate
-                    }
-                }
-
-                $candidateFiles =
-                    $candidateFiles |
-                    Sort-Object LastWriteTime
-                if (-not $candidateFiles) {
-                    [void]$builder.AppendLine(
-                        "No application diagnostic file has changed yet."
-                    )
-                }
-                else {
-                    foreach ($file in $candidateFiles) {
-
-                        [void]$builder.AppendLine("")
-                        [void]$builder.AppendLine(
-                            "-------------------------------------------------"
-                        )
-
-                        [void]$builder.AppendLine(
-                            "FILE: " + $file.FullName
-                        )
-
-                        [void]$builder.AppendLine(
-                            "LastWriteTime: " +
-                            $file.LastWriteTime.ToString("o")
-                        )
-
-                        [void]$builder.AppendLine(
-                            "-------------------------------------------------"
-                        )
-
-                        try {
-                            [void]$builder.AppendLine(
-                                [System.IO.File]::ReadAllText(
-                                    $file.FullName
-                                )
-                            )
-                        }
-                        catch {
-                            [void]$builder.AppendLine(
-                                "Could not read file: " +
-                                $_.Exception.Message
-                            )
-                        }
-                    }
-                }
-
-                # -------------------------------------
-                # Independent OS probe
-                # -------------------------------------
-
-                [void]$builder.AppendLine("")
-                [void]$builder.AppendLine(
-                    "================================================="
-                )
-                [void]$builder.AppendLine(
-                    "INDEPENDENT OS FOREGROUND PROBE"
-                )
-                [void]$builder.AppendLine(
-                    "================================================="
-                )
-
-                if (Test-Path $probeLog) {
-                    try {
-                        [void]$builder.AppendLine(
-                            [System.IO.File]::ReadAllText(
-                                $probeLog
-                            )
-                        )
-                    }
-                    catch {
-                        [void]$builder.AppendLine(
-                            "Probe log temporarily busy."
-                        )
-                    }
-                }
-                else {
-                    [void]$builder.AppendLine(
-                        "Probe has not produced data yet."
-                    )
-                }
-
-                $tempPath =
-                    Join-Path `
-                        $cache `
-                        "m1-3-debug-bundle.tmp"
+                $jobUtf8 =
+                    New-Object System.Text.UTF8Encoding($true)
 
                 [System.IO.File]::WriteAllText(
-                    $tempPath,
-                    $builder.ToString(),
-                    $utf8
+                    $probeLog,
+                    "=== Independent OS Foreground Probe ===" +
+                    [Environment]::NewLine,
+                    $jobUtf8
                 )
 
-                Move-Item `
-                    $tempPath `
-                    $bundlePath `
-                    -Force
-            }
+                $lastHwnd =
+                    [IntPtr]::Zero
 
-            while (-not (Test-Path $bundleStop)) {
+                while (-not (Test-Path -LiteralPath $probeStop)) {
+                    try {
+                        $hwnd =
+                            [LocalCopilotForegroundProbe]::
+                            GetForegroundWindow()
 
-                try {
-                    Update-Bundle
+                        if (
+                            $hwnd -ne [IntPtr]::Zero -and
+                            $hwnd -ne $lastHwnd
+                        ) {
+                            [uint32]$targetProcessId = 0
+
+                            $windowThread =
+                                [LocalCopilotForegroundProbe]::
+                                GetWindowThreadProcessId(
+                                    $hwnd,
+                                    [ref]$targetProcessId
+                                )
+
+                            $processName = "Unknown"
+
+                            try {
+                                $targetProcess =
+                                    Get-Process `
+                                        -Id $targetProcessId `
+                                        -ErrorAction Stop
+
+                                $processName =
+                                    $targetProcess.ProcessName +
+                                    ".exe"
+                            }
+                            catch {
+                            }
+
+                            $titleLength =
+                                [LocalCopilotForegroundProbe]::
+                                GetWindowTextLengthW($hwnd)
+
+                            $line =
+                                "{0:o} | HWND=0x{1:X} | PID={2} | WThread={3} | Process={4} | TitleLength={5} | HasTitle={6}" -f `
+                                (Get-Date),
+                                $hwnd.ToInt64(),
+                                $targetProcessId,
+                                $windowThread,
+                                $processName,
+                                $titleLength,
+                                ($titleLength -gt 0)
+
+                            [System.IO.File]::AppendAllText(
+                                $probeLog,
+                                $line +
+                                [Environment]::NewLine,
+                                $jobUtf8
+                            )
+
+                            $lastHwnd =
+                                $hwnd
+                        }
+                    }
+                    catch {
+                        $exception =
+                            $_.Exception
+
+                        $errorLine =
+                            "{0:o} | PROBE.ERROR | type={1} hresult=0x{2:X8}" -f `
+                            (Get-Date),
+                            $exception.GetType().Name,
+                            $exception.HResult
+
+                        [System.IO.File]::AppendAllText(
+                            $probeLog,
+                            $errorLine +
+                            [Environment]::NewLine,
+                            $jobUtf8
+                        )
+                    }
+
+                    Start-Sleep `
+                        -Milliseconds 100
                 }
-                catch {
-                }
-
-                Start-Sleep `
-                    -Milliseconds 500
             }
 
-            # Final refresh after application closes.
-            try {
-                Update-Bundle
-            }
-            catch {
-            }
+    Start-Sleep `
+        -Milliseconds 600
+
+    # -------------------------------------------------
+    # Time-bounded launch token for this MSIX run only
+    # -------------------------------------------------
+
+    $descriptor =
+        [ordered]@{
+            SchemaVersion = 1
+            SessionId = $sessionId.ToString("D")
+            SessionDirectory = $sessionDirectory
+            CreatedUtc = $sessionStartUtc.ToString("o")
+            ExpiresUtc = $sessionStartUtc.AddHours(4).ToString("o")
         }
 
-    # Give both diagnostic workers time to initialize.
-    Start-Sleep -Milliseconds 600
+    $descriptorJson =
+        $descriptor |
+        ConvertTo-Json -Compress
+
+    $descriptorBytes =
+        [System.Text.Encoding]::UTF8.GetBytes(
+            $descriptorJson
+        )
+
+    $activationToken =
+        [Convert]::ToBase64String(
+            $descriptorBytes
+        )
+
+    $activationToken =
+        $activationToken.TrimEnd(
+            [char[]]"="
+        )
+
+    $activationToken =
+        $activationToken.Replace(
+            "+",
+            "-"
+        )
+
+    $activationToken =
+        $activationToken.Replace(
+            "/",
+            "_"
+        )
+
+    $launchArguments =
+        "--localcopilot-diagnostics=$activationToken"
 
     Write-Host ""
     Write-Host "=============================================="
     Write-Host "LIVE DIAGNOSTIC MODE READY"
     Write-Host "=============================================="
-    Write-Host ""
-    Write-Host "Bundle is refreshed every 500 ms while app runs."
-    Write-Host ""
-    Write-Host "Launching LocalCopilot..."
+    Write-Host "Launching LocalCopilot with one-session diagnostics..."
     Write-Host ""
 
-    # -------------------------------------------------
-    # Launch application
-    # -------------------------------------------------
+    & dotnet run `
+        --project $projectPath `
+        -c Debug `
+        -r win-x64 `
+        --no-build `
+        "/p:WinAppLaunchArgs=$launchArguments"
 
-    # Diagnostic logging is opt-in.
-    # Normal dotnet run does not create this flag.
-    New-Item `
-        -ItemType File `
-        -Force `
-        -Path $diagnosticsFlag |
-        Out-Null
+    $applicationExitCode =
+        $LASTEXITCODE
 
-    try {
-        & dotnet run `
-            --project $projectPath `
-            -c Debug `
-            -r win-x64 `
-            --no-build
+    if ($applicationExitCode -ne 0) {
+        $applicationResult = "FAIL"
+        throw "Application run failed."
     }
-    finally {
 
-        # Logging must be OFF again before we do anything else.
+    $applicationResult = "PASS"
+}
+catch {
+    $runnerError =
+        $_.Exception
+}
+finally {
+    # Stop the independent probe before reading any bundle source.
+    if ($probeJob) {
+        try {
+            New-Item `
+                -ItemType File `
+                -Force `
+                -Path $probeStop |
+                Out-Null
+
+            Wait-Job `
+                $probeJob `
+                -Timeout 5 |
+                Out-Null
+
+            if ($probeJob.State -ne "Completed") {
+                Stop-Job `
+                    $probeJob `
+                    -ErrorAction SilentlyContinue
+            }
+
+            Remove-Job `
+                $probeJob `
+                -Force `
+                -ErrorAction SilentlyContinue
+        }
+        catch {
+        }
+    }
+
+    if (
+        $probeStop -and
+        (Test-Path -LiteralPath $probeStop)
+    ) {
         Remove-Item `
-            $diagnosticsFlag `
+            -LiteralPath $probeStop `
             -Force `
             -ErrorAction SilentlyContinue
+    }
 
-        Write-Host ""
-        Write-Host "LocalCopilot closed."
-        Write-Host "Finalizing diagnostics..."
+    if (
+        $metaPath -and
+        (Test-Path -LiteralPath $metaPath)
+    ) {
+        try {
+            $sessionEndUtc =
+                [DateTimeOffset]::UtcNow
 
-        # First stop OS probe.
-        New-Item `
-            -ItemType File `
-            -Force `
-            -Path $probeStop |
-            Out-Null
+            $runnerResult =
+                if ($runnerError) {
+                    "FAIL"
+                }
+                else {
+                    "PASS"
+                }
 
-        Wait-Job `
-            $probeJob `
-            -Timeout 5 |
-            Out-Null
+            $errorType =
+                if ($runnerError) {
+                    $runnerError.GetType().Name
+                }
+                else {
+                    "none"
+                }
 
-        # Then let bundle writer perform one final read.
-        New-Item `
-            -ItemType File `
-            -Force `
-            -Path $bundleStop |
-            Out-Null
+            $errorHResult =
+                if ($runnerError) {
+                    "0x{0:X8}" -f $runnerError.HResult
+                }
+                else {
+                    "none"
+                }
 
-        Wait-Job `
-            $bundleJob `
-            -Timeout 5 |
-            Out-Null
+            $exitCodeText =
+                if ($null -eq $applicationExitCode) {
+                    "n/a"
+                }
+                else {
+                    $applicationExitCode.ToString()
+                }
 
-        Stop-Job `
-            $probeJob,
-            $bundleJob `
-            -ErrorAction SilentlyContinue
+            $finalMeta = @"
 
-        Remove-Job `
-            $probeJob,
-            $bundleJob `
-            -Force `
-            -ErrorAction SilentlyContinue
+=================================================
+SESSION COMPLETION
+=================================================
+Session End UTC: $($sessionEndUtc.ToString("o"))
+Build Result: $buildResult
+Application Result: $applicationResult
+Application Exit Code: $exitCodeText
+Runner Result: $runnerResult
+Runner Error Type: $errorType
+Runner Error HRESULT: $errorHResult
+"@
 
-        Remove-Item `
-            $probeStop,
-            $bundleStop `
-            -Force `
-            -ErrorAction SilentlyContinue
+            [System.IO.File]::AppendAllText(
+                $metaPath,
+                $finalMeta,
+                (New-Object System.Text.UTF8Encoding($true))
+            )
+        }
+        catch {
+        }
+    }
 
-        Start-Sleep `
-            -Milliseconds 300
+    # Build the final bundle from this exact session and explicit whitelist.
+    if ($bundlePath -and $sessionDirectory) {
+        try {
+            $bundleUtf8 =
+                New-Object System.Text.UTF8Encoding($true)
 
-        if (Test-Path $bundlePath) {
+            $builder =
+                New-Object System.Text.StringBuilder
+
+            [void]$builder.AppendLine(
+                "================================================="
+            )
+            [void]$builder.AppendLine(
+                "LOCALCOPILOT DIAGNOSTIC BUNDLE"
+            )
+            [void]$builder.AppendLine(
+                "================================================="
+            )
+            [void]$builder.AppendLine(
+                "Bundle schema: 1"
+            )
+            [void]$builder.AppendLine(
+                "Session ID: " +
+                $sessionId.ToString("D")
+            )
+            [void]$builder.AppendLine(
+                "Generated UTC: " +
+                [DateTimeOffset]::UtcNow.ToString("o")
+            )
+            [void]$builder.AppendLine(
+                "Included files are restricted to the explicit whitelist below."
+            )
+
+            $bundleWhitelist =
+                @(
+                    [pscustomobject]@{
+                        Name = "session-meta.txt"
+                        Path = $metaPath
+                    },
+                    [pscustomobject]@{
+                        Name = "app.log"
+                        Path = Join-Path $sessionDirectory "app.log"
+                    },
+                    [pscustomobject]@{
+                        Name = "os-foreground.log"
+                        Path = $probeLog
+                    }
+                )
+
+            [void]$builder.AppendLine("")
+            [void]$builder.AppendLine("Whitelist:")
+
+            foreach ($source in $bundleWhitelist) {
+                [void]$builder.AppendLine(
+                    "- " +
+                    $source.Name
+                )
+            }
+
+            foreach ($source in $bundleWhitelist) {
+                [void]$builder.AppendLine("")
+                [void]$builder.AppendLine(
+                    "================================================="
+                )
+                [void]$builder.AppendLine(
+                    "FILE: " +
+                    $source.Name
+                )
+                [void]$builder.AppendLine(
+                    "================================================="
+                )
+
+                if (Test-Path -LiteralPath $source.Path) {
+                    try {
+                        [void]$builder.AppendLine(
+                            [System.IO.File]::ReadAllText(
+                                $source.Path
+                            )
+                        )
+                    }
+                    catch {
+                        [void]$builder.AppendLine(
+                            "Whitelisted file was temporarily unreadable."
+                        )
+                    }
+                }
+                else {
+                    [void]$builder.AppendLine(
+                        "Whitelisted file was not produced."
+                    )
+                }
+            }
+
+            $temporaryBundlePath =
+                Join-Path `
+                    $sessionDirectory `
+                    "diagnostic-bundle.tmp"
+
+            [System.IO.File]::WriteAllText(
+                $temporaryBundlePath,
+                $builder.ToString(),
+                $bundleUtf8
+            )
+
+            Move-Item `
+                -LiteralPath $temporaryBundlePath `
+                -Destination $bundlePath `
+                -Force
 
             try {
                 Get-Content `
-                    $bundlePath `
+                    -LiteralPath $bundlePath `
                     -Raw |
                     Set-Clipboard
 
@@ -597,26 +643,31 @@ public static class LocalCopilotForegroundProbe
             }
             catch {
                 Write-Host ""
-                Write-Host "Bundle created, clipboard copy failed."
+                Write-Host "Bundle created; clipboard copy failed."
             }
 
             Write-Host ""
             Write-Host $bundlePath
             Write-Host ""
-            Write-Host "Paste it directly into ChatGPT."
+            Write-Host "Paste the complete clipboard contents into ChatGPT."
         }
-        else {
+        catch {
             Write-Host ""
-            Write-Host "ERROR: bundle was not created."
+            Write-Host "ERROR: final diagnostic bundle could not be created."
         }
     }
 }
-catch {
+
+if ($runnerError) {
     Write-Host ""
     Write-Host "=============================================="
     Write-Host "DEBUG RUNNER ERROR"
     Write-Host "=============================================="
-    Write-Host $_.Exception.Message
+    Write-Host (
+        "Type={0} HRESULT=0x{1:X8}" -f `
+            $runnerError.GetType().Name,
+            $runnerError.HResult
+    )
     Write-Host ""
     Write-Host "PowerShell remains open."
 }

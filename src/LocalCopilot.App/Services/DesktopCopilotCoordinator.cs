@@ -358,11 +358,13 @@ public sealed class DesktopCopilotCoordinator :
         catch (Exception ex)
         {
             SetCaptureTargetStatus(
-                $"Capture target failed: {ex.Message}");
+                $"Capture target failed | " +
+                $"{ex.GetType().Name} | " +
+                $"0x{ex.HResult:X8}");
 
-            DiagnosticLog.Write(
+            DiagnosticLog.WriteException(
                 "CAPTURE.PROBE_ERROR",
-                ex.ToString());
+                ex);
         }
     }
 
@@ -478,11 +480,13 @@ public sealed class DesktopCopilotCoordinator :
         catch (Exception ex)
         {
             SetCapturedFrameStatus(
-                $"RAM capture failed: {ex.Message}");
+                $"RAM capture failed | " +
+                $"{ex.GetType().Name} | " +
+                $"0x{ex.HResult:X8}");
 
-            DiagnosticLog.Write(
+            DiagnosticLog.WriteException(
                 "CAPTURE.BITMAP_ERROR",
-                ex.ToString());
+                ex);
         }
     }
 
@@ -601,15 +605,16 @@ public sealed class DesktopCopilotCoordinator :
         }
         catch (Exception ex)
         {
-            DiagnosticLog.Write(
+            DiagnosticLog.WriteException(
                 "CHANGE.SAMPLE_ERROR",
+                ex,
                 $"epoch={epoch.Id} " +
-                $"profile={profileWidth} " +
-                $"type={ex.GetType().Name} " +
-                $"message={ex.Message}");
+                $"profile={profileWidth}");
 
             SetChangeDetectionStatus(
-                $"Change sample failed: {ex.Message}");
+                $"Change sample failed | " +
+                $"{ex.GetType().Name} | " +
+                $"0x{ex.HResult:X8}");
         }
     }
 
@@ -760,13 +765,14 @@ public sealed class DesktopCopilotCoordinator :
         catch (Exception ex)
         {
             SetPersistentChangeStatus(
-                $"Persistent start failed: {ex.Message}");
+                $"Persistent start failed | " +
+                $"{ex.GetType().Name} | " +
+                $"0x{ex.HResult:X8}");
 
-            DiagnosticLog.Write(
+            DiagnosticLog.WriteException(
                 "PERSIST.START_ERROR",
-                $"epoch={epoch.Id} " +
-                $"type={ex.GetType().Name} " +
-                $"message={ex.Message}");
+                ex,
+                $"epoch={epoch.Id}");
         }
     }
 
@@ -798,12 +804,13 @@ public sealed class DesktopCopilotCoordinator :
         catch (Exception ex)
         {
             SetPersistentChangeStatus(
-                $"Persistent stop failed: {ex.Message}");
+                $"Persistent stop failed | " +
+                $"{ex.GetType().Name} | " +
+                $"0x{ex.HResult:X8}");
 
-            DiagnosticLog.Write(
+            DiagnosticLog.WriteException(
                 "PERSIST.STOP_ERROR",
-                $"type={ex.GetType().Name} " +
-                $"message={ex.Message}");
+                ex);
         }
     }
 
@@ -896,9 +903,9 @@ public sealed class DesktopCopilotCoordinator :
                     }
                     catch (Exception ex)
                     {
-                        DiagnosticLog.Write(
+                        DiagnosticLog.WriteException(
                             "COORD.QUEUE_ERROR",
-                            ex.ToString());
+                            ex);
                     }
                 });
 
@@ -1345,7 +1352,9 @@ public sealed class DesktopCopilotCoordinator :
 
                     SetPersistentChangeStatus(
                         ended.HadError
-                            ? $"Stopped with error | {ended.ErrorType}: {ended.ErrorMessage}"
+                            ? $"Stopped with error | " +
+                              $"{ended.ErrorType} | " +
+                              $"0x{(ended.ErrorHResult ?? 0):X8}"
                             : $"Stopped | {ended.Reason} | " +
                               $"frames {ended.FramesArrived} | " +
                               $"replaced {ended.FramesReplaced} | " +

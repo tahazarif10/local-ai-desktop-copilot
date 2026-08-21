@@ -525,12 +525,10 @@ public sealed class SensingOrchestrator
         }
         catch (Exception ex)
         {
-            DiagnosticLog.Write(
+            DiagnosticLog.WriteException(
                 "ORCH.START_ERROR",
-                $"epoch={epoch.Id} " +
-                $"type={ex.GetType().Name} " +
-                $"hresult=0x{ex.HResult:X8} " +
-                $"message={ex.Message}");
+                ex,
+                $"epoch={epoch.Id}");
 
             PublishIfCurrent(
                 epoch,

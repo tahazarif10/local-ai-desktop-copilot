@@ -332,7 +332,7 @@ LocalCopilot.Core
 LocalCopilot.Core.Tests -> LocalCopilot.Core
 ```
 
-The split deliberately keeps deterministic logic out of the WinUI target so it can be characterized without XAML, capture, hooks, UI Automation, or a live desktop. It does not add a process or trust boundary. `App` creates and owns one coordinator; the coordinator owns long-running sensing resources and service subscriptions; `MainPage` attaches/detaches only as an `IDesktopCopilotView` and forwards user commands. `DiagnosticLog` temporarily lives in Core to preserve accepted diagnostic behavior without introducing a logging refactor in M2.4.1; its static, fixed-path design remains M2.4.4 debt.
+The split deliberately keeps deterministic logic out of the WinUI target so it can be characterized without XAML, capture, hooks, UI Automation, or a live desktop. It does not add a process or trust boundary. `App` creates and owns one coordinator; the coordinator owns long-running sensing resources and service subscriptions; `MainPage` attaches/detaches only as an `IDesktopCopilotView` and forwards user commands. `DiagnosticLog` remains a static compatibility facade in Core, but its sink is initialized once from a validated, expiring packaged-app launch token and writes only to that session's fixed `app.log` filename. Normal launch arguments cannot activate diagnostics accidentally.
 
 ### 7.2 Incremental target
 
@@ -460,6 +460,8 @@ Required counters/budgets include:
 - CPU, RAM, GPU/VRAM when reliable measurement exists;
 - payload and prompt sizes;
 - model load/unload and degraded-mode transitions.
+
+The current diagnostic-only low-level input hooks expose a bounded health summary at teardown: callback/activity counts, callback and subscriber failures, installing-thread mismatches, latency buckets, average/maximum callback duration, and unhook results. No per-callback file I/O occurs. Physical-client evidence decides whether this accepted diagnostic path remains synchronous or moves to a dedicated hook thread/Raw Input; instrumentation alone is not permission to replace it.
 
 Do not publish a fixed performance claim from an estimate. Keep benchmark environment, sample count, warmup, percentile, and exact hardware with the result.
 

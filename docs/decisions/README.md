@@ -18,6 +18,7 @@ ADRs preserve why a material decision exists so a new session does not undo it a
 | [0003](0003-bounded-latest-wins-sensing.md) | Accepted | Use bounded/latest-wins flow for volatile sensing data |
 | [0004](0004-two-computer-semantic-escalation.md) | Accepted | Fixed two-computer topology and UIA→OCR→VLM escalation |
 | [0005](0005-foundation-hardening-before-uia.md) | Accepted | Complete M2.4 hardening before M3 UIA |
+| [0006](0006-launch-scoped-diagnostics.md) | Accepted | Use expiring launch-scoped diagnostic sessions and explicit bundle sources |
 
 ## When to add an ADR
 

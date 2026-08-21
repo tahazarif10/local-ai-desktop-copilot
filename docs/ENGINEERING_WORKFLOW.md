@@ -141,23 +141,35 @@ Set-Location H:\AIProjects\local-ai-desktop-copilot
 Current behavior:
 
 - rejects launch if `LocalCopilot.App` is already running;
-- removes a stale diagnostic-enable flag before the new session;
+- creates a unique session directory under the repository-local ignored diagnostic root, or a caller-supplied root;
 - records session ID, branch, SHA, .NET, PowerShell, OS, and Git status;
-- builds `Debug/win-x64`;
+- builds `Debug/win-x64 --warnaserror`;
 - runs an independent metadata-only foreground probe;
-- enables application diagnostics only around `dotnet run`;
-- refreshes a bundle from an explicit diagnostic filename whitelist;
-- disables diagnostics first during cleanup;
-- stops jobs, performs a final refresh, and copies the bundle to clipboard.
+- enables application diagnostics only through an expiring launch argument passed by the packaged-app run target;
+- uses no persistent enable flag, so a later normal launch is Off even after abnormal termination;
+- stops the probe before reading bundle sources;
+- creates the final bundle only from the exact session's explicit three-file whitelist;
+- copies the complete bundle to the clipboard.
 
-Known development-only limitation:
+Default output shape:
 
 ```text
-H:\DevCache\LocalCopilot
-m1-3-*.log / m1-3-debug-bundle.txt
+<repository>\.localcopilot\diagnostics\<utc>-<session-id>\
+  session-meta.txt
+  app.log
+  os-foreground.log
+  diagnostic-bundle.txt
 ```
 
-M2.4.4 replaces the fixed drive and legacy names without losing the one-command/copy-entire-bundle workflow.
+To select another root without changing product code:
+
+```powershell
+.\run-debug.ps1 -DiagnosticRoot "D:\LocalCopilotDiagnostics"
+```
+
+The app accepts the diagnostic token only when its schema, GUID, absolute session path, folder/session binding, creation time, expiry, and maximum lifetime validate. Base64url is transport encoding, not encryption or authorization; explicit possession of the launch argument is the opt-in mechanism.
+
+Each input-hook lifetime ends with one `INPUT.HOOK_HEALTH` record. It reports callback/activity counts, callback/subscriber errors, installing-thread mismatches, average/maximum callback duration, fixed latency buckets, and both unhook results. It contains no key, text, scan-code, coordinate, clipboard, or target-control data.
 
 Before sharing a bundle, check it for unexpected content. Normal logs must never include titles, UIA/OCR text, input values, coordinates, clipboard data, pixels, audio, prompts, or responses.
 

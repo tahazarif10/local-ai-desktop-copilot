@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -7,48 +7,73 @@ namespace LocalCopilot_App.Diagnostics;
 
 public static class DiagnosticLog
 {
-    public const string FilePath =
-        @"H:\DevCache\LocalCopilot\m1-3-app.log";
+    public const string ApplicationLogFileName =
+        DiagnosticSessionParser.ApplicationLogFileName;
 
-    public const string EnableFlagPath =
-        @"H:\DevCache\LocalCopilot\diagnostics.enabled";
+    private const int MaximumAreaLength =
+        96;
 
-    private static readonly object Gate = new();
+    private const int MaximumMessageLength =
+        4096;
+
+    private static readonly object Gate =
+        new();
 
     private static readonly UTF8Encoding Utf8 =
         new(false);
+
+    private static DiagnosticSession? _session;
+
+    private static bool _initialized;
 
     public static bool IsEnabled
     {
         get
         {
-            try
+            lock (Gate)
             {
-                return File.Exists(EnableFlagPath);
-            }
-            catch
-            {
-                return false;
+                return
+                    _initialized &&
+                    _session is not null;
             }
         }
     }
 
+    public static void Initialize(
+        string? launchArguments)
+    {
+        Initialize(
+            launchArguments,
+            DateTimeOffset.UtcNow);
+    }
+
     public static void ResetSession()
     {
-        if (!IsEnabled)
+        DiagnosticSession? session =
+            GetSession();
+
+        if (session is null)
+        {
             return;
+        }
 
         try
         {
             Directory.CreateDirectory(
-                Path.GetDirectoryName(FilePath)!);
+                session.DirectoryPath);
+
+            string header =
+                "=== LocalCopilot diagnostic session ===" +
+                Environment.NewLine +
+                $"schema={DiagnosticSessionParser.SchemaVersion} " +
+                $"sessionId={session.SessionId}" +
+                Environment.NewLine;
 
             lock (Gate)
             {
                 File.WriteAllText(
-                    FilePath,
-                    "=== LocalCopilot M1.3 diagnostic session ===" +
-                    Environment.NewLine,
+                    session.LogFilePath,
+                    header,
                     Utf8);
             }
         }
@@ -62,35 +87,230 @@ public static class DiagnosticLog
         string area,
         string message)
     {
-        if (!IsEnabled)
+        DiagnosticSession? session =
+            GetSession();
+
+        if (session is null)
+        {
             return;
+        }
 
         try
         {
-            string safe =
-                message
-                    .Replace("\r", "\\r")
-                    .Replace("\n", "\\n");
+            string safeArea =
+                Sanitize(
+                    area,
+                    MaximumAreaLength,
+                    "UNKNOWN");
+
+            string safeMessage =
+                Sanitize(
+                    message,
+                    MaximumMessageLength,
+                    "none");
 
             string line =
                 $"{DateTimeOffset.Now:O}" +
                 $" | MThread={Environment.CurrentManagedThreadId}" +
-                $" | {area}" +
-                $" | {safe}";
+                $" | {safeArea}" +
+                $" | {safeMessage}";
 
             lock (Gate)
             {
+                Directory.CreateDirectory(
+                    session.DirectoryPath);
+
                 File.AppendAllText(
-                    FilePath,
+                    session.LogFilePath,
                     line + Environment.NewLine,
                     Utf8);
             }
 
-            Debug.WriteLine(line);
+            Debug.WriteLine(
+                line);
         }
         catch
         {
             // Diagnostics must never crash the app.
         }
+    }
+
+    public static void WriteException(
+        string area,
+        Exception exception,
+        string? metadata = null)
+    {
+        if (exception is null)
+        {
+            return;
+        }
+
+        string prefix =
+            string.IsNullOrWhiteSpace(
+                metadata)
+                ? string.Empty
+                : metadata.Trim() + " ";
+
+        Write(
+            area,
+            prefix +
+            $"type={exception.GetType().Name} " +
+            $"hresult=0x{exception.HResult:X8}");
+    }
+
+    internal static void Initialize(
+        string? launchArguments,
+        DateTimeOffset utcNow)
+    {
+        lock (Gate)
+        {
+            if (_initialized)
+            {
+                return;
+            }
+
+            _initialized =
+                true;
+
+            if (DiagnosticSessionParser.TryParse(
+                    launchArguments,
+                    utcNow,
+                    out DiagnosticSession? session))
+            {
+                _session =
+                    session;
+            }
+        }
+    }
+
+    internal static string SanitizeForTests(
+        string value,
+        int maximumLength)
+    {
+        return Sanitize(
+            value,
+            maximumLength,
+            "none");
+    }
+
+    internal static string? CurrentLogFilePath
+    {
+        get
+        {
+            lock (Gate)
+            {
+                return _session?.LogFilePath;
+            }
+        }
+    }
+
+    internal static void ResetForTests()
+    {
+        lock (Gate)
+        {
+            _session =
+                null;
+
+            _initialized =
+                false;
+        }
+    }
+
+    private static DiagnosticSession? GetSession()
+    {
+        lock (Gate)
+        {
+            return
+                _initialized
+                    ? _session
+                    : null;
+        }
+    }
+
+    private static string Sanitize(
+        string? value,
+        int maximumLength,
+        string fallback)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                value) ||
+            maximumLength <= 0)
+        {
+            return fallback;
+        }
+
+        StringBuilder builder =
+            new(
+                Math.Min(
+                    value.Length,
+                    maximumLength));
+
+        foreach (char character in value)
+        {
+            if (builder.Length >=
+                maximumLength)
+            {
+                break;
+            }
+
+            switch (character)
+            {
+                case '\r':
+                    AppendEscaped(
+                        builder,
+                        "\\r",
+                        maximumLength);
+                    break;
+
+                case '\n':
+                    AppendEscaped(
+                        builder,
+                        "\\n",
+                        maximumLength);
+                    break;
+
+                case '\t':
+                    AppendEscaped(
+                        builder,
+                        "\\t",
+                        maximumLength);
+                    break;
+
+                default:
+                    builder.Append(
+                        char.IsControl(
+                            character)
+                            ? '?'
+                            : character);
+                    break;
+            }
+        }
+
+        return builder.Length == 0
+            ? fallback
+            : builder.ToString();
+    }
+
+    private static void AppendEscaped(
+        StringBuilder builder,
+        string escaped,
+        int maximumLength)
+    {
+        int available =
+            maximumLength -
+            builder.Length;
+
+        if (available <= 0)
+        {
+            return;
+        }
+
+        builder.Append(
+            escaped.AsSpan(
+                0,
+                Math.Min(
+                    escaped.Length,
+                    available)));
     }
 }

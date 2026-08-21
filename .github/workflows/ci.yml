@@ -69,6 +69,22 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Parse diagnostic runner with Windows PowerShell
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          $path = (Resolve-Path .\run-debug.ps1).Path
+          $null = [System.Management.Automation.Language.Parser]::ParseFile(
+            $path,
+            [ref]$tokens,
+            [ref]$errors)
+
+          if ($errors.Count -ne 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            throw "run-debug.ps1 is not compatible with Windows PowerShell."
+          }
+
       - name: Set up .NET 10
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
