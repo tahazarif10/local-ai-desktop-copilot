@@ -159,7 +159,8 @@ public sealed class ForegroundWindowService
             privacyPolicy.Evaluate(
                 identity);
 
-        if (!privacy.AllowsSensing)
+        if (!privacy.Allows(
+                PrivacyCapability.ObserveIdentity))
         {
             DiagnosticLog.Write(
                 "SERVICE.PRIVACY_DENY",
@@ -177,6 +178,25 @@ public sealed class ForegroundWindowService
 
             return new ForegroundWindowObservation(
                 blockedSnapshot,
+                privacy);
+        }
+
+        if (!privacy.Allows(
+                PrivacyCapability.ReadWindowTitle))
+        {
+            DiagnosticLog.Write(
+                "SERVICE.TITLE_BLOCKED",
+                $"hwnd=0x{identity.Handle.ToInt64():X} " +
+                $"pid={identity.ProcessId} " +
+                $"process={identity.ProcessName} " +
+                $"rule={privacy.RuleId}");
+
+            return new ForegroundWindowObservation(
+                new ForegroundWindowSnapshot(
+                    identity.Handle,
+                    identity.ProcessId,
+                    identity.ProcessName,
+                    string.Empty),
                 privacy);
         }
 

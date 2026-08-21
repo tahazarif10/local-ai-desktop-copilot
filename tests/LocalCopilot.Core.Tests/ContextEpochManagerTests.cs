@@ -152,6 +152,46 @@ public sealed class ContextEpochManagerTests
     }
 
     [TestMethod]
+    public void GetOrAdvance_ChangedCapabilitySet_CancelsAndAdvances()
+    {
+        using ContextEpochManager manager = new();
+
+        ContextEpoch first = manager.GetOrAdvance(
+            TestData.Snapshot(),
+            TestData.Allowed(
+                capabilities:
+                    PrivacyCapability.ObserveIdentity |
+                    PrivacyCapability.ReadWindowTitle));
+
+        ContextEpoch second = manager.GetOrAdvance(
+            TestData.Snapshot(),
+            TestData.Allowed(
+                capabilities:
+                    PrivacyCapability.ObserveIdentity |
+                    PrivacyCapability.CapturePixels));
+
+        Assert.AreEqual(2L, second.Id);
+        Assert.IsTrue(first.CancellationToken.IsCancellationRequested);
+    }
+
+    [TestMethod]
+    public void GetOrAdvance_ChangedPolicyRevision_CancelsAndAdvances()
+    {
+        using ContextEpochManager manager = new();
+
+        ContextEpoch first = manager.GetOrAdvance(
+            TestData.Snapshot(),
+            TestData.Allowed(policyRevision: 1));
+
+        ContextEpoch second = manager.GetOrAdvance(
+            TestData.Snapshot(),
+            TestData.Allowed(policyRevision: 2));
+
+        Assert.AreEqual(2L, second.Id);
+        Assert.IsTrue(first.CancellationToken.IsCancellationRequested);
+    }
+
+    [TestMethod]
     public void Reset_CancelsCurrentAndPreservesMonotonicIds()
     {
         using ContextEpochManager manager =

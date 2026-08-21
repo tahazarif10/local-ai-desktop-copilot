@@ -42,7 +42,8 @@ public sealed class ChangeDetectionProbeService
         lock (_stateGate)
         {
             bool allowed =
-                epoch.Privacy.AllowsSensing;
+                epoch.Privacy.Allows(
+                    PrivacyCapability.CapturePixels);
 
             bool sameAllowedTarget =
                 _hasObservedTarget &&
@@ -87,7 +88,8 @@ public sealed class ChangeDetectionProbeService
                 nameof(profileWidth));
         }
 
-        if (!epoch.Privacy.AllowsSensing)
+        if (!epoch.Privacy.Allows(
+                PrivacyCapability.CapturePixels))
         {
             throw new UnauthorizedAccessException(
                 "Privacy policy blocks change detection.");

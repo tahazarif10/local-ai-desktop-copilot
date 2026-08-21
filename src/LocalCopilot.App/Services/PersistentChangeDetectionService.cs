@@ -78,7 +78,8 @@ public sealed class PersistentChangeDetectionService
                 nameof(sampleInterval));
         }
 
-        if (!epoch.Privacy.AllowsSensing)
+        if (!epoch.Privacy.Allows(
+                PrivacyCapability.CapturePixels))
         {
             throw new UnauthorizedAccessException(
                 "Privacy policy blocks persistent sensing.");

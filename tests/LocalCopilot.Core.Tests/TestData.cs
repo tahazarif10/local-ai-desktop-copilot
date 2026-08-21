@@ -18,19 +18,28 @@ internal static class TestData
 
     public static PrivacyEvaluation Allowed(
         string ruleId = "default_allow",
-        string reason = "allowed") =>
+        string reason = "allowed",
+        PrivacyCapability capabilities =
+            PrivacyCapability.ObserveIdentity |
+            PrivacyCapability.ReadWindowTitle |
+            PrivacyCapability.CapturePixels |
+            PrivacyCapability.RetainDerivedEvent,
+        long policyRevision = 1) =>
         new(
-            PrivacyDisposition.Allowed,
+            capabilities,
             ruleId,
-            reason);
+            reason,
+            policyRevision);
 
     public static PrivacyEvaluation Blocked(
         string ruleId = "process_blocklist",
-        string reason = "process_rule") =>
+        string reason = "process_rule",
+        long policyRevision = 1) =>
         new(
-            PrivacyDisposition.Blocked,
+            PrivacyCapability.None,
             ruleId,
-            reason);
+            reason,
+            policyRevision);
 
     public static ChangeResult Change(
         ChangeClassification classification) =>

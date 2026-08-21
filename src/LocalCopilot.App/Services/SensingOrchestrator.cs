@@ -190,7 +190,8 @@ public sealed class SensingOrchestrator
 
                 blocked =
                     !epoch.Privacy
-                        .AllowsSensing;
+                        .Allows(
+                            PrivacyCapability.CapturePixels);
 
                 if (!blocked)
                 {
@@ -642,7 +643,8 @@ public sealed class SensingOrchestrator
                     epoch) &&
                 !epoch.CancellationToken
                     .IsCancellationRequested &&
-                epoch.Privacy.AllowsSensing;
+                epoch.Privacy.Allows(
+                    PrivacyCapability.CapturePixels);
         }
     }
 
