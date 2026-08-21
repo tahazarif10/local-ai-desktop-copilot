@@ -255,22 +255,22 @@ public sealed class DiagnosticSessionTests
                 File.ReadAllText(
                     expectedPath);
 
-            StringAssert.Contains(
-                content,
-                $"sessionId={sessionId:D}");
+            Assert.Contains(
+                $"sessionId={sessionId:D}",
+                content);
 
-            StringAssert.Contains(
-                content,
-                "TEST.EVENT | first\\r\\nsecond\\tvalue");
+            Assert.Contains(
+                "TEST.EVENT | first\\r\\nsecond\\tvalue",
+                content);
 
-            StringAssert.Contains(
-                content,
+            Assert.Contains(
                 "TEST.ERROR | operation=test " +
-                "type=InvalidOperationException hresult=0x");
+                "type=InvalidOperationException hresult=0x",
+                content);
 
-            StringAssert.DoesNotContain(
-                content,
-                "sensitive provider content");
+            Assert.DoesNotContain(
+                "sensitive provider content",
+                content);
         }
         finally
         {
