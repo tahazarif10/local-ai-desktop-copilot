@@ -39,13 +39,13 @@ This is a product-grade system, not a screenshot-to-LLM demo. It uses the smalle
 
 | Item | Current truth |
 | --- | --- |
-| Last verified functional code baseline | `833a0af915a5ed58dd61642c1e188c623d3b90d4` (later documentation-only commits may be descendants) |
+| Last verified functional code baseline | `dd6f56300fd32d9329f01e6d8515af925e0014bd` (later documentation-only commits may be descendants) |
 | Baseline date | 2026-08-21 (Windows runtime acceptance) |
-| Completed | Foreground context, RAM-only capture, privacy/epoch gate, low-resolution change detection, persistent latest-wins capture, sensing orchestration, diagnostic input correlation, portable core characterization, and CI foundation |
-| Current implementation shape | One packaged WinUI 3 process split into a Windows/UI app assembly and a portable core assembly; the diagnostic page still owns composition; persistent capture/input correlation require explicit Arm and default OFF |
-| Next implementation milestone | `M2.4.2 Composition and Lifecycle Separation` on `dev/m2-4-2-composition-lifecycle` |
+| Completed | Foreground context, RAM-only capture, privacy/epoch gate, low-resolution change detection, persistent latest-wins capture, sensing orchestration, diagnostic input correlation, portable core characterization/CI, and application-owned composition/lifecycle |
+| Current implementation shape | One packaged WinUI 3 process split into a Windows/UI app assembly and a portable core assembly; `App` owns a composition root/coordinator while `MainPage` is a view/command adapter; persistent capture/input correlation require explicit Arm and default OFF |
+| Next implementation milestone | `M2.4.3 Capability-based Privacy Policy` on `dev/m2-4-3-capability-privacy` |
 | Next product capability after hardening | `M3 UI Understanding` through read-only Windows UI Automation |
-| Automated tests / CI | M2.4.1 is merged with 43 deterministic core tests; 43/43 passed locally and on Ubuntu/Windows CI, and Windows CI passed the canonical `Debug/win-x64` app build |
+| Automated tests / CI | 49 deterministic core tests; 49/49 passed locally and on Ubuntu/Windows CI, and Windows CI passed the canonical `Debug/win-x64` app build at the M2.4.2 validation head |
 | Cloud use | Forbidden by the product architecture |
 | Autonomous input/actions | Out of scope |
 
@@ -110,7 +110,16 @@ See [Privacy Model](docs/PRIVACY_MODEL.md) for the exact current-versus-target d
 
 ## What works today
 
-The merged M2 sensing path is:
+The accepted desktop ownership path is:
+
+```text
+App
+  -> ApplicationCompositionRoot
+  -> DesktopCopilotCoordinator (services, subscriptions, lifecycle)
+  <-> MainPage (commands + immutable view state only)
+```
+
+The preserved M2 sensing path is:
 
 ```text
 WinEvent foreground hook
