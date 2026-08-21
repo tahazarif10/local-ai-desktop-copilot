@@ -113,7 +113,7 @@ Build succeeded.
 
 Only `win-x64` has runtime acceptance. Do not claim x86/ARM64 support merely because platforms appear in the project.
 
-The accepted M2.3 baseline `c29099a` had no automated tests. M2.4.1 adds a portable characterization suite for the extracted core logic. Run it with:
+The accepted M2.3 baseline `c29099a` had no automated tests. M2.4.1 added a portable characterization suite for the extracted core logic. Run it with:
 
 ```powershell
 dotnet test .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj -c Release --settings .\tests\LocalCopilot.Core.Tests\.runsettings

@@ -1,10 +1,10 @@
 ---
 state_schema: 1
-reference_code_commit: c29099a1c96680229f82f7b6b400cf962e51b5cc
+reference_code_commit: 833a0af915a5ed58dd61642c1e188c623d3b90d4
 last_verified_date: 2026-08-21
-completed_through: M2.3.1
-next_milestone: M2.4.1
-next_milestone_name: Characterization Tests and CI Foundation
+completed_through: M2.4.1
+next_milestone: M2.4.2
+next_milestone_name: Composition and Lifecycle Separation
 ---
 
 # Project state
@@ -13,13 +13,11 @@ This document separates verified implementation from target architecture. Update
 
 ## Executive state
 
-The implementation at `c29099a1c96680229f82f7b6b400cf962e51b5cc` is the accepted M2.3/M2.3.1 functional baseline. The Windows `win-x64` build passed with zero warnings and zero errors, and the orchestrated sensing/correlation path passed targeted runtime acceptance on the physical client. Documentation-only `main` commits may follow this SHA without changing the accepted runtime behavior; always resolve live HEAD from GitHub/Git.
+The implementation at `833a0af915a5ed58dd61642c1e188c623d3b90d4` is the accepted M2.4.1 functional baseline. [PR #10](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/10) extracted deterministic logic into `LocalCopilot.Core`, added 43 characterization tests, and established Ubuntu/Windows CI without changing the accepted M2 sensing behavior. The canonical Windows `win-x64` build and the full physical-client M2 regression both passed. Documentation-only `main` commits may follow this SHA without changing the accepted runtime behavior; always resolve live HEAD from GitHub/Git.
 
-There is no known blocking defect in the accepted M2 path. No further M2.3 rework is required unless a reproducible regression appears.
+There is no known blocking defect in the accepted M2 path or M2.4.1 foundation. No rework is required unless a reproducible regression appears.
 
-The repository is not yet a complete copilot. It is a diagnostic WinUI shell around the sensing foundation. The next implementation work is M2.4 foundation hardening before any UI Automation content collection.
-
-The active M2.4.1 candidate in [PR #10](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/10) extracts deterministic logic into `LocalCopilot.Core`, defines 43 characterization tests, and adds Linux/Windows CI. Candidate validation is complete: the full suite passed locally and on both CI runners, the canonical Windows build passed, and the unchanged M2 runtime path passed a physical-client regression scenario. This remains pre-merge evidence rather than a completed milestone: `c29099a` is still the accepted functional baseline until PR #10 is merged.
+The repository is not yet a complete copilot. It is a diagnostic WinUI shell around the sensing foundation. The next implementation work is M2.4.2 composition and lifecycle separation before capability privacy and any UI Automation content collection.
 
 ## Accepted milestone evidence
 
@@ -33,22 +31,26 @@ The active M2.4.1 candidate in [PR #10](https://github.com/tahazarif10/local-ai-
 | M2.2 Persistent latest-wins sensing | Complete | [PR #6](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/6) | 640 px / 500 ms; frames replaced under pressure; resize recreation; context cancellation; clean recovery and teardown |
 | M2.3 Sensing orchestrator | Complete | [PR #7](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/7) | Explicit Arm/Disarm, settle/reuse/block/unavailable paths, context-scoped session lifecycle |
 | M2.3.1 Diagnostic correlation | Complete | [PR #7](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/7) | MouseWheel, MouseClick, KeyboardActivity, and expired `None`; final run processed 33 samples with `staleDropped=0`; clean `hadError=False` shutdown and hook removal |
+| M2.4.1 Characterization tests and CI foundation | Complete | [PR #10](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/10), squash `833a0af` | 43/43 deterministic tests locally and on Ubuntu/Windows CI; canonical Windows build; unchanged M2 path passed the physical-client regression and privacy scan |
 
 PR #7 was squash-merged as `c29099a`. Its feature-branch head (`abcbf08`) is not the `main` baseline.
 
-### M2.4.1 candidate validation evidence
+PR #10 was squash-merged as `833a0af`. Its behavior-bearing validation head (`ab504ee`) and final documentation-only PR head (`af9a916`) are supporting evidence, not the current `main` baseline.
 
-The behavior-bearing candidate was validated at PR #10 code head `ab504eea5c4baabf2b770c92d0866ff89d1caac9` on 2026-08-21. Later documentation-only descendants do not replace that runtime evidence.
+### M2.4.1 acceptance evidence
+
+The behavior-bearing code was validated at PR #10 head `ab504eea5c4baabf2b770c92d0866ff89d1caac9` on 2026-08-21, then squash-merged without a tree-content change as `833a0af915a5ed58dd61642c1e188c623d3b90d4`. Later documentation-only descendants do not replace that runtime evidence.
 
 - Local Windows test run: 43 passed, 0 failed, 0 skipped.
 - Local canonical app build: `Debug/win-x64`, 0 warnings, 0 errors.
 - [CI run #2](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32472133991): 43/43 core tests passed on Ubuntu and Windows; the Windows `Debug/win-x64` app build passed.
+- [Final PR CI run #3](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32474169112) passed on the documentation-complete PR head before merge.
 - Physical-client regression: explicit Arm, allowed sensing, metadata-only input correlation, diagnostic privacy blocking before content access, automatic allowed recovery, same-context reuse, Disarm/Re-arm, allowed context transition, and page unload all behaved as the accepted M2 baseline.
 - Every exercised persistent session ended with `hadError=False` and `staleDropped=0`. Privacy transitions ended the prior session before publication to the blocked epoch; frame replacement remained active under the latest-wins capacity-one policy.
 - Teardown evidence: input tracking stopped, persistent sensing was already stopped, the foreground hook returned `success=True` with `lastError=0`, the observer reported stopped, and the final epoch was cancelled/reset.
 - Diagnostic privacy scan found only the approved metadata classes; no raw title, key, text, coordinate, clipboard, pixel payload, audio, prompt, or response content was recorded. Session identifiers, process/window metadata, and machine-specific performance measurements are intentionally retained outside the public repository.
 
-Verdict: **candidate PASS; merge pending**. This evidence does not mark M2.4.1 complete before merge and does not authorize M2.4.2 or M3 work by itself.
+Verdict: **accepted and merged**. M2.4.2 is now the only approved implementation gate; this evidence does not authorize M3 work.
 
 ## Current implementation map
 
@@ -59,8 +61,8 @@ Verdict: **candidate PASS; merge pending**. This evidence does not mark M2.4.1 c
 | Language/runtime | C# on .NET 10 | `net10.0-windows10.0.26100.0` |
 | Desktop UI | Packaged WinUI 3 | `Microsoft.WindowsAppSDK` 2.4.0 |
 | Portable logic | `LocalCopilot.Core` class library | `net10.0`; no WinUI/Windows API dependency |
-| Characterization tests | MSTest 4.3.3 | 43 deterministic tests; 43/43 passed locally and on both CI runners at the PR candidate |
-| Continuous integration | GitHub Actions | [PR #10 run #2](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32472133991) passed core tests on Ubuntu/Windows and the `Debug/win-x64` app build on Windows |
+| Characterization tests | MSTest 4.3.3 | 43 deterministic tests; 43/43 passed locally and on both CI runners at the accepted M2.4.1 baseline |
+| Continuous integration | GitHub Actions | [PR #10 final run](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32474169112) passed core tests on Ubuntu/Windows and the `Debug/win-x64` app build on Windows |
 | Capture/image interop | Windows Graphics Capture + Win2D | `Microsoft.Graphics.Win2D` 1.4.0 |
 | Packaging/trust | MSIX tooling, full-trust desktop app | Development package identity used by `dotnet run` |
 | Canonical validated target | `Debug`, `win-x64` | Physical Windows client acceptance |
@@ -129,11 +131,12 @@ The `systemAIModels` manifest capability is present, but no Windows AI model API
 
 ### Must be resolved before M3 continuous semantic sensing
 
-1. **Characterization coverage is validated but not merged yet.** The active M2.4.1 candidate passed portable privacy, epoch, change-classification, timeline, and correlation tests, two-runner CI, the canonical Windows build, and a physical-client runtime regression. It remains incomplete until PR #10 is merged and live `main` is verified.
-2. **UI owns product composition and lifetime.** `MainPage.xaml.cs` constructs and coordinates every service. M2.4 separates a composition/lifecycle boundary without changing accepted behavior.
-3. **Privacy is binary and not product-configurable.** `AllowsSensing` cannot express different permissions for title, pixels, UIA text, memory, or LAN transfer. It also has no user-managed deny rules. M2.4 introduces the capability contract and configuration boundary before UIA exposes richer text.
-4. **Off is not yet a complete screen-privacy state.** The foreground observer and allowed title read run on page load; Arm gates persistent WGC/input tracking only. M2.4 must make Off/Paused stop target-window content reads.
-5. **No UIA execution boundary exists.** Official Windows guidance requires UIA client calls on a separate COM MTA worker, not the UI thread. Bounded traversal, caching, time budgets, and recovery/isolation are M3 acceptance requirements.
+M2.4.1 resolved the missing automated characterization/CI foundation. The remaining findings are:
+
+1. **UI owns product composition and lifetime.** `MainPage.xaml.cs` constructs and coordinates every service. M2.4.2 separates a composition/lifecycle boundary without changing accepted behavior.
+2. **Privacy is binary and not product-configurable.** `AllowsSensing` cannot express different permissions for title, pixels, UIA text, memory, or LAN transfer. It also has no user-managed deny rules. M2.4 introduces the capability contract and configuration boundary before UIA exposes richer text.
+3. **Off is not yet a complete screen-privacy state.** The foreground observer and allowed title read run on page load; Arm gates persistent WGC/input tracking only. M2.4 must make Off/Paused stop target-window content reads.
+4. **No UIA execution boundary exists.** Official Windows guidance requires UIA client calls on a separate COM MTA worker, not the UI thread. Bounded traversal, caching, time budgets, and recovery/isolation are M3 acceptance requirements.
 
 ### Important hardening debt
 
@@ -155,13 +158,13 @@ These are fixed design inputs, not upgrade suggestions:
 
 ## Immediate next gate
 
-The current candidate branch is:
+The next implementation branch is:
 
 ```text
-dev/m2-4-1-characterization-tests
+dev/m2-4-2-composition-lifecycle
 ```
 
-M2.4.1 candidate validation is complete; the next action is review and merge of PR #10. After merge and live-`main` verification, the next implementation branch is `dev/m2-4-2-composition-lifecycle`. M2.4.2 must preserve this evidence while moving construction and lifetime ownership out of `MainPage`.
+M2.4.1 is accepted on `main`. M2.4.2 must preserve its test, CI, privacy, runtime, and teardown evidence while moving construction, subscriptions, start/stop, and lifetime ownership out of `MainPage`. It must not introduce UIA, capability-policy redesign, diagnostic-path refactoring, or other later-slice behavior.
 
 Do not start M3.1 UIA code directly from the M2.3 baseline.
 

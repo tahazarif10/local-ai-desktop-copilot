@@ -99,4 +99,4 @@ A milestone is complete only when all of the following are true:
 
 ## Current handoff
 
-The last verified functional code baseline is `c29099a1c96680229f82f7b6b400cf962e51b5cc`; later documentation-only `main` commits may be descendants. M2.3/M2.3.1 are complete, and the next implementation gate is M2.4.1 characterization tests. Resolve live `main` HEAD from GitHub/Git, then compare it with `docs/PROJECT_STATE.md` before working.
+The last verified functional code baseline is `833a0af915a5ed58dd61642c1e188c623d3b90d4`; later documentation-only `main` commits may be descendants. M2.4.1 is complete, and the next implementation gate is M2.4.2 composition and lifecycle separation on `dev/m2-4-2-composition-lifecycle`. Resolve live `main` HEAD from GitHub/Git, then compare it with `docs/PROJECT_STATE.md` before working.
