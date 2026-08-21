@@ -28,10 +28,13 @@ public sealed class PrivacyPolicy
     private readonly bool
         _diagnosticNotepadRuleEnabled;
 
-    private PrivacyPolicy(
+    internal PrivacyPolicy(
         HashSet<string> blockedProcesses,
         bool diagnosticNotepadRuleEnabled)
     {
+        ArgumentNullException.ThrowIfNull(
+            blockedProcesses);
+
         _blockedProcesses =
             blockedProcesses;
 

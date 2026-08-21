@@ -14,6 +14,7 @@
   <img alt="UI: WinUI 3" src="https://img.shields.io/badge/UI-WinUI_3-2563EB?style=for-the-badge" />
   <img alt="Privacy: local only" src="https://img.shields.io/badge/Privacy-Local_Only-15803D?style=for-the-badge" />
   <img alt="Current gate: M2.4" src="https://img.shields.io/badge/Current_Gate-M2.4-F59E0B?style=for-the-badge" />
+  <a href="https://github.com/tahazarif10/local-ai-desktop-copilot/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/tahazarif10/local-ai-desktop-copilot/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
 </p>
 
 <p align="center">
@@ -41,10 +42,10 @@ This is a product-grade system, not a screenshot-to-LLM demo. It uses the smalle
 | Last verified functional code baseline | `c29099a1c96680229f82f7b6b400cf962e51b5cc` (later documentation-only commits may be descendants) |
 | Baseline date | 2026-08-21 (Windows runtime acceptance) |
 | Completed | Foreground context, RAM-only capture, privacy/epoch gate, low-resolution change detection, persistent latest-wins capture, sensing orchestration, diagnostic input correlation |
-| Current implementation shape | One packaged WinUI 3 application with a diagnostic page; persistent capture/input correlation require explicit Arm and default OFF; foreground identity/title observation currently starts on page load |
-| Next implementation milestone | `M2.4 Foundation Hardening`, starting with characterization tests and lifecycle separation |
+| Current implementation shape | One packaged WinUI 3 process split into a Windows/UI app assembly and a portable core assembly; the diagnostic page still owns composition; persistent capture/input correlation require explicit Arm and default OFF |
+| Next implementation milestone | `M2.4.1 Characterization Tests and CI Foundation` has a validated candidate in [PR #10](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/10); merge is pending, then M2.4.2 lifecycle separation follows |
 | Next product capability after hardening | `M3 UI Understanding` through read-only Windows UI Automation |
-| Automated tests / CI | Not present yet; this is an explicit M2.4 gap |
+| Automated tests / CI | M2.4.1 has 43 deterministic core tests: 43/43 passed locally and on both CI runners; Windows CI also passed the canonical `Debug/win-x64` app build at the PR candidate |
 | Cloud use | Forbidden by the product architecture |
 | Autonomous input/actions | Out of scope |
 
@@ -134,8 +135,11 @@ Current stack: C#/.NET 10, packaged WinUI 3, Windows App SDK 2.4.0, Win2D 1.4.0,
 From PowerShell 5.1 or newer on the Windows client:
 
 ```powershell
+dotnet test .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj -c Release --settings .\tests\LocalCopilot.Core.Tests\.runsettings
 dotnet build .\src\LocalCopilot.App\LocalCopilot.App.csproj -c Debug -r win-x64
 ```
+
+The core suite does not require WinUI, capture, global hooks, UI Automation, or a live desktop. The Windows app build remains a separate required check because the portable tests do not validate WinUI/Windows interop composition.
 
 For an explicit diagnostic session:
 
@@ -151,6 +155,9 @@ For the full acceptance and Git workflow, use [Engineering Workflow](docs/ENGINE
 
 ```text
 .
+├── .github/
+│   └── workflows/
+│       └── ci.yml
 ├── AGENTS.md
 ├── README.md
 ├── run-debug.ps1
@@ -162,15 +169,19 @@ For the full acceptance and Git workflow, use [Engineering Workflow](docs/ENGINE
 │   ├── PROJECT_STATE.md
 │   ├── ROADMAP.md
 │   └── decisions/
-└── src/
-    └── LocalCopilot.App/
-        ├── Diagnostics/
-        ├── Services/
-        ├── MainPage.xaml
-        └── MainPage.xaml.cs
+├── src/
+│   ├── LocalCopilot.Core/
+│   │   ├── Diagnostics/
+│   │   └── Services/
+│   └── LocalCopilot.App/
+│       ├── Services/
+│       ├── MainPage.xaml
+│       └── MainPage.xaml.cs
+└── tests/
+    └── LocalCopilot.Core.Tests/
 ```
 
-The single application project is the **current** structure. The multi-project/process boundaries in the architecture are targets to introduce only when their milestone requires them.
+`LocalCopilot.App` and `LocalCopilot.Core` are separate assemblies but still run in one desktop process. The larger multi-project/process boundaries in the architecture remain targets to introduce only when their milestone requires them.
 
 ## License
 

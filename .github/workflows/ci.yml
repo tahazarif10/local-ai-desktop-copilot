@@ -1,0 +1,111 @@
+name: CI
+
+"on":
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  portable-core-tests:
+    name: Portable core tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore core tests
+        run: dotnet restore ./tests/LocalCopilot.Core.Tests/LocalCopilot.Core.Tests.csproj
+
+      - name: Run core tests
+        run: >-
+          dotnet test
+          ./tests/LocalCopilot.Core.Tests/LocalCopilot.Core.Tests.csproj
+          --configuration Release
+          --no-restore
+          --settings ./tests/LocalCopilot.Core.Tests/.runsettings
+          --logger "trx;LogFileName=core-tests-ubuntu.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: core-tests-ubuntu-${{ github.run_id }}
+          path: tests/LocalCopilot.Core.Tests/TestResults/*.trx
+          if-no-files-found: warn
+          retention-days: 7
+
+  windows-validation:
+    name: Windows tests and win-x64 build
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore core tests
+        run: dotnet restore .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj
+
+      - name: Run core tests
+        run: >-
+          dotnet test
+          .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj
+          --configuration Release
+          --no-restore
+          --settings .\tests\LocalCopilot.Core.Tests\.runsettings
+          --logger "trx;LogFileName=core-tests-windows.trx"
+
+      - name: Restore WinUI app
+        run: >-
+          dotnet restore
+          .\src\LocalCopilot.App\LocalCopilot.App.csproj
+          --runtime win-x64
+
+      - name: Build WinUI app
+        run: >-
+          dotnet build
+          .\src\LocalCopilot.App\LocalCopilot.App.csproj
+          --configuration Debug
+          --runtime win-x64
+          --no-restore
+          --warnaserror
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: core-tests-windows-${{ github.run_id }}
+          path: tests/LocalCopilot.Core.Tests/TestResults/*.trx
+          if-no-files-found: warn
+          retention-days: 7
