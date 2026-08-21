@@ -1,62 +1,33 @@
-﻿using LocalCopilot_App.Diagnostics;
+using LocalCopilot_App.Diagnostics;
 using LocalCopilot_App.Services;
-using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
-using Windows.Graphics.Capture;
 
 namespace LocalCopilot_App;
 
-public sealed partial class MainPage : Page
+public sealed partial class MainPage :
+    Page,
+    IDesktopCopilotView
 {
-    private readonly uint
-        _ownProcessId;
-
-    private readonly ForegroundWindowService
-        _foregroundWindowService;
-
-    private readonly ForegroundWindowObserver
-        _foregroundWindowObserver;
-
-    private readonly DispatcherQueue
-        _uiDispatcher;
-
-    private readonly PrivacyPolicy
-        _privacyPolicy;
-
-    private readonly ContextEpochManager
-        _contextEpochManager;
-
-    private readonly ChangeDetectionProbeService
-        _changeDetectionProbeService;
-
-    private readonly PersistentChangeDetectionService
-        _persistentChangeDetectionService;
-
-    private readonly SensingOrchestrator
-        _sensingOrchestrator;
-
-    private readonly DiagnosticTimeline
-        _diagnosticTimeline;
-
-    private readonly InputActivityTracker
-        _inputActivityTracker;
-
-    private readonly ChangeCorrelationService
-        _changeCorrelationService;
-
-    private ForegroundWindowSnapshot?
-        _lastSnapshot;
-
-    private ContextEpoch?
-        _currentEpoch;
+    private readonly DesktopCopilotCoordinator
+        _coordinator;
 
     public MainPage()
+        : this(
+            ((App)Application.Current)
+                .Coordinator)
     {
-        DiagnosticLog.ResetSession();
+    }
+
+    internal MainPage(
+        DesktopCopilotCoordinator coordinator)
+    {
+        _coordinator =
+            coordinator ??
+            throw new ArgumentNullException(
+                nameof(coordinator));
 
         DiagnosticLog.Write(
             "PAGE.CTOR",
@@ -68,80 +39,48 @@ public sealed partial class MainPage : Page
             "PAGE.CTOR",
             "After InitializeComponent.");
 
-        _ownProcessId =
-            unchecked(
-                (uint)Environment.ProcessId);
-
-        DiagnosticLog.Write(
-            "PAGE.CTOR",
-            $"ownPid={_ownProcessId}");
-
-        _foregroundWindowService =
-            new ForegroundWindowService();
-
-        _foregroundWindowObserver =
-            new ForegroundWindowObserver();
-
-        _privacyPolicy =
-            PrivacyPolicy.CreateDefault();
-
-        _contextEpochManager =
-            new ContextEpochManager();
-
-        _changeDetectionProbeService =
-            new ChangeDetectionProbeService();
-
-        _persistentChangeDetectionService =
-            new PersistentChangeDetectionService();
-
-        _diagnosticTimeline =
-            new DiagnosticTimeline();
-
-        _inputActivityTracker =
-            new InputActivityTracker();
-
-        _changeCorrelationService =
-            new ChangeCorrelationService(
-                _diagnosticTimeline);
-
-        _uiDispatcher =
-            DispatcherQueue.GetForCurrentThread()
-            ?? throw new InvalidOperationException(
-                "UI DispatcherQueue unavailable.");
-
-        _sensingOrchestrator =
-            new SensingOrchestrator(
-                _persistentChangeDetectionService,
-                _uiDispatcher);
-
-        DiagnosticLog.Write(
-            "PAGE.DISPATCHER",
-            $"HasThreadAccess={_uiDispatcher.HasThreadAccess}");
-
-        _sensingOrchestrator.StatusChanged +=
-            SensingOrchestrator_StatusChanged;
-
-        _persistentChangeDetectionService.SampleReady +=
-            PersistentChangeDetectionService_SampleReady;
-
-        _persistentChangeDetectionService.SessionEnded +=
-            PersistentChangeDetectionService_SessionEnded;
-
-        _inputActivityTracker.ActivityObserved +=
-            InputActivityTracker_ActivityObserved;
-
-        _foregroundWindowObserver.ForegroundWindowChanged +=
-            ForegroundWindowObserver_ForegroundWindowChanged;
-
         Loaded +=
             MainPage_Loaded;
 
         Unloaded +=
             MainPage_Unloaded;
+    }
 
-        DiagnosticLog.Write(
-            "PAGE.CTOR",
-            "Constructor complete.");
+    public void Render(
+        DesktopCopilotViewState state)
+    {
+        ArgumentNullException.ThrowIfNull(
+            state);
+
+        ProcessNameText.Text =
+            state.ProcessName;
+
+        WindowTitleText.Text =
+            state.WindowTitle;
+
+        ProcessIdText.Text =
+            state.ProcessId;
+
+        WindowHandleText.Text =
+            state.WindowHandle;
+
+        LastObservedText.Text =
+            state.LastObserved;
+
+        CaptureTargetStatusText.Text =
+            state.CaptureTargetStatus;
+
+        CapturedFrameStatusText.Text =
+            state.CapturedFrameStatus;
+
+        ChangeDetectionStatusText.Text =
+            state.ChangeDetectionStatus;
+
+        PersistentChangeStatusText.Text =
+            state.PersistentChangeStatus;
+
+        OrchestratorStatusText.Text =
+            state.OrchestratorStatus;
     }
 
     private void MainPage_Loaded(
@@ -150,54 +89,10 @@ public sealed partial class MainPage : Page
     {
         DiagnosticLog.Write(
             "PAGE.LOADED",
-            $"HasThreadAccess={_uiDispatcher.HasThreadAccess}");
+            $"coordinatorRunning={_coordinator.IsRunning}");
 
-        try
-        {
-            _foregroundWindowObserver.Start();
-
-            DiagnosticLog.Write(
-                "PAGE.LOADED",
-                $"observerRunning={_foregroundWindowObserver.IsRunning}");
-
-            ForegroundWindowObservation? observation =
-                _foregroundWindowService.GetCurrent(
-                    _privacyPolicy,
-                    _ownProcessId);
-
-            if (observation is null)
-            {
-                DiagnosticLog.Write(
-                    "PAGE.INITIAL",
-                    "Initial observation=null.");
-
-                return;
-            }
-
-            ForegroundWindowSnapshot snapshot =
-                observation.Snapshot;
-
-            DiagnosticLog.Write(
-                "PAGE.INITIAL",
-                $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
-                $"process={snapshot.ProcessName} " +
-                $"privacy={observation.Privacy.Disposition}");
-
-            ApplyObservation(
-                observation);
-        }
-        catch (Exception ex)
-        {
-            DiagnosticLog.Write(
-                "PAGE.LOADED_ERROR",
-                ex.ToString());
-
-            ProcessNameText.Text =
-                "Observer start failed";
-
-            WindowTitleText.Text =
-                ex.Message;
-        }
+        _coordinator.AttachView(
+            this);
     }
 
     private void MainPage_Unloaded(
@@ -206,437 +101,26 @@ public sealed partial class MainPage : Page
     {
         DiagnosticLog.Write(
             "PAGE.UNLOADED",
-            $"HasThreadAccess={_uiDispatcher.HasThreadAccess}");
+            $"coordinatorRunning={_coordinator.IsRunning}");
 
-        bool stopped =
-            _foregroundWindowObserver.Stop();
-
-        DiagnosticLog.Write(
-            "PAGE.UNLOADED",
-            $"observerStopped={stopped}");
-
-        _sensingOrchestrator.Disarm(
-            "page_unloaded");
-
-        StopInputTracking(
-            "page_unloaded");
-
-        _contextEpochManager.Reset();
-
-        _currentEpoch =
-            null;
-
-        _lastSnapshot =
-            null;
-
-        _changeDetectionProbeService.ResetAll();
-    }
-
-    private void ForegroundWindowObserver_ForegroundWindowChanged(
-        nint hwnd)
-    {
-        DiagnosticLog.Write(
-            "PAGE.EVENT_RECEIVED",
-            $"hwnd=0x{hwnd.ToInt64():X} " +
-            $"HasThreadAccess={_uiDispatcher.HasThreadAccess}");
-
-        bool queued =
-            _uiDispatcher.TryEnqueue(
-                DispatcherQueuePriority.High,
-                () =>
-                {
-                    DiagnosticLog.Write(
-                        "PAGE.QUEUE_EXECUTE",
-                        $"hwnd=0x{hwnd.ToInt64():X} " +
-                        $"HasThreadAccess={_uiDispatcher.HasThreadAccess}");
-
-                    try
-                    {
-                        ForegroundWindowObservation? observation =
-                            _foregroundWindowService.GetFromHandle(
-                                hwnd,
-                                _privacyPolicy,
-                                _ownProcessId);
-
-                        if (observation is null)
-                        {
-                            DiagnosticLog.Write(
-                                "PAGE.QUEUE_RESULT",
-                                "observation=null");
-
-                            return;
-                        }
-
-                        ForegroundWindowSnapshot snapshot =
-                            observation.Snapshot;
-
-                        DiagnosticLog.Write(
-                            "PAGE.QUEUE_RESULT",
-                            $"process={snapshot.ProcessName} " +
-                            $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
-                            $"privacy={observation.Privacy.Disposition}");
-
-                        ApplyObservation(
-                            observation);
-                    }
-                    catch (Exception ex)
-                    {
-                        DiagnosticLog.Write(
-                            "PAGE.QUEUE_ERROR",
-                            ex.ToString());
-                    }
-                });
-
-        DiagnosticLog.Write(
-            "PAGE.ENQUEUE",
-            $"hwnd=0x{hwnd.ToInt64():X} queued={queued}");
-    }
-
-    private void ApplyObservation(
-        ForegroundWindowObservation observation)
-    {
-        ArgumentNullException.ThrowIfNull(
-            observation);
-
-        ForegroundWindowSnapshot snapshot =
-            observation.Snapshot;
-
-        PrivacyEvaluation privacy =
-            observation.Privacy;
-
-        ContextEpoch epoch =
-            _contextEpochManager.GetOrAdvance(
-                snapshot,
-                privacy);
-
-        bool contextChanged =
-            !ReferenceEquals(
-                _currentEpoch,
-                epoch);
-
-        _lastSnapshot =
-            snapshot;
-
-        _currentEpoch =
-            epoch;
-
-        _changeDetectionProbeService.ObserveContext(
-            epoch);
-
-        _sensingOrchestrator.ObserveContext(
-            epoch);
-
-        RefreshInputTracking(
-            epoch,
-            contextChanged
-                ? "context_changed"
-                : "context_reused");
-
-        DiagnosticLog.Write(
-            "CONTEXT.APPLY",
-            $"epoch={epoch.Id} " +
-            $"contextChanged={contextChanged} " +
-            $"process={snapshot.ProcessName} " +
-            $"pid={snapshot.ProcessId} " +
-            $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
-            $"privacy={privacy.Disposition} " +
-            $"rule={privacy.RuleId} " +
-            $"reason={privacy.Reason}");
-
-        ProcessNameText.Text =
-            snapshot.ProcessName;
-
-        ProcessIdText.Text =
-            snapshot.ProcessId.ToString();
-
-        WindowHandleText.Text =
-            $"0x{snapshot.Handle.ToInt64():X}";
-
-        LastObservedText.Text =
-            DateTime.Now.ToString(
-                "HH:mm:ss.fff");
-
-        if (!privacy.AllowsSensing)
-        {
-            WindowTitleText.Text =
-                "[Privacy blocked]";
-
-            CaptureTargetStatusText.Text =
-                "Blocked by privacy policy.";
-
-            CapturedFrameStatusText.Text =
-                "Blocked by privacy policy.";
-
-            ChangeDetectionStatusText.Text =
-                "Blocked by privacy policy.";
-
-            PersistentChangeStatusText.Text =
-                "Blocked by privacy policy.";
-
-            DiagnosticLog.Write(
-                "PAGE.PRIVACY_BLOCKED",
-                $"epoch={epoch.Id} " +
-                $"process={snapshot.ProcessName} " +
-                $"rule={privacy.RuleId} " +
-                $"reason={privacy.Reason}");
-
-            return;
-        }
-
-        if (contextChanged)
-        {
-            CaptureTargetStatusText.Text =
-                "Not tested";
-
-            CapturedFrameStatusText.Text =
-                "Not captured";
-
-            ChangeDetectionStatusText.Text =
-                "No change samples yet";
-
-            if (!_persistentChangeDetectionService.IsRunning)
-            {
-                PersistentChangeStatusText.Text =
-                    "Stopped | context changed";
-            }
-        }
-
-        WindowTitleText.Text =
-            string.IsNullOrWhiteSpace(
-                snapshot.WindowTitle)
-                ? "(no title)"
-                : snapshot.WindowTitle;
-
-        DiagnosticLog.Write(
-            "PAGE.DISPLAY_DONE",
-            $"epoch={epoch.Id} " +
-            $"process={snapshot.ProcessName}");
-    }
-    private ContextEpoch? GetAllowedEpoch(
-        string operation)
-    {
-        ContextEpoch? epoch =
-            _currentEpoch;
-
-        DiagnosticLog.Write(
-            "SENSING.GATE",
-            $"operation={operation} " +
-            $"epoch={epoch?.Id ?? 0} " +
-            $"privacy={epoch?.Privacy.Disposition.ToString() ?? "None"}");
-
-        if (epoch is null)
-        {
-            DiagnosticLog.Write(
-                "SENSING.GATE_REJECT",
-                $"operation={operation} reason=no_epoch");
-
-            return null;
-        }
-
-        if (!epoch.Privacy.AllowsSensing)
-        {
-            DiagnosticLog.Write(
-                "CAPTURE.PRIVACY_REJECT",
-                $"operation={operation} " +
-                $"epoch={epoch.Id} " +
-                $"process={epoch.Snapshot.ProcessName} " +
-                $"rule={epoch.Privacy.RuleId} " +
-                $"reason={epoch.Privacy.Reason}");
-
-            return null;
-        }
-
-        if (epoch.CancellationToken.IsCancellationRequested)
-        {
-            DiagnosticLog.Write(
-                "SENSING.GATE_REJECT",
-                $"operation={operation} " +
-                $"epoch={epoch.Id} reason=cancelled");
-
-            return null;
-        }
-
-        return epoch;
+        _coordinator.DetachView(
+            this);
     }
 
     private void CaptureTargetProbeButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        ContextEpoch? epoch =
-            GetAllowedEpoch(
-                "target_probe");
-
-        if (epoch is null)
-        {
-            CaptureTargetStatusText.Text =
-                _currentEpoch is not null &&
-                !_currentEpoch.Privacy.AllowsSensing
-                    ? "Blocked by privacy policy."
-                    : "No allowed capture target.";
-
-            return;
-        }
-
-        bool captureSupported =
-            GraphicsCaptureSession.IsSupported();
-
-        DiagnosticLog.Write(
-            "CAPTURE.SUPPORT",
-            $"supported={captureSupported}");
-
-        if (!captureSupported)
-        {
-            CaptureTargetStatusText.Text =
-                "Windows Graphics Capture is not supported.";
-
-            DiagnosticLog.Write(
-                "CAPTURE.PROBE_REJECT",
-                "reason=graphics_capture_not_supported");
-
-            return;
-        }
-
-        ForegroundWindowSnapshot snapshot =
-            epoch.Snapshot;
-
-        DiagnosticLog.Write(
-            "CAPTURE.PROBE_BEGIN",
-            $"epoch={epoch.Id} " +
-            $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
-            $"pid={snapshot.ProcessId} " +
-            $"process={snapshot.ProcessName}");
-
-        try
-        {
-            GraphicsCaptureItem item =
-                GraphicsCaptureItemFactory.CreateForWindow(
-                    snapshot.Handle);
-
-            CaptureTargetStatusText.Text =
-                $"OK | {item.Size.Width} x {item.Size.Height}" +
-                $" | {item.DisplayName}";
-
-            DiagnosticLog.Write(
-                "CAPTURE.PROBE_OK",
-                $"epoch={epoch.Id} " +
-                $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
-                $"size={item.Size.Width}x{item.Size.Height}");
-        }
-        catch (Exception ex)
-        {
-            CaptureTargetStatusText.Text =
-                $"Capture target failed: {ex.Message}";
-
-            DiagnosticLog.Write(
-                "CAPTURE.PROBE_ERROR",
-                ex.ToString());
-        }
+        _coordinator.ProbeCaptureTarget();
     }
 
     private async void CaptureOneFrameButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        ContextEpoch? epoch =
-            GetAllowedEpoch(
-                "single_frame");
-
-        if (epoch is null)
-        {
-            CapturedFrameStatusText.Text =
-                _currentEpoch is not null &&
-                !_currentEpoch.Privacy.AllowsSensing
-                    ? "Blocked by privacy policy."
-                    : "No allowed capture target.";
-
-            return;
-        }
-
-        ForegroundWindowSnapshot snapshot =
-            epoch.Snapshot;
-
-        DiagnosticLog.Write(
-            "CAPTURE.FRAME_BEGIN",
-            $"epoch={epoch.Id} " +
-            $"hwnd=0x{snapshot.Handle.ToInt64():X} " +
-            $"pid={snapshot.ProcessId} " +
-            $"process={snapshot.ProcessName}");
-
-        try
-        {
-            GraphicsCaptureItem item =
-                GraphicsCaptureItemFactory.CreateForWindow(
-                    snapshot.Handle);
-
-            DiagnosticLog.Write(
-                "CAPTURE.FRAME_ITEM",
-                $"epoch={epoch.Id} " +
-                $"itemSize={item.Size.Width}x{item.Size.Height}");
-
-            SingleFrameCaptureInfo frame =
-                await SingleFrameCaptureService.CaptureAsync(
-                    item,
-                    TimeSpan.FromSeconds(5),
-                    2560);
-
-            if (epoch.CancellationToken.IsCancellationRequested ||
-                !ReferenceEquals(
-                    _currentEpoch,
-                    epoch))
-            {
-                DiagnosticLog.Write(
-                    "CAPTURE.FRAME_STALE_DROP",
-                    $"epoch={epoch.Id} " +
-                    $"currentEpoch={_currentEpoch?.Id ?? 0}");
-
-                CapturedFrameStatusText.Text =
-                    "Ignored stale capture result.";
-
-                return;
-            }
-
-            DiagnosticLog.Write(
-                "CAPTURE.FRAME_OK",
-                $"epoch={epoch.Id} " +
-                $"content={frame.ContentWidth}x{frame.ContentHeight} " +
-                $"surface={frame.SurfaceWidth}x{frame.SurfaceHeight} " +
-                $"frameMs={frame.FrameMilliseconds:0.0}");
-
-            DiagnosticLog.Write(
-                "CAPTURE.RESIZE_OK",
-                $"epoch={epoch.Id} " +
-                $"source={frame.ContentWidth}x{frame.ContentHeight} " +
-                $"output={frame.OutputWidth}x{frame.OutputHeight} " +
-                $"scale={frame.ScaleFactor:0.0000} " +
-                $"resizeMs={frame.ResizeMilliseconds:0.0}");
-
-            DiagnosticLog.Write(
-                "CAPTURE.BITMAP_OK",
-                $"epoch={epoch.Id} " +
-                $"bitmap={frame.OutputWidth}x{frame.OutputHeight} " +
-                $"format={frame.BitmapPixelFormat} " +
-                $"stride={frame.PlaneStride} " +
-                $"cpuBytes={frame.CpuBytes} " +
-                $"copyMs={frame.CopyMilliseconds:0.0} " +
-                $"totalMs={frame.TotalMilliseconds:0.0}");
-
-            CapturedFrameStatusText.Text =
-                $"RAM OK | " +
-                $"{frame.OutputWidth} x {frame.OutputHeight} | " +
-                $"{frame.CpuBytes / 1024.0 / 1024.0:0.0} MB | " +
-                $"{frame.TotalMilliseconds:0.0} ms";
-        }
-        catch (Exception ex)
-        {
-            CapturedFrameStatusText.Text =
-                $"RAM capture failed: {ex.Message}";
-
-            DiagnosticLog.Write(
-                "CAPTURE.BITMAP_ERROR",
-                ex.ToString());
-        }
+        await _coordinator.CaptureOneFrameAsync();
     }
+
     private async void Change640Button_Click(
         object sender,
         RoutedEventArgs e)
@@ -653,449 +137,39 @@ public sealed partial class MainPage : Page
             960);
     }
 
-    private async Task RunChangeDetectionSampleAsync(
+    private Task RunChangeDetectionSampleAsync(
         int profileWidth)
     {
-        ContextEpoch? epoch =
-            GetAllowedEpoch(
-                $"change_{profileWidth}");
-
-        if (epoch is null)
-        {
-            ChangeDetectionStatusText.Text =
-                _currentEpoch is not null &&
-                !_currentEpoch.Privacy.AllowsSensing
-                    ? "Blocked by privacy policy."
-                    : "No allowed change-detection target.";
-
-            return;
-        }
-
-        DiagnosticLog.Write(
-            "CHANGE.SAMPLE_BEGIN",
-            $"epoch={epoch.Id} " +
-            $"profile={profileWidth} " +
-            $"hwnd=0x{epoch.Snapshot.Handle.ToInt64():X} " +
-            $"pid={epoch.Snapshot.ProcessId} " +
-            $"process={epoch.Snapshot.ProcessName}");
-
-        ChangeDetectionStatusText.Text =
-            $"Sampling {profileWidth}px...";
-
-        try
-        {
-            ChangeProbeResult probe =
-                await _changeDetectionProbeService.SampleAsync(
-                    epoch,
-                    profileWidth,
-                    TimeSpan.FromSeconds(5));
-
-            if (epoch.CancellationToken.IsCancellationRequested ||
-                !ReferenceEquals(
-                    _currentEpoch,
-                    epoch))
-            {
-                DiagnosticLog.Write(
-                    "CHANGE.SAMPLE_STALE",
-                    $"epoch={epoch.Id} " +
-                    $"profile={profileWidth} " +
-                    $"currentEpoch={_currentEpoch?.Id ?? 0}");
-
-                ChangeDetectionStatusText.Text =
-                    "Ignored stale change sample.";
-
-                return;
-            }
-
-            ChangeResult change =
-                probe.Change;
-
-            ChangeDetectionCaptureFrame capture =
-                probe.Capture;
-
-            string region =
-                change.ChangedRegion is null
-                    ? "none"
-                    : $"{change.ChangedRegion.X}," +
-                      $"{change.ChangedRegion.Y}," +
-                      $"{change.ChangedRegion.Width}," +
-                      $"{change.ChangedRegion.Height}";
-
-            DiagnosticLog.Write(
-                "CHANGE.SAMPLE_OK",
-                $"epoch={probe.EpochId} " +
-                $"profile={probe.ProfileWidth} " +
-                $"classification={change.Classification} " +
-                $"reason={change.Reason} " +
-                $"input={capture.SourceWidth}x{capture.SourceHeight} " +
-                $"output={capture.OutputWidth}x{capture.OutputHeight} " +
-                $"captureMs={capture.TotalMilliseconds:0.000} " +
-                $"frameMs={capture.FrameMilliseconds:0.000} " +
-                $"resizeMs={capture.ResizeMilliseconds:0.000} " +
-                $"readbackMs={capture.ReadbackMilliseconds:0.000} " +
-                $"lumaMs={capture.LuminanceMilliseconds:0.000} " +
-                $"diffMs={change.DiffMilliseconds:0.000} " +
-                $"totalMs={probe.TotalMilliseconds:0.000} " +
-                $"changedPixelRatio={change.ChangedPixelRatio:0.000000} " +
-                $"changedTileRatio={change.ChangedTileRatio:0.000000} " +
-                $"globalDifference={change.MeanAbsoluteDifference:0.000000} " +
-                $"changedPixels={change.ChangedPixelCount} " +
-                $"changedTiles={change.ChangedTileCount}/{change.TotalTileCount} " +
-                $"region={region}");
-
-            ChangeDetectionStatusText.Text =
-                $"{profileWidth}px | " +
-                $"{change.Classification} | " +
-                $"pixels {change.ChangedPixelRatio:P2} | " +
-                $"tiles {change.ChangedTileRatio:P2} | " +
-                $"diff {change.DiffMilliseconds:0.0} ms | " +
-                $"total {probe.TotalMilliseconds:0.0} ms";
-        }
-        catch (OperationCanceledException)
-        {
-            DiagnosticLog.Write(
-                "CHANGE.SAMPLE_CANCELLED",
-                $"epoch={epoch.Id} " +
-                $"profile={profileWidth}");
-
-            ChangeDetectionStatusText.Text =
-                "Change sample cancelled.";
-        }
-        catch (Exception ex)
-        {
-            DiagnosticLog.Write(
-                "CHANGE.SAMPLE_ERROR",
-                $"epoch={epoch.Id} " +
-                $"profile={profileWidth} " +
-                $"type={ex.GetType().Name} " +
-                $"message={ex.Message}");
-
-            ChangeDetectionStatusText.Text =
-                $"Change sample failed: {ex.Message}";
-        }
+        return _coordinator
+            .RunChangeDetectionSampleAsync(
+                profileWidth);
     }
+
     private void ArmSensingOrchestratorButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (_sensingOrchestrator.IsArmed)
-        {
-            OrchestratorStatusText.Text =
-                "Already armed.";
-
-            return;
-        }
-
-        if (_persistentChangeDetectionService
-            .HasActiveSession)
-        {
-            OrchestratorStatusText.Text =
-                "Stop the manual persistent session before arming.";
-
-            DiagnosticLog.Write(
-                "ORCH.ARM_REJECT",
-                "reason=manual_session_active");
-
-            return;
-        }
-
-        OrchestratorStatusText.Text =
-            "ARMED | evaluating current context...";
-
-        _sensingOrchestrator.Arm(
-            _currentEpoch);
-
-        RefreshInputTracking(
-            _currentEpoch,
-            "user_arm");
+        _coordinator.Arm();
     }
 
     private void DisarmSensingOrchestratorButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        OrchestratorStatusText.Text =
-            "Disarming...";
-
-        _sensingOrchestrator.Disarm(
-            "user_disarm");
-
-        StopInputTracking(
-            "user_disarm");
-
-        OrchestratorStatusText.Text =
-            "OFF";
+        _coordinator.Disarm();
     }
 
-    private void SensingOrchestrator_StatusChanged(
-        SensingOrchestratorUpdate update)
-    {
-        bool queued =
-            _uiDispatcher.TryEnqueue(
-                DispatcherQueuePriority.Normal,
-                () =>
-                {
-                    OrchestratorStatusText.Text =
-                        $"{update.Phase} | " +
-                        $"epoch {update.EpochId} | " +
-                        $"{update.Reason}";
-                });
-
-        if (!queued)
-        {
-            DiagnosticLog.Write(
-                "ORCH.UI_QUEUE_REJECT",
-                $"epoch={update.EpochId} " +
-                $"phase={update.Phase}");
-        }
-    }
     private void StartPersistentChangeButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (_sensingOrchestrator.IsArmed)
-        {
-            PersistentChangeStatusText.Text =
-                "Disarm auto sensing before manual start.";
-
-            DiagnosticLog.Write(
-                "PERSIST.MANUAL_REJECT",
-                "operation=start reason=orchestrator_armed");
-
-            return;
-        }
-
-        ContextEpoch? epoch =
-            GetAllowedEpoch(
-                "persistent_start");
-
-        if (epoch is null)
-        {
-            PersistentChangeStatusText.Text =
-                _currentEpoch is not null &&
-                !_currentEpoch.Privacy.AllowsSensing
-                    ? "Blocked by privacy policy."
-                    : "No allowed persistent target.";
-
-            return;
-        }
-
-        if (_persistentChangeDetectionService.IsRunning)
-        {
-            PersistentChangeStatusText.Text =
-                "Persistent sensing is already running.";
-
-            return;
-        }
-
-        try
-        {
-            _persistentChangeDetectionService.Start(
-                epoch,
-                640,
-                TimeSpan.FromMilliseconds(
-                    500));
-
-            PersistentChangeStatusText.Text =
-                "Running | 640 px | 2 Hz | waiting for samples...";
-        }
-        catch (Exception ex)
-        {
-            PersistentChangeStatusText.Text =
-                $"Persistent start failed: {ex.Message}";
-
-            DiagnosticLog.Write(
-                "PERSIST.START_ERROR",
-                $"epoch={epoch.Id} " +
-                $"type={ex.GetType().Name} " +
-                $"message={ex.Message}");
-        }
+        _coordinator.StartManualPersistentSensing();
     }
 
     private void StopPersistentChangeButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (_sensingOrchestrator.IsArmed)
-        {
-            PersistentChangeStatusText.Text =
-                "Use Disarm auto sensing to stop orchestrated capture.";
-
-            DiagnosticLog.Write(
-                "PERSIST.MANUAL_REJECT",
-                "operation=stop reason=orchestrator_armed");
-
-            return;
-        }
-
-        try
-        {
-            _persistentChangeDetectionService.Stop(
-                "user_stop");
-
-            PersistentChangeStatusText.Text =
-                "Stopped by user.";
-        }
-        catch (Exception ex)
-        {
-            PersistentChangeStatusText.Text =
-                $"Persistent stop failed: {ex.Message}";
-
-            DiagnosticLog.Write(
-                "PERSIST.STOP_ERROR",
-                $"type={ex.GetType().Name} " +
-                $"message={ex.Message}");
-        }
-    }
-
-    private void RefreshInputTracking(
-        ContextEpoch? epoch,
-        string reason)
-    {
-        if (
-            !_sensingOrchestrator.IsArmed ||
-            epoch is null ||
-            !epoch.Privacy.AllowsSensing)
-        {
-            StopInputTracking(
-                reason);
-
-            return;
-        }
-
-        _diagnosticTimeline.BeginEpoch(
-            epoch.Id);
-
-        try
-        {
-            _inputActivityTracker.Start(
-                epoch.Id);
-        }
-        catch (Exception ex)
-        {
-            _diagnosticTimeline.Reset();
-
-            DiagnosticLog.Write(
-                "INPUT.TRACKING_START_ERROR",
-                $"epoch={epoch.Id} " +
-                $"type={ex.GetType().Name} " +
-                $"hresult=0x{ex.HResult:X8}");
-        }
-    }
-
-    private void StopInputTracking(
-        string reason)
-    {
-        _inputActivityTracker.Stop(
-            reason);
-
-        _diagnosticTimeline.Reset();
-    }
-
-    private void InputActivityTracker_ActivityObserved(
-        InputActivityEvent activity)
-    {
-        _diagnosticTimeline.Record(
-            activity);
-    }
-
-    private void PersistentChangeDetectionService_SampleReady(
-        PersistentChangeSample sample)
-    {
-        _changeCorrelationService.Observe(
-            sample);
-
-        bool queued =
-            _uiDispatcher.TryEnqueue(
-                DispatcherQueuePriority.Normal,
-                () =>
-                {
-                    ContextEpoch? epoch =
-                        _currentEpoch;
-
-                    if (
-                        epoch is null ||
-                        epoch.Id !=
-                            sample.EpochId ||
-                        !epoch.Privacy.AllowsSensing)
-                    {
-                        DiagnosticLog.Write(
-                            "PERSIST.UI_STALE_DROP",
-                            $"sampleEpoch={sample.EpochId} " +
-                            $"currentEpoch={epoch?.Id ?? 0}");
-
-                        return;
-                    }
-
-                    PersistentChangeStatusText.Text =
-                        $"RUNNING | " +
-                        $"{sample.Change.Classification} | " +
-                        $"pixels {sample.Change.ChangedPixelRatio:P2} | " +
-                        $"tiles {sample.Change.ChangedTileRatio:P2} | " +
-                        $"process {sample.ProcessingMilliseconds:0.0} ms | " +
-                        $"diff {sample.Change.DiffMilliseconds:0.0} ms | " +
-                        $"frames {sample.FramesArrived} | " +
-                        $"replaced {sample.FramesReplaced} | " +
-                        $"samples {sample.SamplesProcessed} | " +
-                        $"recreate {sample.FramePoolRecreates}";
-
-                    DiagnosticLog.Write(
-                        "PERSIST.UI_SAMPLE",
-                        $"epoch={sample.EpochId} " +
-                        $"classification={sample.Change.Classification} " +
-                        $"samples={sample.SamplesProcessed}");
-                });
-
-        if (!queued)
-        {
-            DiagnosticLog.Write(
-                "PERSIST.UI_QUEUE_REJECT",
-                $"epoch={sample.EpochId} " +
-                "event=sample");
-        }
-    }
-
-    private void PersistentChangeDetectionService_SessionEnded(
-        PersistentChangeSessionEnded ended)
-    {
-        bool queued =
-            _uiDispatcher.TryEnqueue(
-                DispatcherQueuePriority.Normal,
-                () =>
-                {
-                    ContextEpoch? epoch =
-                        _currentEpoch;
-
-                    if (
-                        epoch is null ||
-                        epoch.Id !=
-                            ended.EpochId)
-                    {
-                        DiagnosticLog.Write(
-                            "PERSIST.END_UI_STALE",
-                            $"endedEpoch={ended.EpochId} " +
-                            $"currentEpoch={epoch?.Id ?? 0} " +
-                            $"reason={ended.Reason}");
-
-                        return;
-                    }
-
-                    PersistentChangeStatusText.Text =
-                        ended.HadError
-                            ? $"Stopped with error | {ended.ErrorType}: {ended.ErrorMessage}"
-                            : $"Stopped | {ended.Reason} | " +
-                              $"frames {ended.FramesArrived} | " +
-                              $"replaced {ended.FramesReplaced} | " +
-                              $"samples {ended.SamplesProcessed} | " +
-                              $"recreate {ended.FramePoolRecreates}";
-                });
-
-        if (!queued)
-        {
-            DiagnosticLog.Write(
-                "PERSIST.UI_QUEUE_REJECT",
-                $"epoch={ended.EpochId} " +
-                "event=session_end");
-        }
+        _coordinator.StopManualPersistentSensing();
     }
 }
