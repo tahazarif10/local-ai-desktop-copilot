@@ -66,8 +66,17 @@ public sealed record PrivacyPolicyConfiguration(
     IReadOnlyCollection<ApplicationPrivacyRule> ApplicationRules)
 {
     public static PrivacyPolicyConfiguration CreateProductDefault(
-        bool diagnosticNotepadRuleEnabled = false)
+        bool diagnosticNotepadRuleEnabled = false,
+        bool diagnosticUiTextEnabled = false)
     {
+        if (diagnosticUiTextEnabled &&
+            !diagnosticNotepadRuleEnabled)
+        {
+            throw new ArgumentException(
+                "UI text requires an active diagnostic session.",
+                nameof(diagnosticUiTextEnabled));
+        }
+
         List<ApplicationPrivacyRule> rules = new();
 
         if (diagnosticNotepadRuleEnabled)
@@ -92,6 +101,12 @@ public sealed record PrivacyPolicyConfiguration(
             globalGrants |=
                 PrivacyCapability.RetainDerivedEvent |
                 PrivacyCapability.ReadUiStructure;
+
+            if (diagnosticUiTextEnabled)
+            {
+                globalGrants |=
+                    PrivacyCapability.ReadUiText;
+            }
         }
 
         return new PrivacyPolicyConfiguration(
@@ -132,14 +147,17 @@ public sealed class PrivacyPolicy
     public static PrivacyPolicy CreateDefault()
     {
         bool diagnosticNotepadRuleEnabled = DiagnosticLog.IsEnabled;
+        bool diagnosticUiTextEnabled = DiagnosticLog.IsUiTextEnabled;
         PrivacyPolicy policy = new(
             PrivacyPolicyConfiguration.CreateProductDefault(
-                diagnosticNotepadRuleEnabled));
+                diagnosticNotepadRuleEnabled,
+                diagnosticUiTextEnabled));
 
         DiagnosticLog.Write(
             "PRIVACY.POLICY_READY",
             $"revision={policy.Revision} " +
-            $"diagnosticNotepadRule={diagnosticNotepadRuleEnabled}");
+            $"diagnosticNotepadRule={diagnosticNotepadRuleEnabled} " +
+            $"diagnosticUiText={diagnosticUiTextEnabled}");
 
         return policy;
     }

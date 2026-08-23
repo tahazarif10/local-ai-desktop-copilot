@@ -28,7 +28,8 @@ public enum UiAutomationProbeReason
     WorkerStopped,
     WorkerInitializationFailed,
     NativeFailure,
-    PublicationRejected
+    PublicationRejected,
+    SemanticSnapshotExpired
 }
 
 public sealed record UiAutomationProbeResult(
@@ -40,7 +41,8 @@ public sealed record UiAutomationProbeResult(
     int? HResult,
     int WorkerThreadId,
     bool IdentityRevalidated,
-    UiAutomationStructuralSnapshot? Snapshot = null);
+    UiAutomationStructuralSnapshot? Snapshot = null,
+    UiAutomationSemanticSnapshot? SemanticSnapshot = null);
 
 public sealed record UiAutomationProbeClassification(
     UiAutomationProbeOutcome Outcome,
@@ -135,9 +137,29 @@ public static class UiAutomationProbePublicationGate
     public static UiAutomationProbeResult Apply(
         UiAutomationProbeResult result,
         ContextEpoch? currentEpoch,
-        long latestRequestId)
+        long latestRequestId,
+        DateTimeOffset? utcNow = null)
     {
         ArgumentNullException.ThrowIfNull(result);
+
+        UiAutomationSemanticSnapshot? semanticSnapshot =
+            result.SemanticSnapshot;
+
+        bool semanticSnapshotValid =
+            semanticSnapshot is null ||
+            (!semanticSnapshot.IsDisposed &&
+             semanticSnapshot.EpochId == result.EpochId);
+
+        bool semanticSnapshotCurrent =
+            semanticSnapshot is null ||
+            !semanticSnapshot.IsExpired(
+                utcNow ?? DateTimeOffset.UtcNow);
+
+        PrivacyCapability requiredCapabilities =
+            PrivacyCapability.ReadUiStructure |
+            (semanticSnapshot is null
+                ? PrivacyCapability.None
+                : PrivacyCapability.ReadUiText);
 
         bool mayPublish =
             currentEpoch is not null &&
@@ -145,15 +167,25 @@ public static class UiAutomationProbePublicationGate
             currentEpoch.Id == result.EpochId &&
             !currentEpoch.CancellationToken.IsCancellationRequested &&
             currentEpoch.Privacy.Allows(
-                PrivacyCapability.ReadUiStructure);
+                requiredCapabilities) &&
+            semanticSnapshotValid &&
+            semanticSnapshotCurrent;
 
-        return mayPublish
-            ? result
-            : result with
+        if (mayPublish)
+        {
+            return result;
+        }
+
+        semanticSnapshot?.Dispose();
+
+        return result with
             {
                 Outcome = UiAutomationProbeOutcome.Stale,
-                Reason = UiAutomationProbeReason.PublicationRejected,
-                Snapshot = null
+                Reason = semanticSnapshotCurrent
+                    ? UiAutomationProbeReason.PublicationRejected
+                    : UiAutomationProbeReason.SemanticSnapshotExpired,
+                Snapshot = null,
+                SemanticSnapshot = null
             };
     }
 }
