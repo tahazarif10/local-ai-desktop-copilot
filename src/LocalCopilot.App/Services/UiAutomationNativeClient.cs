@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Windows.Win32.Foundation;
 using Windows.Win32.UI.Accessibility;
 
 namespace LocalCopilot_App.Services;
@@ -137,7 +138,8 @@ internal sealed class UiAutomationNativeClient : IDisposable
 
             foreach (int propertyId in CachedPropertyIds)
             {
-                cacheRequest.AddProperty(propertyId);
+                cacheRequest.AddProperty(
+                    (UIA_PROPERTY_ID)propertyId);
             }
 
             if (CachedPropertyIds.Length !=
@@ -189,7 +191,9 @@ internal sealed class UiAutomationNativeClient : IDisposable
 
         try
         {
-            element = _automation.ElementFromHandle(hwnd);
+            element =
+                _automation.ElementFromHandle(
+                    new HWND(hwnd));
             return 0;
         }
         catch (Exception ex)
@@ -241,7 +245,7 @@ internal sealed class UiAutomationNativeClient : IDisposable
         {
             unownedElement =
                 _automation.ElementFromHandleBuildCache(
-                    hwnd,
+                    new HWND(hwnd),
                     _cacheRequest);
 
             if (unownedElement is null)
@@ -463,7 +467,8 @@ internal sealed class UiAutomationNativeClient : IDisposable
         int propertyId)
     {
         object? value =
-            element.GetCachedPropertyValue(propertyId);
+            element.GetCachedPropertyValue(
+                (UIA_PROPERTY_ID)propertyId);
 
         if (value is bool boolean)
         {
@@ -479,7 +484,8 @@ internal sealed class UiAutomationNativeClient : IDisposable
         int propertyId)
     {
         object? value =
-            element.GetCachedPropertyValue(propertyId);
+            element.GetCachedPropertyValue(
+                (UIA_PROPERTY_ID)propertyId);
 
         if (value is int number)
         {
@@ -495,7 +501,7 @@ internal sealed class UiAutomationNativeClient : IDisposable
     {
         object? value =
             element.GetCachedPropertyValue(
-                BoundingRectanglePropertyId);
+                (UIA_PROPERTY_ID)BoundingRectanglePropertyId);
 
         if (value is double[] values &&
             values.Length == 4)
@@ -541,7 +547,7 @@ internal sealed class UiAutomationNativeClient : IDisposable
     [DllImport("ole32.dll", ExactSpelling = true)]
     private static extern void CoUninitialize();
 
-    private sealed record NativeNodeFrame(
+    private readonly record struct NativeNodeFrame(
         IUIAutomationElement Element,
         int NodeIndex,
         int Depth);
