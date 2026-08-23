@@ -934,7 +934,9 @@ internal sealed class UiAutomationNativeClient : IDisposable
 
             if (tracker.CanReadAnotherString())
             {
-                string currentValue = valuePattern.CurrentValue;
+                string? currentValue =
+                    ConvertAndFreeBstr(
+                        valuePattern.CurrentValue);
 
                 if (tracker.TryCreateValue(
                         UiAutomationSemanticContentKind.Value,
@@ -1004,9 +1006,10 @@ internal sealed class UiAutomationNativeClient : IDisposable
                 {
                     range = ranges!.GetElement(rangeIndex);
 
-                    string visibleText =
-                        range.GetText(
-                            budgets.MaxCharactersPerString);
+                    string? visibleText =
+                        ConvertAndFreeBstr(
+                            range.GetText(
+                                budgets.MaxCharactersPerString));
 
                     if (tracker.TryCreateValue(
                             UiAutomationSemanticContentKind.VisibleText,
@@ -1047,6 +1050,18 @@ internal sealed class UiAutomationNativeClient : IDisposable
         {
             tracker.MarkProviderContentUnavailable();
             return false;
+        }
+    }
+
+    private static string? ConvertAndFreeBstr(BSTR value)
+    {
+        try
+        {
+            return value.ToString();
+        }
+        finally
+        {
+            Marshal.FreeBSTR(value);
         }
     }
 
