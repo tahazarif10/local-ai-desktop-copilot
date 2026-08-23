@@ -275,7 +275,7 @@ public sealed class UiAutomationSemanticSnapshotTests
                         "Second")
                 ]);
 
-        Assert.AreEqual(4, node.Values.Count);
+        Assert.HasCount(4, node.Values);
         Assert.AreEqual(
             2,
             node.Values.Count(
