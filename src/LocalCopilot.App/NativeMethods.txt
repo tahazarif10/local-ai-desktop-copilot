@@ -1,0 +1,4 @@
+// M3.2 uses the SDK-generated COM projection rather than extending manual
+// vtable slot declarations. Supporting UIA interfaces and types are generated
+// transitively from this authoritative interface.
+IUIAutomation2

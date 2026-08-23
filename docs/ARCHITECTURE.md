@@ -244,6 +244,14 @@ UIA is read-only and starts at M3. It must:
 
 The accepted M3.1 implementation intentionally provides less than the later semantic reader: it performs only `ElementFromHandle` and immediately releases the returned root pointer without requesting any property, child, cache, view, pattern, Name, Value, or Text. The call is admitted only after `ReadUiStructure`, runs on a lazy application-owned thread explicitly initialized as COM MTA, and publishes only a typed metadata result after a second current-epoch/capability check. `CUIAutomation8`/`IUIAutomation2` supplies 1.5-second connection and transaction timeouts inside a 2.5-second request deadline. One request may execute while one newest request waits; a newer pending request cancels the older pending request as superseded.
 
+Accepted M3.2 preserves that ownership/gating path and replaces the M3.1-only manual vtable ABI with pinned CsWin32 source generation. One Element-scope cache request asks for exactly 27 non-text Boolean/numeric properties. Starting at `ElementFromHandleBuildCache`, the worker walks Control View breadth-first with per-node BuildCache sibling/child calls. It records cached `IsContentElement` as the selective Content View marker rather than performing a second traversal, and it never enters Raw View or issues an unbounded descendants query.
+
+Its immutable default budget is 256 nodes, root depth 0 through depth 8, 1,200 ms traversal, 27 properties per node and 6,912 property values total, zero strings/bytes, and a 32 KiB estimated result. Depth-boundary reporting is conservative so the worker does not spend an extra cross-process call merely to decide whether a maximum-depth node has a child. Reaching any boundary returns typed truncation metadata. Bounds and per-node structural facts remain short-lived RAM data; only aggregate node/content/depth/property/byte/truncation/timing summaries may reach the diagnostic UI/log. Publication rejection clears the entire snapshot.
+
+CI and physical Windows acceptance at functional head `e1a50741580379f0f65c80e212f04c449e5a8c9b` proved 108 portable tests, strict generated-interop build, classic/packaged/browser providers within every budget, deterministic truncation and recovery, capability/integrity denial before native work, stale snapshot removal, M3.1 timeout/latest-wins regression, joined teardown, and a prohibited-content scan. PR #16 remains unmerged until explicitly authorized, so live `main` still contains only M3.1.
+
+M3.3 may add text only behind a separate `ReadUiText` decision. It must select nodes from the already bounded structure and independently cap string count, UTF-8 bytes, elapsed time, result size, and lifetime. Text remains RAM-only, must never enter diagnostics, persistence, or server egress implicitly, and must be removed on epoch or capability rejection. M3.2 is not permission for a live or unbounded text walk.
+
 The worker also revalidates HWND/PID and fail-closes if the target token cannot be inspected or has a higher integrity level than the client. The manifest remains without `uiAccess`; the app never elevates or attempts secure-desktop access. Every COM interface pointer is created, used, and released on the worker before a result crosses the boundary.
 
 UIA properties are cross-process calls and providers vary in quality. `CancellationToken` alone cannot be assumed to interrupt a blocked COM call. M3.1 physically validated forced deadline/recovery on the same worker and joined teardown during active work; this is sufficient for the manual root probe but not a guarantee against every hostile provider. M3.4 must decide whether continuous UIA needs a restartable helper process from measured evidence; M3.1 does not create that process speculatively.
@@ -327,13 +335,13 @@ LocalCopilot.App
   DesktopCopilotCoordinator (integration, subscriptions, commands, view state)
   MainPage (diagnostic rendering + command forwarding)
   Windows adapters (WinEvent, WGC, Win32 input)
-  UiAutomationProbeWorker (lazy dedicated COM MTA, root-only, bounded latest-wins)
+  UiAutomationProbeWorker (lazy COM MTA, root probe + bounded snapshot)
         |
         v
 LocalCopilot.Core
   privacy policy, epochs, lifecycle gate, change classification,
   timeline/correlation models, UIA typed outcomes/classifier/publication gate,
-  capacity-one latest-pending slot
+  immutable structural contract/budget tracker, latest-pending slot
 
 LocalCopilot.Core.Tests -> LocalCopilot.Core
 ```
@@ -354,7 +362,7 @@ LocalCopilot.Inference.Server   local endpoint, resource manager, runtime adapte
 *.Tests                         pure, contract, and Windows integration suites
 ```
 
-M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, M2.4.4 hardened diagnostics/input evidence, and M3.1 accepted the smallest UIA worker boundary through a root-only probe. M3.2 may extend that boundary only for a budgeted non-text structural snapshot; later milestones must not create all future projects at once.
+M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, M2.4.4 hardened diagnostics/input evidence, M3.1 accepted the smallest UIA worker boundary through a root-only probe, and M3.2 accepted the generated, budgeted non-text snapshot governed by ADR 0008. After PR #16 merges, M3.3 may design separately authorized bounded semantic text; later milestones must not create all future projects at once.
 
 ## 8. Threading and lifecycle model
 
@@ -511,6 +519,8 @@ Prefer reversible adapters and typed contracts. Split a process only for a measu
 - [Security considerations for assistive technologies](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-securityoverview)
 - [UI Automation tree views](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-treeoverview)
 - [Caching UI Automation properties and patterns](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-cachingforclients)
+- [Microsoft CsWin32](https://github.com/microsoft/CsWin32)
+- [ADR 0008: generated bounded UIA snapshot](decisions/0008-generated-bounded-uia-snapshot.md)
 - [UI Automation security overview](https://learn.microsoft.com/en-us/dotnet/framework/ui-automation/ui-automation-security-overview)
 - [Low-level mouse hook callback requirements](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelmouseproc)
 - [Windows App SDK desktop application lifecycle](https://learn.microsoft.com/en-us/windows/apps/develop/launch/app-lifecycle)

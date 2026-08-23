@@ -126,22 +126,27 @@ Accepted implementation on `dev/m3-1-uia-worker-probe`:
 
 Accepted evidence: [PR #15](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/15), 91 deterministic tests on Ubuntu/Windows, Windows PowerShell parsing, strict `Debug/win-x64 --warnaserror` build, and two physical Windows sessions proving classic/packaged/browser roots, privacy denial before queueing, higher-integrity fail-closed behavior from a non-elevated runner, same-worker deadline recovery, deterministic latest-wins/stale publication, and joined teardown during active work. Both bundles passed the prohibited-content scan.
 
-### ▶ M3.2 Bounded structural snapshot
+### ✅ M3.2 Bounded structural snapshot
 
-- Traverse only the foreground HWND subtree.
-- Prefer Control View; use Content View for user-relevant content; never default to the unbounded Raw View.
-- Batch properties through UIA caching to reduce cross-process calls.
-- Enforce explicit budgets for nodes, depth, elapsed time, string count/bytes, and result size.
-- Initially collect structural metadata and pattern availability; raw text remains out of logs.
-- Reevaluate CsWin32/generated interop before expanding the narrow manual ABI accepted only for M3.1.
-- Preserve one-active/one-latest backpressure, current epoch/capability publication, same-worker COM release, typed unavailable/timeout outcomes, and deterministic teardown.
+- Runtime accepted on `dev/m3-2-bounded-structural-snapshot` at functional head `e1a50741580379f0f65c80e212f04c449e5a8c9b`; [PR #16](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/16) remains unmerged until explicitly authorized.
+- Traverse only the foreground HWND subtree breadth-first through Control View. Cache `IsContentElement` for the user-relevant Content subset; never use Raw View or an unbounded descendant query.
+- Batch exactly 27 non-text Boolean/numeric properties through an Element-scope UIA cache request. Pattern availability is metadata only; never obtain or invoke a pattern object.
+- Enforce immutable defaults of 256 nodes, depth 8, 1,200 ms traversal, 27 values per node / 6,912 total, zero strings/bytes, and 32 KiB estimated result. Report every reached boundary with truncation flags.
+- Use pinned private build-time CsWin32 source generation from Microsoft Win32 metadata instead of expanding the M3.1 manual ABI; accepted ADR 0008 records the decision.
+- Preserve one-active/one-latest backpressure, current epoch/capability/latest publication, snapshot removal on stale publication, same-worker COM release, typed unavailable/timeout/cancelled/faulted outcomes, and deterministic teardown.
+- Publish/log only aggregate counts, truncation, estimated bytes, and timing. Name, Value, Text content, bounds, control IDs, per-node states, and pattern details remain absent from diagnostics.
 
-### M3.3 Semantic UI snapshot
+Accepted evidence: [CI run #28](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32648315641) passed 108 tests on Ubuntu/Windows, PowerShell runner parsing, and the strict Windows build. Full physical session `22e567be-059d-4d19-bb1f-55b60a7a8646` passed classic/packaged/browser providers, immutable budgets, privacy/integrity denial, stale disposal, M3.1 regression, recovery, joined teardown, and the prohibited-content scan. Short session `fd287eb1-c062-423f-881a-4f4c3ca1b0a7` confirmed corrected M3.2 runner metadata. Detailed measurements are in `PROJECT_STATE.md`.
 
-- Add policy-authorized Name/Value/Text extraction in RAM.
-- Normalize focus, dialog/window, control type, enabled/off-screen state, bounding rectangle, and read-only pattern facts.
+### ▶ M3.3 Semantic UI snapshot
+
+- Begin with a privacy/content-bounds design on `dev/m3-3-semantic-ui-snapshot` after PR #16 merges; structure acceptance does not authorize text.
+- Add a separately authorized `ReadUiText` path for Name/Value/Text only from selected nodes in the already bounded structure.
+- Fix independent string-count, UTF-8-byte, elapsed-time, result-size, and expiry budgets before live provider reads; keep content RAM-only and absent from logs, persistence, and implicit server egress.
+- Normalize focus, dialog/window, control type, enabled/off-screen state, bounding rectangle, and read-only pattern facts without widening the accepted structural traversal.
 - Never call action patterns such as Invoke, SetValue, ExpandCollapse, Selection, or Scroll.
 - Attach provenance, epoch, timestamps, sensitivity, and expiry to every snapshot.
+- Drop all semantic content when epoch, capability, identity, or latest-request publication validation fails.
 
 ### M3.4 Orchestrated UI enrichment
 

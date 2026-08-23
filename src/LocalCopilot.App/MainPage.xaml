@@ -13,7 +13,7 @@
                 FontWeight="SemiBold" />
 
             <TextBlock
-                Text="M3.1  Capability-gated UI Automation root probe"
+                Text="M3.2  Bounded non-text UI Automation structure"
                 FontSize="18"
                 Opacity="0.7"
                 Margin="0,0,0,18" />
@@ -145,20 +145,36 @@
                 Margin="0,6,0,0" />
 
             <TextBlock
-                Text="M3.1 UI Automation root probe"
+                Text="M3.2 UI Automation structural snapshot"
                 FontWeight="SemiBold"
                 Margin="0,22,0,0" />
 
             <TextBlock
-                Text="Manual diagnostic only · structure capability required · no text or tree traversal"
+                Text="Manual diagnostic only · bounded Control View · no Name, Value, Text, or actions"
                 TextWrapping="Wrap"
                 Opacity="0.7" />
 
             <Button
-                Content="Probe UI Automation root"
-                Click="UiAutomationRootProbeButton_Click"
+                Content="Capture bounded structural snapshot"
+                Click="UiAutomationStructuralSnapshotButton_Click"
                 HorizontalAlignment="Left"
                 Margin="0,6,0,0" />
+
+            <Button
+                Content="Exercise depth-0 structural budget"
+                Click="UiAutomationDepthBudgetButton_Click"
+                HorizontalAlignment="Left" />
+
+            <Button
+                Content="Exercise structural latest-wins/stale burst"
+                Click="UiAutomationStructuralLatestWinsBurstButton_Click"
+                HorizontalAlignment="Left" />
+
+            <Button
+                Content="Probe UI Automation root (M3.1 regression)"
+                Click="UiAutomationRootProbeButton_Click"
+                HorizontalAlignment="Left"
+                Margin="0,2,0,0" />
 
             <Button
                 Content="Force timeout, then retry normal probe"
@@ -166,7 +182,7 @@
                 HorizontalAlignment="Left" />
 
             <Button
-                Content="Exercise latest-wins/stale burst"
+                Content="Exercise root latest-wins/stale burst"
                 Click="UiAutomationLatestWinsBurstButton_Click"
                 HorizontalAlignment="Left" />
 
