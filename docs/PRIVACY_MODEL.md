@@ -205,7 +205,7 @@ Never write these to application logs or diagnostic bundles:
 - model prompt/context/response;
 - secrets, document paths, or command lines discovered incidentally.
 
-Allowed diagnostic fields include event IDs, timestamps, thread ID, epoch, HWND/PID/process name where policy permits, rule ID, classification, dimensions, counts, durations, queue metrics, exception type/HRESULT, and a sanitized bounded reason.
+Allowed diagnostic fields include event IDs, timestamps, thread ID, epoch, HWND/PID/process name where policy permits, rule ID, numeric process-integrity RIDs, classification, dimensions, counts, durations, queue metrics, exception type/HRESULT, and a sanitized bounded reason.
 
 Exception `.Message` values from content-bearing providers must be treated as potentially sensitive and sanitized before logging or bundling.
 

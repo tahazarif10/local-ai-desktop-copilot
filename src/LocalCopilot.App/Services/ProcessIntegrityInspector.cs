@@ -29,6 +29,9 @@ internal sealed class ProcessIntegrityInspector
             currentIntegrityLevel;
     }
 
+    public uint CurrentIntegrityLevel =>
+        _currentIntegrityLevel;
+
     public static bool TryCreate(
         out ProcessIntegrityInspector? inspector,
         out int hresult)
@@ -53,9 +56,11 @@ internal sealed class ProcessIntegrityInspector
     public bool TryIsSameOrLowerIntegrity(
         uint processId,
         out bool mayRead,
+        out uint targetIntegrityLevel,
         out int hresult)
     {
         mayRead = false;
+        targetIntegrityLevel = 0;
 
         nint process = OpenProcess(
             ProcessQueryLimitedInformation,
@@ -74,7 +79,7 @@ internal sealed class ProcessIntegrityInspector
         {
             if (!TryReadIntegrityLevel(
                     process,
-                    out uint targetIntegrityLevel,
+                    out targetIntegrityLevel,
                     out hresult))
             {
                 return false;

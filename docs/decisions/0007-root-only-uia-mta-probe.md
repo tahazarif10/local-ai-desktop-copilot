@@ -32,6 +32,8 @@ For M3.1 only:
 - Require `ReadUiStructure` before queueing, revalidate HWND/PID on the worker, and fail closed before UIA if target integrity is unreadable or above the client.
 - Immediately release the returned root pointer on the same worker. Do not query properties, children, views, cache requests, patterns, names, values, text, or actions.
 - Publish only typed outcome/reason/timing/HRESULT/thread/identity metadata after the current epoch and capability are checked again.
+- Record only numeric current/target integrity RIDs for security evidence; reject an elevated diagnostic runner before launch.
+- Provide a diagnostic-only three-request burst with a bounded two-second pre-native hold so pending replacement and stale publication are physically observable. The normal probe path never uses this hold.
 - Keep the application manifest without `uiAccess`; never elevate or attempt secure-desktop access.
 
 ## Consequences

@@ -639,9 +639,118 @@ public sealed class DesktopCopilotCoordinator :
 
     public Task ProbeUiAutomationForcedTimeoutAsync()
     {
+        EnsureUiThread(
+            "uia_forced_timeout");
+
+        if (!DiagnosticLog.IsEnabled)
+        {
+            SetUiAutomationProbeStatus(
+                "A launch-scoped diagnostic session is required.");
+
+            return Task.CompletedTask;
+        }
+
         return ProbeUiAutomationRootAsync(
             "uia_forced_timeout",
             TimeSpan.FromTicks(1));
+    }
+
+    public async Task ProbeUiAutomationLatestWinsBurstAsync()
+    {
+        const string operation =
+            "uia_latest_wins_burst";
+
+        EnsureUiThread(
+            operation);
+
+        if (!DiagnosticLog.IsEnabled)
+        {
+            SetUiAutomationProbeStatus(
+                "A launch-scoped diagnostic session is required.");
+
+            return;
+        }
+
+        ContextEpoch? epoch =
+            GetAllowedEpoch(
+                operation,
+                PrivacyCapability.ReadUiStructure);
+
+        if (epoch is null)
+        {
+            UiAutomationProbeResult blocked =
+                new(
+                    0,
+                    _currentEpoch?.Id ?? 0,
+                    UiAutomationProbeOutcome.Unavailable,
+                    _currentEpoch is null
+                        ? UiAutomationProbeReason.NoCurrentEpoch
+                        : UiAutomationProbeReason.CapabilityDenied,
+                    TimeSpan.Zero,
+                    HResult: null,
+                    WorkerThreadId: 0,
+                    IdentityRevalidated: false);
+
+            PublishUiAutomationProbeResult(
+                blocked);
+
+            return;
+        }
+
+        SetUiAutomationProbeStatus(
+            "Exercising one active plus one latest pending request...");
+
+        UiAutomationProbeOperation first =
+            _uiAutomationProbeWorker.ProbeForDiagnostics(
+                epoch,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(2));
+
+        _latestUiAutomationProbeRequestId =
+            first.RequestId;
+
+        await first.Started;
+
+        UiAutomationProbeOperation second =
+            _uiAutomationProbeWorker.Probe(
+                epoch,
+                TimeSpan.FromSeconds(5));
+
+        _latestUiAutomationProbeRequestId =
+            second.RequestId;
+
+        UiAutomationProbeOperation third =
+            _uiAutomationProbeWorker.Probe(
+                epoch,
+                TimeSpan.FromSeconds(5));
+
+        _latestUiAutomationProbeRequestId =
+            third.RequestId;
+
+        DiagnosticLog.Write(
+            "UIA.BURST_QUEUED",
+            $"epoch={epoch.Id} " +
+            $"first={first.RequestId} " +
+            $"second={second.RequestId} " +
+            $"third={third.RequestId}");
+
+        UiAutomationProbeResult[] results =
+            await Task.WhenAll(
+                first.Completion,
+                second.Completion,
+                third.Completion);
+
+        foreach (UiAutomationProbeResult result in results)
+        {
+            UiAutomationProbeResult publishable =
+                UiAutomationProbePublicationGate.Apply(
+                    result,
+                    _currentEpoch,
+                    _latestUiAutomationProbeRequestId);
+
+            PublishUiAutomationProbeResult(
+                publishable);
+        }
     }
 
     private async Task ProbeUiAutomationRootAsync(

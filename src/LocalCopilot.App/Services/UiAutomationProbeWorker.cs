@@ -59,6 +59,35 @@ public sealed class UiAutomationProbeWorker :
         ContextEpoch epoch,
         TimeSpan timeout)
     {
+        return ProbeCore(
+            epoch,
+            timeout,
+            diagnosticHold: TimeSpan.Zero);
+    }
+
+    internal UiAutomationProbeOperation ProbeForDiagnostics(
+        ContextEpoch epoch,
+        TimeSpan timeout,
+        TimeSpan diagnosticHold)
+    {
+        if (diagnosticHold <= TimeSpan.Zero ||
+            diagnosticHold > TimeSpan.FromSeconds(2))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(diagnosticHold));
+        }
+
+        return ProbeCore(
+            epoch,
+            timeout,
+            diagnosticHold);
+    }
+
+    private UiAutomationProbeOperation ProbeCore(
+        ContextEpoch epoch,
+        TimeSpan timeout,
+        TimeSpan diagnosticHold)
+    {
         ArgumentNullException.ThrowIfNull(epoch);
 
         if (timeout <= TimeSpan.Zero ||
@@ -77,6 +106,7 @@ public sealed class UiAutomationProbeWorker :
                 epoch.Snapshot.ProcessId,
                 Stopwatch.GetTimestamp(),
                 timeout,
+                diagnosticHold,
                 epoch.CancellationToken);
 
         WorkItem? replaced;
@@ -283,6 +313,8 @@ public sealed class UiAutomationProbeWorker :
 
                     try
                     {
+                        item.MarkStarted();
+
                         result =
                             Execute(
                                 item,
@@ -364,6 +396,25 @@ public sealed class UiAutomationProbeWorker :
                 identityRevalidated: false);
         }
 
+        if (item.DiagnosticHold > TimeSpan.Zero)
+        {
+            DiagnosticLog.Write(
+                "UIA.DIAGNOSTIC_HOLD",
+                $"request={item.RequestId} " +
+                $"durationMs={item.DiagnosticHold.TotalMilliseconds:0}");
+
+            if (_stopRequested.WaitOne(
+                    item.DiagnosticHold))
+            {
+                return item.CreateResult(
+                    UiAutomationProbeOutcome.Cancelled,
+                    UiAutomationProbeReason.WorkerStopped,
+                    hresult: null,
+                    workerThreadId,
+                    identityRevalidated: false);
+            }
+        }
+
         if (item.CancellationToken.IsCancellationRequested)
         {
             return item.CreateResult(
@@ -422,10 +473,23 @@ public sealed class UiAutomationProbeWorker :
                 identityRevalidated);
         }
 
-        if (!integrityInspector.TryIsSameOrLowerIntegrity(
+        bool integrityInspected =
+            integrityInspector.TryIsSameOrLowerIntegrity(
                 item.ProcessId,
                 out bool mayRead,
-                out int accessHResult))
+                out uint targetIntegrityLevel,
+                out int accessHResult);
+
+        DiagnosticLog.Write(
+            "UIA.INTEGRITY_CHECK",
+            $"request={item.RequestId} " +
+            $"currentRid={integrityInspector.CurrentIntegrityLevel} " +
+            $"targetRid={targetIntegrityLevel} " +
+            $"inspected={integrityInspected} " +
+            $"mayRead={mayRead} " +
+            $"hresult=0x{accessHResult:X8}");
+
+        if (!integrityInspected)
         {
             return item.CreateResult(
                 UiAutomationProbeOutcome.Unavailable,
@@ -515,6 +579,11 @@ public sealed class UiAutomationProbeWorker :
 
     private sealed class WorkItem
     {
+        private readonly TaskCompletionSource<bool>
+            _started =
+                new(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+
         private readonly TaskCompletionSource<UiAutomationProbeResult>
             _completion =
                 new(
@@ -527,6 +596,7 @@ public sealed class UiAutomationProbeWorker :
             uint processId,
             long startedTimestamp,
             TimeSpan timeout,
+            TimeSpan diagnosticHold,
             CancellationToken cancellationToken)
         {
             RequestId = requestId;
@@ -535,6 +605,7 @@ public sealed class UiAutomationProbeWorker :
             ProcessId = processId;
             StartedTimestamp = startedTimestamp;
             Timeout = timeout;
+            DiagnosticHold = diagnosticHold;
             CancellationToken = cancellationToken;
         }
 
@@ -550,11 +621,14 @@ public sealed class UiAutomationProbeWorker :
 
         public TimeSpan Timeout { get; }
 
+        public TimeSpan DiagnosticHold { get; }
+
         public CancellationToken CancellationToken { get; }
 
         public UiAutomationProbeOperation Operation =>
             new(
                 RequestId,
+                _started.Task,
                 _completion.Task);
 
         public bool HasExpired =>
@@ -582,9 +656,16 @@ public sealed class UiAutomationProbeWorker :
                 identityRevalidated);
         }
 
+        public void MarkStarted()
+        {
+            _started.TrySetResult(true);
+        }
+
         public void TryComplete(
             UiAutomationProbeResult result)
         {
+            _started.TrySetResult(true);
+
             if (!_completion.TrySetResult(result))
             {
                 return;
@@ -611,4 +692,5 @@ public sealed class UiAutomationProbeWorker :
 
 public sealed record UiAutomationProbeOperation(
     long RequestId,
+    Task Started,
     Task<UiAutomationProbeResult> Completion);

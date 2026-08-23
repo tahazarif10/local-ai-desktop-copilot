@@ -177,6 +177,8 @@ For an explicit diagnostic session:
 .\run-debug.ps1 -DiagnosticRoot "D:\LocalCopilotDiagnostics"
 ```
 
+Run the diagnostic command from a normal, non-Administrator PowerShell. The runner fails closed if the shell is elevated so the app cannot inherit administrator integrity and invalidate the M3.1 security matrix.
+
 `run-debug.ps1` creates one ignored, session-specific directory under `.localcopilot\diagnostics` by default, performs the strict Windows build, launches the packaged app with an expiring diagnostic token, runs a metadata-only foreground probe, and copies the final bundle to the clipboard. There is no persistent diagnostic-enable flag. The bundle reads only `session-meta.txt`, `app.log`, and `os-foreground.log` from that exact session.
 
 For the full acceptance and Git workflow, use [Engineering Workflow](docs/ENGINEERING_WORKFLOW.md).

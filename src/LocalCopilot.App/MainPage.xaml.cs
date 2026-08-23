@@ -189,4 +189,11 @@ public sealed partial class MainPage :
     {
         await _coordinator.ProbeUiAutomationForcedTimeoutAsync();
     }
+
+    private async void UiAutomationLatestWinsBurstButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await _coordinator.ProbeUiAutomationLatestWinsBurstAsync();
+    }
 }

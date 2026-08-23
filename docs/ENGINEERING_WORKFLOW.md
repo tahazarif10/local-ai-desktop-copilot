@@ -141,8 +141,9 @@ Set-Location H:\AIProjects\local-ai-desktop-copilot
 Current behavior:
 
 - rejects launch if `LocalCopilot.App` is already running;
+- rejects an elevated PowerShell host so the packaged app cannot accidentally inherit administrator integrity during privacy/security acceptance;
 - creates a unique session directory under the repository-local ignored diagnostic root, or a caller-supplied root;
-- records session ID, branch, SHA, .NET, PowerShell, OS, and Git status;
+- records session ID, branch, SHA, .NET, PowerShell, OS, `Runner elevated: False`, and Git status;
 - builds `Debug/win-x64 --warnaserror`;
 - runs an independent metadata-only foreground probe;
 - enables application diagnostics only through an expiring launch argument passed by the packaged-app run target and read from the desktop process command line;
@@ -218,10 +219,10 @@ Required cases:
 2. **WinUI/packaged UI:** Calculator or another non-elevated packaged Windows UI returns `Available/RootResolved`.
 3. **Browser:** the normal non-elevated Chrome window returns `Available/RootResolved`.
 4. **Privacy deny:** diagnostic Notepad returns `Unavailable/CapabilityDenied` and produces no `UIA.QUEUE`/native probe for that epoch.
-5. **Integrity deny:** an explicitly elevated target returns `Unavailable/HigherIntegrity` or `Unavailable/AccessInspectionFailed`; the manifest/process remains non-elevated and without `uiAccess`.
+5. **Integrity deny:** the runner metadata must say `Runner elevated: False`. An explicitly elevated target returns `Unavailable/HigherIntegrity` or `Unavailable/AccessInspectionFailed`; `UIA.INTEGRITY_CHECK` must show the target RID greater than the current RID (or a failed inspection), and the manifest/process remains non-elevated and without `uiAccess`.
 6. **Deterministic deadline/recovery:** on an allowed epoch, click `Force timeout, then retry normal probe`; first observe `Timeout/DeadlineExpired`, then immediately run the normal probe and observe `Available/RootResolved` on the same worker thread. This validates the request deadline/recovery path; it is not evidence that every hostile provider is interruptible.
-7. **Rapid transitions:** switch among allowed, denied, and own windows while issuing multiple probes. Raw `UIA.REQUEST_COMPLETE` records may show a replaced pending request as `Cancelled/Superseded`; final `UIA.PROBE_RESULT` converts any non-latest or no-longer-current completion to `Stale/PublicationRejected`. No prior target result may render as current.
-8. **Teardown:** close while a probe is active or immediately after repeated probes. Require one `UIA.WORKER_STOP` and `UIA.WORKER_DISPOSE` with `joined=True`, plus the existing clean sensing/input/foreground/coordinator teardown.
+7. **Latest-wins and rapid transitions:** on an allowed epoch, click `Exercise latest-wins/stale burst`. The diagnostic-only two-second hold makes one request active while two more are published: raw results must include `Cancelled/Superseded` for the replaced pending request; final results must convert both non-latest requests to `Stale/PublicationRejected`; the newest request must complete normally. Then switch rapidly among allowed, denied, and own windows and confirm no prior target result renders as current.
+8. **Teardown:** click `Exercise latest-wins/stale burst` and close the app before its two-second hold completes. Require cancellation/worker-stop metadata, one `UIA.WORKER_STOP`, and `UIA.WORKER_DISPOSE` with `joined=True`, plus the existing clean sensing/input/foreground/coordinator teardown.
 
 All successful native probes must use one nonzero worker managed-thread ID distinct from the UI log thread, and `UIA.WORKER_START` must report `apartment=MTA`. The bundle must contain no title text, UIA Name/Value/Text, control value, tree/property data, key/text value, coordinate, clipboard content, pixel payload, prompt, or response.
 
