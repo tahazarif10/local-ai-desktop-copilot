@@ -13,7 +13,7 @@
                 FontWeight="SemiBold" />
 
             <TextBlock
-                Text="M2.3  Sensing Orchestrator"
+                Text="M3.1  Capability-gated UI Automation root probe"
                 FontSize="18"
                 Opacity="0.7"
                 Margin="0,0,0,18" />
@@ -141,6 +141,38 @@
             <TextBlock
                 x:Name="PersistentChangeStatusText"
                 Text="Stopped"
+                TextWrapping="Wrap"
+                Margin="0,6,0,0" />
+
+            <TextBlock
+                Text="M3.1 UI Automation root probe"
+                FontWeight="SemiBold"
+                Margin="0,22,0,0" />
+
+            <TextBlock
+                Text="Manual diagnostic only · structure capability required · no text or tree traversal"
+                TextWrapping="Wrap"
+                Opacity="0.7" />
+
+            <Button
+                Content="Probe UI Automation root"
+                Click="UiAutomationRootProbeButton_Click"
+                HorizontalAlignment="Left"
+                Margin="0,6,0,0" />
+
+            <Button
+                Content="Force timeout, then retry normal probe"
+                Click="UiAutomationForcedTimeoutButton_Click"
+                HorizontalAlignment="Left" />
+
+            <Button
+                Content="Exercise latest-wins/stale burst"
+                Click="UiAutomationLatestWinsBurstButton_Click"
+                HorizontalAlignment="Left" />
+
+            <TextBlock
+                x:Name="UiAutomationProbeStatusText"
+                Text="Not probed"
                 TextWrapping="Wrap"
                 Margin="0,6,0,0" />
 

@@ -79,6 +79,9 @@ public sealed partial class MainPage :
         PersistentChangeStatusText.Text =
             state.PersistentChangeStatus;
 
+        UiAutomationProbeStatusText.Text =
+            state.UiAutomationProbeStatus;
+
         OrchestratorStatusText.Text =
             state.OrchestratorStatus;
     }
@@ -171,5 +174,26 @@ public sealed partial class MainPage :
         RoutedEventArgs e)
     {
         _coordinator.StopManualPersistentSensing();
+    }
+
+    private async void UiAutomationRootProbeButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await _coordinator.ProbeUiAutomationRootAsync();
+    }
+
+    private async void UiAutomationForcedTimeoutButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await _coordinator.ProbeUiAutomationForcedTimeoutAsync();
+    }
+
+    private async void UiAutomationLatestWinsBurstButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await _coordinator.ProbeUiAutomationLatestWinsBurstAsync();
     }
 }

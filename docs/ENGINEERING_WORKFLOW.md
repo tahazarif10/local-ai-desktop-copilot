@@ -119,7 +119,7 @@ The accepted M2.3 baseline `c29099a` had no automated tests. M2.4.1 added a port
 dotnet test .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj -c Release --settings .\tests\LocalCopilot.Core.Tests\.runsettings
 ```
 
-The suite currently contains 68 deterministic tests for capability-based `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, `ChangeCorrelationService`, the one-shot `ApplicationLifecycleGate`, launch-scoped `DiagnosticSession` parsing/logging, and `InputHookHealthMonitor`. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, live global hooks, UI Automation, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build above.
+The accepted M3.1 baseline contains 91 deterministic tests for capability-based `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, `ChangeCorrelationService`, the one-shot `ApplicationLifecycleGate`, launch-scoped `DiagnosticSession` parsing/logging, `InputHookHealthMonitor`, UIA native-result classification, stale/latest-request publication gating, and the capacity-one latest-pending slot. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, live global hooks, live UI Automation providers, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build or milestone-specific physical provider evidence.
 
 The CI workflow runs the core suite on both Ubuntu and Windows, then builds the packaged app as `Debug/win-x64` on Windows. Test-result artifacts are retained for failed as well as successful runs. Do not write “all tests passed” unless the relevant local/CI run is identified and actually passed; report build, test, CI, and physical runtime evidence as separate facts.
 
@@ -141,8 +141,9 @@ Set-Location H:\AIProjects\local-ai-desktop-copilot
 Current behavior:
 
 - rejects launch if `LocalCopilot.App` is already running;
+- rejects an elevated PowerShell host so the packaged app cannot accidentally inherit administrator integrity during privacy/security acceptance;
 - creates a unique session directory under the repository-local ignored diagnostic root, or a caller-supplied root;
-- records session ID, branch, SHA, .NET, PowerShell, OS, and Git status;
+- records session ID, branch, SHA, .NET, PowerShell, OS, `Runner elevated: False`, and Git status;
 - builds `Debug/win-x64 --warnaserror`;
 - runs an independent metadata-only foreground probe;
 - enables application diagnostics only through an expiring launch argument passed by the packaged-app run target and read from the desktop process command line;
@@ -207,6 +208,25 @@ Required categories for a content-bearing asynchronous feature:
 - relevant prior-milestone regression.
 
 A single happy-path screenshot is not acceptance.
+
+### M3.1 physical matrix
+
+This matrix was accepted on 2026-08-23 at functional head `e48b067f1c13ee5ba211bcd36de663b30ca27246`. Keep it as the root-worker regression matrix when M3.2 expands UIA.
+
+Run `run-debug.ps1`, Arm once, and keep the generated bundle open until all cases are complete. For each external target, focus the target, return to LocalCopilot, and use the root-probe command; own-process foreground transitions are excluded, so the coordinator retains the last external epoch.
+
+Required cases:
+
+1. **Classic Win32:** a non-elevated classic process such as a standalone PowerShell console or another known Win32 window returns `Available/RootResolved`.
+2. **WinUI/packaged UI:** Calculator or another non-elevated packaged Windows UI returns `Available/RootResolved`.
+3. **Browser:** the normal non-elevated Chrome window returns `Available/RootResolved`.
+4. **Privacy deny:** diagnostic Notepad returns `Unavailable/CapabilityDenied` and produces no `UIA.QUEUE`/native probe for that epoch.
+5. **Integrity deny:** the runner metadata must say `Runner elevated: False`. An explicitly elevated target returns `Unavailable/HigherIntegrity` or `Unavailable/AccessInspectionFailed`; `UIA.INTEGRITY_CHECK` must show the target RID greater than the current RID (or a failed inspection), and the manifest/process remains non-elevated and without `uiAccess`.
+6. **Deterministic deadline/recovery:** on an allowed epoch, click `Force timeout, then retry normal probe`; first observe `Timeout/DeadlineExpired`, then immediately run the normal probe and observe `Available/RootResolved` on the same worker thread. This validates the request deadline/recovery path; it is not evidence that every hostile provider is interruptible.
+7. **Latest-wins and rapid transitions:** on an allowed epoch, click `Exercise latest-wins/stale burst`. The diagnostic-only two-second hold makes one request active while two more are published: raw results must include `Cancelled/Superseded` for the replaced pending request; final results must convert both non-latest requests to `Stale/PublicationRejected`; the newest request must complete normally. Then switch rapidly among allowed, denied, and own windows and confirm no prior target result renders as current.
+8. **Teardown:** click `Exercise latest-wins/stale burst` and close the app before its two-second hold completes. Require cancellation/worker-stop metadata, one `UIA.WORKER_STOP`, and `UIA.WORKER_DISPOSE` with `joined=True`, plus the existing clean sensing/input/foreground/coordinator teardown.
+
+All successful native probes must use one nonzero worker managed-thread ID distinct from the UI log thread, and `UIA.WORKER_START` must report `apartment=MTA`. The bundle must contain no title text, UIA Name/Value/Text, control value, tree/property data, key/text value, coordinate, clipboard content, pixel payload, prompt, or response.
 
 ## 8. Performance evidence
 

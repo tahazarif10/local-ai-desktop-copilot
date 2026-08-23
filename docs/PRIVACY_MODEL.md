@@ -4,9 +4,9 @@
 
 Privacy is a control-plane boundary, not a filter applied after capture.
 
-The accepted M2.4.3 implementation evaluates process identity before content, keeps all target observation Off until explicit Arm, and uses independent typed capabilities rather than a single sensing Boolean. The foreground hook, identity lookup, title read, WGC, and input correlation all stop on Disarm. Every current capture entry point requires `CapturePixels` and revalidates HWND/PID immediately before WGC creation. M2.4.4 adds validated launch-scoped diagnostics, isolated whitelisted bundles, exception type/HRESULT redaction, and measured content-free input-hook health; a normal launch has no diagnostic sink.
+The accepted M2.4.3 implementation evaluates process identity before content, keeps all target observation Off until explicit Arm, and uses independent typed capabilities rather than a single sensing Boolean. The foreground hook, identity lookup, title read, WGC, and input correlation all stop on Disarm. Every current capture entry point requires `CapturePixels` and revalidates HWND/PID immediately before WGC creation. M2.4.4 adds validated launch-scoped diagnostics, isolated whitelisted bundles, exception type/HRESULT redaction, and measured content-free input-hook health; a normal launch has no diagnostic sink. The accepted M3.1 implementation applies the same pattern to root-only UIA: `ReadUiStructure` is checked before queueing and again before publication, then HWND/PID and integrity are revalidated on the MTA worker immediately before `ElementFromHandle`.
 
-The policy configuration boundary supports emergency deny, normalized exact-application rules, global grants, strict precedence, immutable revisioned snapshots, and change notification. Product defaults grant only Armed ephemeral identity/title/pixel work; derived-event retention is added only by the opt-in diagnostic configuration. UIA, OCR, microphone, and local-server transmission capabilities remain denied because those features do not yet exist. Notepad remains an exact deny fixture only while diagnostic mode is enabled.
+The policy configuration boundary supports emergency deny, normalized exact-application rules, global grants, strict precedence, immutable revisioned snapshots, and change notification. Product defaults grant only Armed ephemeral identity/title/pixel work. The opt-in launch-scoped diagnostic configuration separately adds derived-event retention and, for M3.1 validation, `ReadUiStructure`; it still does not grant `ReadUiText`. OCR, microphone, and local-server transmission capabilities remain denied. Notepad remains an exact deny fixture only while diagnostic mode is enabled.
 
 The product is still a diagnostic foundation: there is no user-facing policy editor, persisted rule store, pause control, semantic content source, or server transport. Those missing product surfaces do not weaken the implemented source gates.
 
@@ -149,6 +149,10 @@ Cancellation is advisory for APIs that cannot be interrupted. The publication ga
 
 UIA can expose structured text beyond what a naive screenshot pipeline might expect, including off-screen controls. Therefore:
 
+- the M3.1 probe resolves and immediately releases only the foreground root interface pointer; it requests no property, child, cache, pattern, Name, Value, or Text data;
+- product-default policy denies the probe, while the temporary diagnostic grant is activated only by the validated expiring launch token;
+- at most one request executes and one newest request waits; a context/policy change cancels the epoch and the publication gate converts late completion to `Stale`;
+- target integrity above the client or an unreadable target token fails closed before UIA as `Unavailable`; `uiAccess`, elevation, and secure-desktop access remain forbidden;
 - root traversal at the current foreground HWND;
 - Control View by default, selective Content View;
 - exclude own UI and desktop-wide traversal;
@@ -201,7 +205,7 @@ Never write these to application logs or diagnostic bundles:
 - model prompt/context/response;
 - secrets, document paths, or command lines discovered incidentally.
 
-Allowed diagnostic fields include event IDs, timestamps, thread ID, epoch, HWND/PID/process name where policy permits, rule ID, classification, dimensions, counts, durations, queue metrics, exception type/HRESULT, and a sanitized bounded reason.
+Allowed diagnostic fields include event IDs, timestamps, thread ID, epoch, HWND/PID/process name where policy permits, rule ID, numeric process-integrity RIDs, classification, dimensions, counts, durations, queue metrics, exception type/HRESULT, and a sanitized bounded reason.
 
 Exception `.Message` values from content-bearing providers must be treated as potentially sensitive and sanitized before logging or bundling.
 
@@ -236,12 +240,13 @@ A content-bearing milestone cannot pass unless tests/runtime evidence show:
 
 ## 16. Current remediation sequence
 
-M2.4 closes privacy gaps in this order:
+Foundation hardening and read-only UIA advance in this order:
 
 1. ✅ characterize current privacy/epoch behavior with tests (M2.4.1);
 2. ✅ separate lifetime/composition from the page (M2.4.2);
 3. ✅ implement capability decisions, a product policy configuration boundary, true Off semantics, and cancel-on-policy-change (M2.4.3);
 4. ✅ remove fixed diagnostic paths/content-risky exception logging and measure input-hook hardening (M2.4.4);
-5. ▶ introduce the capability-gated UIA worker probe in M3.1; UIA text remains a later, separately authorized slice.
+5. ✅ validate the capability-gated, root-only MTA worker probe in M3.1; UIA text remains a later, separately authorized slice;
+6. ▶ add only a bounded non-text structural snapshot behind the same gates in M3.2.
 
-See [ADR 0001](decisions/0001-privacy-before-content.md) and [ADR 0005](decisions/0005-foundation-hardening-before-uia.md).
+See [ADR 0001](decisions/0001-privacy-before-content.md), [ADR 0005](decisions/0005-foundation-hardening-before-uia.md), and accepted [ADR 0007](decisions/0007-root-only-uia-mta-probe.md).

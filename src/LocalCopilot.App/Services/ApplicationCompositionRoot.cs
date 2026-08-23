@@ -39,6 +39,8 @@ public static class ApplicationCompositionRoot
             diagnosticTimeline,
             new InputActivityTracker(),
             new ChangeCorrelationService(
-                diagnosticTimeline));
+                diagnosticTimeline),
+            new UiAutomationProbeWorker(
+                foregroundWindowService));
     }
 }

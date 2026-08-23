@@ -58,7 +58,7 @@ Read `docs/PRIVACY_MODEL.md` before adding any new source of content.
 ## Architecture discipline
 
 - Preserve the verified M2 sensing path unless a failing test or measured problem requires change.
-- M2.4 foundation hardening is complete. Begin semantic work only through the bounded M3.1 UIA capability/worker probe; do not skip directly to traversal, text extraction, OCR, or orchestration.
+- M2.4 foundation hardening and the M3.1 root-only UIA worker probe are complete. Expand semantics only through the bounded M3.2 structural-snapshot gate; do not skip directly to text extraction, OCR, or orchestration.
 - Keep Win32/WinRT/COM adapters behind narrow contracts; pure policy and event logic must be unit-testable without Windows interop.
 - UI code must not become the lifetime owner and orchestration implementation for new product services. M2.4.2 moved composition/lifecycle out of `MainPage`; preserve the application-owned coordinator boundary.
 - UI Automation calls belong on a dedicated COM MTA worker, never the WinUI thread. Scope traversal to the foreground HWND, use Control/Content views and property caching, and enforce node/depth/text/time budgets.
@@ -99,4 +99,4 @@ A milestone is complete only when all of the following are true:
 
 ## Current handoff
 
-The last verified functional code baseline is `cfcc4806b266bd8654fa93745783e8c8ae6b5b60`; later documentation-only or merge commits may be descendants. M2.4.4 diagnostics/input hardening is accepted through PR #14. The only approved next implementation gate is M3.1 UIA capability and worker probe on `dev/m3-1-uia-worker-probe`. Resolve live `main` HEAD from GitHub/Git, then compare it with `docs/PROJECT_STATE.md` before working.
+The last verified functional code baseline is `e48b067f1c13ee5ba211bcd36de663b30ca27246`; PR #15 is its review/merge record. M3.1 accepts diagnostic-only `ReadUiStructure`, one active plus one latest pending request, dedicated COM MTA ownership, typed outcomes, integrity fail-closed behavior, and no property/text/traversal/action call. The only approved next branch is `dev/m3-2-bounded-structural-snapshot`: define explicit budgets and a non-text structural contract before expanding UIA interop. Resolve live Git/PR state, then compare it with `docs/PROJECT_STATE.md` before working.

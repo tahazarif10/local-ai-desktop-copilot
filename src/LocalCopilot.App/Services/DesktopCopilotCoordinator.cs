@@ -46,6 +46,9 @@ public sealed class DesktopCopilotCoordinator :
     private readonly ChangeCorrelationService
         _changeCorrelationService;
 
+    private readonly UiAutomationProbeWorker
+        _uiAutomationProbeWorker;
+
     private readonly ApplicationLifecycleGate
         _lifecycle =
             new();
@@ -67,6 +70,9 @@ public sealed class DesktopCopilotCoordinator :
     private bool
         _subscriptionsAttached;
 
+    private long
+        _latestUiAutomationProbeRequestId;
+
     internal DesktopCopilotCoordinator(
         uint ownProcessId,
         DispatcherQueue uiDispatcher,
@@ -79,7 +85,8 @@ public sealed class DesktopCopilotCoordinator :
         SensingOrchestrator sensingOrchestrator,
         DiagnosticTimeline diagnosticTimeline,
         InputActivityTracker inputActivityTracker,
-        ChangeCorrelationService changeCorrelationService)
+        ChangeCorrelationService changeCorrelationService,
+        UiAutomationProbeWorker uiAutomationProbeWorker)
     {
         _ownProcessId =
             ownProcessId;
@@ -138,6 +145,11 @@ public sealed class DesktopCopilotCoordinator :
             changeCorrelationService ??
             throw new ArgumentNullException(
                 nameof(changeCorrelationService));
+
+        _uiAutomationProbeWorker =
+            uiAutomationProbeWorker ??
+            throw new ArgumentNullException(
+                nameof(uiAutomationProbeWorker));
 
         DiagnosticLog.Write(
             "COORD.CTOR",
@@ -618,6 +630,195 @@ public sealed class DesktopCopilotCoordinator :
         }
     }
 
+    public Task ProbeUiAutomationRootAsync()
+    {
+        return ProbeUiAutomationRootAsync(
+            "uia_root_probe",
+            TimeSpan.FromMilliseconds(2500));
+    }
+
+    public Task ProbeUiAutomationForcedTimeoutAsync()
+    {
+        EnsureUiThread(
+            "uia_forced_timeout");
+
+        if (!DiagnosticLog.IsEnabled)
+        {
+            SetUiAutomationProbeStatus(
+                "A launch-scoped diagnostic session is required.");
+
+            return Task.CompletedTask;
+        }
+
+        return ProbeUiAutomationRootAsync(
+            "uia_forced_timeout",
+            TimeSpan.FromTicks(1));
+    }
+
+    public async Task ProbeUiAutomationLatestWinsBurstAsync()
+    {
+        const string operation =
+            "uia_latest_wins_burst";
+
+        EnsureUiThread(
+            operation);
+
+        if (!DiagnosticLog.IsEnabled)
+        {
+            SetUiAutomationProbeStatus(
+                "A launch-scoped diagnostic session is required.");
+
+            return;
+        }
+
+        ContextEpoch? epoch =
+            GetAllowedEpoch(
+                operation,
+                PrivacyCapability.ReadUiStructure);
+
+        if (epoch is null)
+        {
+            UiAutomationProbeResult blocked =
+                new(
+                    0,
+                    _currentEpoch?.Id ?? 0,
+                    UiAutomationProbeOutcome.Unavailable,
+                    _currentEpoch is null
+                        ? UiAutomationProbeReason.NoCurrentEpoch
+                        : UiAutomationProbeReason.CapabilityDenied,
+                    TimeSpan.Zero,
+                    HResult: null,
+                    WorkerThreadId: 0,
+                    IdentityRevalidated: false);
+
+            PublishUiAutomationProbeResult(
+                blocked);
+
+            return;
+        }
+
+        SetUiAutomationProbeStatus(
+            "Exercising one active plus one latest pending request...");
+
+        UiAutomationProbeOperation first =
+            _uiAutomationProbeWorker.ProbeForDiagnostics(
+                epoch,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(2));
+
+        _latestUiAutomationProbeRequestId =
+            first.RequestId;
+
+        await first.Started;
+
+        UiAutomationProbeOperation second =
+            _uiAutomationProbeWorker.Probe(
+                epoch,
+                TimeSpan.FromSeconds(5));
+
+        _latestUiAutomationProbeRequestId =
+            second.RequestId;
+
+        UiAutomationProbeOperation third =
+            _uiAutomationProbeWorker.Probe(
+                epoch,
+                TimeSpan.FromSeconds(5));
+
+        _latestUiAutomationProbeRequestId =
+            third.RequestId;
+
+        DiagnosticLog.Write(
+            "UIA.BURST_QUEUED",
+            $"epoch={epoch.Id} " +
+            $"first={first.RequestId} " +
+            $"second={second.RequestId} " +
+            $"third={third.RequestId}");
+
+        UiAutomationProbeResult[] results =
+            await Task.WhenAll(
+                first.Completion,
+                second.Completion,
+                third.Completion);
+
+        foreach (UiAutomationProbeResult result in results)
+        {
+            UiAutomationProbeResult publishable =
+                UiAutomationProbePublicationGate.Apply(
+                    result,
+                    _currentEpoch,
+                    _latestUiAutomationProbeRequestId);
+
+            PublishUiAutomationProbeResult(
+                publishable);
+        }
+    }
+
+    private async Task ProbeUiAutomationRootAsync(
+        string operation,
+        TimeSpan timeout)
+    {
+        EnsureUiThread(
+            operation);
+
+        ContextEpoch? epoch =
+            GetAllowedEpoch(
+                operation,
+                PrivacyCapability.ReadUiStructure);
+
+        if (epoch is null)
+        {
+            UiAutomationProbeResult blocked =
+                new(
+                    0,
+                    _currentEpoch?.Id ?? 0,
+                    UiAutomationProbeOutcome.Unavailable,
+                    _currentEpoch is null
+                        ? UiAutomationProbeReason.NoCurrentEpoch
+                        : UiAutomationProbeReason.CapabilityDenied,
+                    TimeSpan.Zero,
+                    HResult: null,
+                    WorkerThreadId: 0,
+                    IdentityRevalidated: false);
+
+            PublishUiAutomationProbeResult(
+                blocked);
+
+            return;
+        }
+
+        SetUiAutomationProbeStatus(
+            operation == "uia_forced_timeout"
+                ? "Forcing an expired request deadline..."
+                : "Resolving root on dedicated MTA worker...");
+
+        DiagnosticLog.Write(
+            "UIA.PROBE_BEGIN",
+            $"operation={operation} " +
+            $"epoch={epoch.Id} " +
+            $"hwnd=0x{epoch.Snapshot.Handle.ToInt64():X} " +
+            $"pid={epoch.Snapshot.ProcessId}");
+
+        UiAutomationProbeOperation probe =
+            _uiAutomationProbeWorker.Probe(
+                epoch,
+                timeout);
+
+        _latestUiAutomationProbeRequestId =
+            probe.RequestId;
+
+        UiAutomationProbeResult result =
+            await probe.Completion;
+
+        UiAutomationProbeResult publishable =
+            UiAutomationProbePublicationGate.Apply(
+                result,
+                _currentEpoch,
+                _latestUiAutomationProbeRequestId);
+
+        PublishUiAutomationProbeResult(
+            publishable);
+    }
+
     public void Arm()
     {
         EnsureUiThread(
@@ -829,6 +1030,7 @@ public sealed class DesktopCopilotCoordinator :
 
         DetachServiceSubscriptions();
 
+        _uiAutomationProbeWorker.Dispose();
         _inputActivityTracker.Dispose();
         _foregroundWindowObserver.Dispose();
         _contextEpochManager.Dispose();
@@ -1086,6 +1288,8 @@ public sealed class DesktopCopilotCoordinator :
                         ChangeDetectionStatus =
                             "Blocked by privacy policy.",
                         PersistentChangeStatus =
+                            "Blocked by privacy policy.",
+                        UiAutomationProbeStatus =
                             "Blocked by privacy policy."
                     };
                 }
@@ -1119,7 +1323,9 @@ public sealed class DesktopCopilotCoordinator :
                     PersistentChangeStatus =
                         _persistentChangeDetectionService.IsRunning
                             ? updated.PersistentChangeStatus
-                            : "Stopped | context changed"
+                            : "Stopped | context changed",
+                    UiAutomationProbeStatus =
+                        "Not probed | context changed"
                 };
             });
 
@@ -1495,6 +1701,43 @@ public sealed class DesktopCopilotCoordinator :
                     OrchestratorStatus =
                         status
                 });
+    }
+
+    private void SetUiAutomationProbeStatus(
+        string status)
+    {
+        UpdateViewState(
+            state =>
+                state with
+                {
+                    UiAutomationProbeStatus =
+                        status
+                });
+    }
+
+    private void PublishUiAutomationProbeResult(
+        UiAutomationProbeResult result)
+    {
+        string hresult =
+            result.HResult.HasValue
+                ? $"0x{result.HResult.Value:X8}"
+                : "none";
+
+        DiagnosticLog.Write(
+            "UIA.PROBE_RESULT",
+            $"request={result.RequestId} " +
+            $"epoch={result.EpochId} " +
+            $"outcome={result.Outcome} " +
+            $"reason={result.Reason} " +
+            $"elapsedMs={result.Elapsed.TotalMilliseconds:0.000} " +
+            $"hresult={hresult} " +
+            $"workerThread={result.WorkerThreadId} " +
+            $"identityRevalidated={result.IdentityRevalidated}");
+
+        SetUiAutomationProbeStatus(
+            $"{result.Outcome} | {result.Reason} | " +
+            $"{result.Elapsed.TotalMilliseconds:0.0} ms | " +
+            $"HRESULT {hresult}");
     }
 
     private void UpdateViewState(

@@ -84,12 +84,14 @@ public sealed record PrivacyPolicyConfiguration(
             PrivacyCapability.ReadWindowTitle |
             PrivacyCapability.CapturePixels;
 
-        // Existing metadata-only correlation is a diagnostic feature.
-        // Product launches do not silently grant derived retention.
+        // Existing metadata-only correlation and the manual M3.1 root probe
+        // are diagnostic features. Product launches do not silently grant
+        // either derived retention or UI structure access.
         if (diagnosticNotepadRuleEnabled)
         {
             globalGrants |=
-                PrivacyCapability.RetainDerivedEvent;
+                PrivacyCapability.RetainDerivedEvent |
+                PrivacyCapability.ReadUiStructure;
         }
 
         return new PrivacyPolicyConfiguration(

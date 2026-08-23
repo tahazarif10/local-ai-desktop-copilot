@@ -1,10 +1,10 @@
 ---
 state_schema: 1
-reference_code_commit: cfcc4806b266bd8654fa93745783e8c8ae6b5b60
-last_verified_date: 2026-08-21
-completed_through: M2.4.4
-next_milestone: M3.1
-next_milestone_name: UIA Capability and Worker Probe
+reference_code_commit: e48b067f1c13ee5ba211bcd36de663b30ca27246
+last_verified_date: 2026-08-23
+completed_through: M3.1
+next_milestone: M3.2
+next_milestone_name: Bounded Structural Snapshot
 ---
 
 # Project state
@@ -13,11 +13,11 @@ This document separates verified implementation from target architecture. Update
 
 ## Executive state
 
-The implementation at `cfcc4806b266bd8654fa93745783e8c8ae6b5b60` is the accepted M2.4.4 functional baseline. [PR #14](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/14) replaced fixed/persistent diagnostics with validated launch-scoped sessions, hardened the three-file bundle and exception redaction, and measured the content-free low-level input hooks. The canonical Windows `win-x64` build, 68 deterministic tests, CI, two physical diagnostic sessions, and a normal-launch no-write proof passed. Documentation-only or merge descendants may follow this SHA without changing the accepted runtime behavior; always resolve live HEAD from GitHub/Git.
+The implementation at `e48b067f1c13ee5ba211bcd36de663b30ca27246` is the accepted M3.1 functional baseline. [PR #15](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/15) adds the smallest capability-gated UI Automation boundary: a manual, root-only `ElementFromHandle` probe on one application-owned COM MTA worker. The canonical Windows `win-x64` build, 91 deterministic tests on Ubuntu and Windows, and two physical diagnostic sessions passed. Documentation-only or merge descendants may follow this SHA without changing the accepted runtime behavior; always resolve live HEAD from GitHub/Git.
 
-There is no known blocking defect in the accepted M2 sensing path or the completed M2.4 foundation-hardening gate. No rework is required unless a reproducible regression appears.
+There is no known blocking defect in the accepted M2 sensing path, completed M2.4 foundation-hardening gate, or M3.1 root-probe boundary. No rework is required unless a reproducible regression appears.
 
-The repository is not yet a complete copilot. It is a hardened diagnostic WinUI shell around the sensing foundation. The next implementation work is M3.1: a read-only UIA capability and dedicated COM MTA worker probe, before bounded traversal or semantic text collection.
+The repository is not yet a complete copilot. It is a hardened diagnostic WinUI shell around the sensing foundation plus a metadata-only UIA root-availability probe. M3.1 intentionally reads no UIA property, child, view, text, pattern, or action. M3.2 bounded structural snapshots are the only approved next implementation gate; semantic text collection remains M3.3.
 
 ## Accepted milestone evidence
 
@@ -35,6 +35,7 @@ The repository is not yet a complete copilot. It is a hardened diagnostic WinUI 
 | M2.4.2 Composition and lifecycle separation | Complete | [PR #12](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/12), validated code head `dd6f563` | 49/49 deterministic tests locally and on Ubuntu/Windows CI; canonical Windows build; application-owned coordinator passed lifecycle, privacy, recovery, unavailable-target, and armed-shutdown regression |
 | M2.4.3 Capability-based privacy policy | Complete | [PR #13](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/13), validated code head `a9c0adb` | 58/58 deterministic tests locally and on Ubuntu/Windows CI; canonical Windows build; true Off, capability gates, deny/recovery, identity revalidation, Disarm/Re-arm, stale rejection, and armed shutdown passed |
 | M2.4.4 Diagnostics and input hardening | Complete | [PR #14](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/14), validated code head `cfcc480` | 68/68 deterministic tests on Ubuntu/Windows CI; strict Windows build; default/custom diagnostic roots, normal-launch no-write proof, all four correlation outcomes, 1,965 measured callbacks with zero errors/mismatches, and clean unhook/shutdown passed |
+| M3.1 UIA capability and worker probe | Complete | [PR #15](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/15), validated code head `e48b067` | 91/91 deterministic tests on Ubuntu/Windows CI; strict Windows build; Win32/packaged/browser roots, privacy and integrity denial, timeout recovery, latest-wins/stale publication, and active-worker teardown passed |
 
 PR #7 was squash-merged as `c29099a`. Its feature-branch head (`abcbf08`) is not the `main` baseline.
 
@@ -100,7 +101,35 @@ The behavior-bearing code was validated at PR #14 head `cfcc4806b266bd8654fa9374
 - Diagnostic privacy review found only approved metadata. No title text, key/scan code, typed text, coordinate, clipboard content, pixel payload, audio, prompt, response, provider exception message, or stack text appeared.
 - Decision: retain the current synchronous diagnostic-only low-level hooks. A dedicated hook thread or Raw Input is not justified by current target-hardware evidence and requires a new measured regression before replacement.
 
-Verdict: **accepted**. PR #14 is the review/merge record. M2.4 is complete; M3.1 is the only approved next implementation gate.
+Verdict: **accepted**. PR #14 is the review/merge record. At that gate M2.4 was complete and M3.1 was the only approved next implementation step; M3.1 is now accepted below.
+
+### M3.1 acceptance evidence
+
+The behavior-bearing code was validated at PR #15 head `e48b067f1c13ee5ba211bcd36de663b30ca27246` on 2026-08-23. Both physical bundles recorded the exact feature branch/SHA and an empty working tree; the acceptance-documentation commit does not replace that runtime evidence.
+
+- [CI run #22](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32633213008) passed 91/91 deterministic core tests on Ubuntu and Windows, parsed `run-debug.ps1` with Windows PowerShell, and built the packaged app as strict `Debug/win-x64 --warnaserror` with zero warnings and zero errors.
+- Physical session `cefae151-90c8-4d52-a94c-a445ef39e55b` proved `Available/RootResolved` against classic PowerShell, Chrome, and packaged `ApplicationFrameHost` targets. Every successful native call used worker managed thread 10 after `UIA.WORKER_START apartment=MTA`; the WinUI log thread remained thread 2.
+- Diagnostic Notepad returned `Unavailable/CapabilityDenied` without a `UIA.QUEUE` or native root request for its denied epoch. Product defaults still deny `ReadUiStructure`; the validated diagnostic launch granted structure without granting UIA text.
+- Three forced-expiry probes returned `Timeout/DeadlineExpired`. A normal packaged-target probe immediately after the final expiry returned `Available/RootResolved` on the same worker thread, proving typed deadline handling and worker recovery without claiming that every hostile provider is interruptible.
+- The first session exercised 78 rapid foreground epochs across allowed, denied, transient, and own windows. Prior-context work never rendered as current, teardown stopped the MTA worker once, and `UIA.WORKER_DISPOSE` reported `started=True joined=True`.
+- Targeted session `6db7d86a-526f-421d-a729-befd76fff088` ran from a confirmed non-Administrator shell (`Runner elevated: False`). An elevated target reported current RID 8192 and target RID 12288, `inspected=True`, `mayRead=False`, HRESULT `0x80070005`, and `Unavailable/HigherIntegrity` before UIA.
+- Two deterministic three-request bursts each kept one request active, replaced the older pending request as `Cancelled/Superseded`, converted both non-latest final results to `Stale/PublicationRejected`, and published only the newest request as `Available/RootResolved`.
+- A third burst was interrupted by application shutdown while the two-second hold was active. Pending and active work completed `Cancelled/WorkerStopped`, every final result was rejected as stale, the worker emitted one stop, and disposal joined it successfully. Existing sensing teardown also reported successful hook removal, zero callback/subscriber/thread errors, and successful keyboard/mouse unhook.
+- Both diagnostic privacy scans found no title text, UIA Name/Value/Text, tree/property/control data, key or scan code, typed text, coordinates, clipboard content, pixel payload, audio, prompt, response, provider exception message, or stack text.
+
+The accepted boundary is deliberately narrow:
+
+- `ReadUiStructure` remains denied by product defaults and is granted without `ReadUiText` only by a validated expiring diagnostic launch.
+- `DesktopCopilotCoordinator` gates before queueing and applies a current epoch/capability publication gate after completion.
+- `UiAutomationProbeWorker` starts lazily, owns one dedicated COM MTA thread, and permits one active plus one coalesced newest pending request.
+- The worker revalidates HWND/PID, rejects unreadable or higher-integrity targets before UIA, creates `CUIAutomation8` as `IUIAutomation2`, configures 1.5-second native connection/transaction timeouts, and applies a 2.5-second normal end-to-end deadline. A separate diagnostic command forces an expired request so typed timeout and immediate same-worker recovery can be observed deterministically.
+- Runtime evidence records current/target integrity RIDs, and `run-debug.ps1` rejects an elevated host before creating a session so an administrator runner cannot invalidate the higher-integrity negative case.
+- A diagnostic-only two-second worker hold plus three-request burst makes active/latest-pending replacement and stale publication observable without depending on human clicks beating a millisecond-scale provider call. It does not alter normal probe timing.
+- `ElementFromHandle` is the only UIA operation. The root pointer is released on the worker and no UIA object, property, text, tree node, pattern, or action crosses the apartment.
+- Outcomes are typed as `Available`, `Unavailable`, `Timeout`, `Cancelled`, `Stale`, or `Faulted`; diagnostics contain only reason/timing/HRESULT/thread/identity metadata.
+- The portable suite grows from the accepted 68-test baseline to 91 tests, adding capability separation, HRESULT classification, stale/latest-request publication, and bounded latest-pending replacement coverage.
+
+Verdict: **accepted**. PR #15 is the review and merge record. M3.2 is the only approved next implementation gate.
 
 ## Current implementation map
 
@@ -111,9 +140,10 @@ Verdict: **accepted**. PR #14 is the review/merge record. M2.4 is complete; M3.1
 | Language/runtime | C# on .NET 10 | `net10.0-windows10.0.26100.0` |
 | Desktop UI | Packaged WinUI 3 | `Microsoft.WindowsAppSDK` 2.4.0 |
 | Portable logic | `LocalCopilot.Core` class library | `net10.0`; no WinUI/Windows API dependency |
-| Characterization tests | MSTest 4.3.3 | 68 deterministic tests; 68/68 passed on both CI runners at the accepted M2.4.4 baseline |
-| Continuous integration | GitHub Actions | [PR #14 code-head run](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32500012379) passed 68 core tests on Ubuntu/Windows, Windows PowerShell parsing, and the strict `Debug/win-x64` app build |
+| Characterization tests | MSTest 4.3.3 | Accepted M3.1 baseline: 91/91 deterministic tests |
+| Continuous integration | GitHub Actions | [PR #15 code-head run](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32633213008) passed 91 core tests on Ubuntu/Windows, Windows PowerShell parsing, and the strict `Debug/win-x64` app build |
 | Capture/image interop | Windows Graphics Capture + Win2D | `Microsoft.Graphics.Win2D` 1.4.0 |
+| UIA interop | Direct minimal `CUIAutomation8`/`IUIAutomation2` ABI inside `LocalCopilot.App` | Accepted root-only manual probe; no property/text/traversal/action and no extra runtime package/process |
 | Packaging/trust | MSIX tooling, full-trust desktop app | Development package identity used by `dotnet run` |
 | Canonical validated target | `Debug`, `win-x64` | Physical Windows client acceptance |
 | Declared OS minimum | Windows build 17763 | Declaration only; it is not broad runtime-support evidence |
@@ -141,6 +171,7 @@ Qwen3-VL-2B appeared as an early candidate in the original product prompt. It is
 | `DiagnosticLog` / `run-debug.ps1` | Expiring launch-scoped metadata sink, isolated session directory, activation handshake, and exact three-file bundle | No persistent enable flag; normal launch writes nothing; default root is ignored and custom roots are supported |
 | `ApplicationCompositionRoot` | Constructs the current service graph once for the desktop process | Concrete composition remains in the Windows app assembly |
 | `DesktopCopilotCoordinator` | Owns sensing integration, subscriptions, immutable view state, commands, start/stop, and teardown | One UI-thread-owned coordinator per application/window lifetime |
+| `UiAutomationProbeWorker` | Owns the lazy COM MTA, capacity-one latest-pending slot, integrity/identity checks, native timeouts, root resolution, and same-thread COM release | `ElementFromHandle` only; returns metadata outcomes and exposes no UIA object, property, tree, text, pattern, or action |
 | `ApplicationLifecycleGate` | Thread-safe one-shot Created/Running/Stopped/Disposed transitions | Portable lifecycle state only; Windows resource teardown remains coordinator-owned |
 | `MainPage` | Diagnostic rendering and command forwarding through `IDesktopCopilotView` | Attaches/detaches as a view; it does not construct or own sensing resources |
 
@@ -162,13 +193,14 @@ Qwen3-VL-2B appeared as an early candidate in the original product prompt. It is
 - Diagnostics are disabled unless one validated, expiring process launch token binds the app to one isolated session; a normal launch does not create or modify diagnostic files.
 - `App` owns one coordinator; page load/unload only attaches/detaches the view.
 - Service subscription, observer, capture/input session, epoch, and coordinator teardown paths were exercised without a resource leak.
+- Root-only UIA work starts only after `ReadUiStructure`, runs on one dedicated COM MTA worker, revalidates HWND/PID and integrity, releases COM pointers on that worker, and passes the epoch/capability/latest-request publication gate.
 
 ## Not implemented
 
 The following capabilities do not exist in `main` and must not be described as complete:
 
 - Product privacy settings UI, pause control, or persisted policy configuration
-- UI Automation client or semantic UI snapshot
+- Bounded UIA structural or semantic snapshot; the accepted root-only probe collects no properties, children, views, patterns, or text
 - Dialog/error/notification semantic detection
 - OCR or changed-region text extraction
 - Vision model or visual-description service
@@ -187,9 +219,10 @@ The `systemAIModels` manifest capability is present, but no Windows AI model API
 
 ### Must be resolved before M3 continuous semantic sensing
 
-M2.4.1 through M2.4.4 resolved the characterization/CI, ownership/lifecycle, capability-privacy, diagnostic-session, exception-redaction, and input-measurement findings. M3.1 now begins with one required execution boundary:
+M2.4.1 through M2.4.4 resolved the characterization/CI, ownership/lifecycle, capability-privacy, diagnostic-session, exception-redaction, and input-measurement findings. M3.1 accepted the minimal UIA execution boundary. The next unresolved slice is narrower than continuous semantic sensing:
 
-1. **No UIA execution boundary exists yet.** Official Windows guidance requires UIA client calls on a separate COM MTA worker, not the UI thread. M3.1 must establish capability gating, typed outcomes, deadlines, provider-hang recovery evidence, and clean worker teardown before traversal or text collection.
+1. **M3.2 needs a separately bounded structural contract.** Before any traversal, define and test explicit node, depth, elapsed-time, property-count/string-byte, and result-size budgets; choose Control/Content view behavior; batch only required non-text properties through caching; and reevaluate generated/CsWin32 interop because the accepted manual ABI was approved only for the tiny root probe.
+2. **Process isolation remains evidence-gated.** M3.1 platform timeouts and physical recovery are sufficient for a manual root probe, not proof that every hostile provider is interruptible. M3.4 must decide whether continuous UIA needs a restartable helper process from measured M3.2/M3.3 behavior.
 
 ### Important hardening debt
 
@@ -214,12 +247,12 @@ These are fixed design inputs, not upgrade suggestions:
 The next implementation branch is:
 
 ```text
-dev/m3-1-uia-worker-probe
+dev/m3-2-bounded-structural-snapshot
 ```
 
-M2.4.4 is accepted through PR #14 and completes foundation hardening. M3.1 must add the `ReadUiStructure` capability gate at the call boundary and probe foreground-HWND root resolution on a dedicated COM MTA worker with typed outcomes, deadlines, stale-result rejection, inaccessible-target handling, recovery, and deterministic teardown.
+M3.1 is accepted through PR #15. M3.2 may extend the same `ReadUiStructure` boundary only into a bounded, foreground-HWND structural snapshot with non-text metadata and explicit view/cache/traversal/result budgets. Its first task is contract and interop design backed by portable budget tests; it must preserve the accepted worker, privacy, epoch, latest-wins, and teardown behavior.
 
-Do not add bounded traversal, UIA text retention, OCR, action patterns, elevation/`uiAccess`, or continuous semantic orchestration in M3.1.
+Do not add UIA Name/Value/Text retention, OCR, action patterns, elevation/`uiAccess`, continuous semantic orchestration, or a speculative helper process in M3.2.
 
 ## How to update this file
 

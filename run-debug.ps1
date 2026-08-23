@@ -20,6 +20,7 @@ $sessionId = $null
 $buildResult = "NOT_RUN"
 $applicationResult = "NOT_RUN"
 $applicationExitCode = $null
+$runnerElevated = $null
 
 try {
     $repoRoot = $PSScriptRoot
@@ -55,6 +56,23 @@ try {
     # -------------------------------------------------
     # Safety
     # -------------------------------------------------
+
+    $windowsIdentity =
+        [Security.Principal.WindowsIdentity]::GetCurrent()
+
+    $windowsPrincipal =
+        New-Object `
+            Security.Principal.WindowsPrincipal($windowsIdentity)
+
+    $runnerElevated =
+        $windowsPrincipal.IsInRole(
+            [Security.Principal.WindowsBuiltInRole]::Administrator)
+
+    if ($runnerElevated) {
+        throw `
+            "run-debug.ps1 must run from a non-elevated PowerShell. " +
+            "Close this Administrator window and retry from a normal shell."
+    }
 
     $existingApp =
         Get-Process `
@@ -161,7 +179,7 @@ try {
 LOCALCOPILOT LIVE DIAGNOSTIC SESSION
 =================================================
 Schema: 1
-Milestone: M2.4.4
+Milestone: M3.1
 Session ID: $($sessionId.ToString("D"))
 Session Start UTC: $($sessionStartUtc.ToString("o"))
 Branch: $branch
@@ -169,6 +187,7 @@ HEAD: $head
 Dotnet: $dotnetVersion
 PowerShell: $($PSVersionTable.PSVersion)
 OS: $([Environment]::OSVersion.VersionString)
+Runner elevated: $runnerElevated
 Diagnostic activation: launch-scoped, expiring token
 Application argument source: process command line
 Application log: app.log
@@ -185,7 +204,7 @@ $gitStatus
 
     Write-Host ""
     Write-Host "=============================================="
-    Write-Host "NEW M2.4.4 DIAGNOSTIC SESSION"
+    Write-Host "NEW M3.1 DIAGNOSTIC SESSION"
     Write-Host "=============================================="
     Write-Host "Session: $($sessionId.ToString("D"))"
     Write-Host "Directory:"
