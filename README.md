@@ -33,18 +33,18 @@
 This is a product-grade system, not a screenshot-to-LLM demo. It uses the smallest useful local context, escalates from cheap sensing to richer semantics only when required, and treats privacy as a control-plane boundary.
 
 > [!IMPORTANT]
-> The runtime-accepted baseline now includes the M3.1 metadata-only UI Automation root probe and M3.2 bounded, non-text structural snapshots. PR #16 still awaits an explicitly authorized merge, so live `main` remains at M3.1. UIA text, OCR, memory, model inference, voice, autonomous actions, and a production privacy-settings UI do not exist.
+> The accepted `main` baseline includes the M3.1 metadata-only UI Automation root probe and M3.2 bounded, non-text structural snapshots. UIA text, OCR, memory, model inference, voice, autonomous actions, and a production privacy-settings UI do not exist.
 
 ## Project status in 60 seconds
 
 | Item | Current truth |
 | --- | --- |
 | Last verified functional code baseline | `e1a50741580379f0f65c80e212f04c449e5a8c9b` (the later `2677025` descendant changes only the diagnostic milestone label) |
-| Review / live merge state | M3.2 [PR #16](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/16) is runtime accepted but unmerged; live `main` remains M3.1 squash `01a64f8` until explicit merge authorization |
+| Accepted merge record | M3.2 [PR #16](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/16), squash merge `be0a437`; resolve live HEAD from GitHub/Git |
 | Baseline date | 2026-08-23 (Windows runtime acceptance) |
 | Completed | Foreground context, RAM-only capture, capability privacy/epochs, low-resolution change detection, persistent latest-wins sensing, diagnostic correlation, portable core/CI, application-owned lifecycle, launch-scoped diagnostics/input hardening, root-only UIA probing, and bounded non-text UIA structure |
 | Current implementation shape | Existing packaged WinUI process with one application-owned COM MTA, one active plus one newest pending request, generated UIA interop, and short-lived bounded Control View results; there is no separate UIA process |
-| Active milestone | `M3.3 Semantic UI Snapshot`; branch `dev/m3-3-semantic-ui-snapshot` opens only after PR #16 merges, beginning with privacy and content-budget design |
+| Active milestone | `M3.3 Semantic UI Snapshot`; branch `dev/m3-3-semantic-ui-snapshot`; begin with privacy and content-budget design |
 | Accepted M3.2 contract | Foreground HWND only; breadth-first Control View; Content subset marker; 256 nodes / depth 8 / 1,200 ms / 27 properties per node / zero strings / 32 KiB estimated result |
 | Automated tests / CI | 108/108 deterministic tests on Ubuntu/Windows plus Windows PowerShell parsing and strict `Debug/win-x64 --warnaserror` app build in [CI #28](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32648315641) |
 | Cloud use | Forbidden by the product architecture |

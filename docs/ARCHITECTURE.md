@@ -248,7 +248,7 @@ Accepted M3.2 preserves that ownership/gating path and replaces the M3.1-only ma
 
 Its immutable default budget is 256 nodes, root depth 0 through depth 8, 1,200 ms traversal, 27 properties per node and 6,912 property values total, zero strings/bytes, and a 32 KiB estimated result. Depth-boundary reporting is conservative so the worker does not spend an extra cross-process call merely to decide whether a maximum-depth node has a child. Reaching any boundary returns typed truncation metadata. Bounds and per-node structural facts remain short-lived RAM data; only aggregate node/content/depth/property/byte/truncation/timing summaries may reach the diagnostic UI/log. Publication rejection clears the entire snapshot.
 
-CI and physical Windows acceptance at functional head `e1a50741580379f0f65c80e212f04c449e5a8c9b` proved 108 portable tests, strict generated-interop build, classic/packaged/browser providers within every budget, deterministic truncation and recovery, capability/integrity denial before native work, stale snapshot removal, M3.1 timeout/latest-wins regression, joined teardown, and a prohibited-content scan. PR #16 remains unmerged until explicitly authorized, so live `main` still contains only M3.1.
+CI and physical Windows acceptance at functional head `e1a50741580379f0f65c80e212f04c449e5a8c9b` proved 108 portable tests, strict generated-interop build, classic/packaged/browser providers within every budget, deterministic truncation and recovery, capability/integrity denial before native work, stale snapshot removal, M3.1 timeout/latest-wins regression, joined teardown, and a prohibited-content scan. PR #16 squash-merged that accepted tree to `main` as `be0a437ddbe09fc2a9830a9b10da56f83a8051d9`.
 
 M3.3 may add text only behind a separate `ReadUiText` decision. It must select nodes from the already bounded structure and independently cap string count, UTF-8 bytes, elapsed time, result size, and lifetime. Text remains RAM-only, must never enter diagnostics, persistence, or server egress implicitly, and must be removed on epoch or capability rejection. M3.2 is not permission for a live or unbounded text walk.
 
@@ -362,7 +362,7 @@ LocalCopilot.Inference.Server   local endpoint, resource manager, runtime adapte
 *.Tests                         pure, contract, and Windows integration suites
 ```
 
-M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, M2.4.4 hardened diagnostics/input evidence, M3.1 accepted the smallest UIA worker boundary through a root-only probe, and M3.2 accepted the generated, budgeted non-text snapshot governed by ADR 0008. After PR #16 merges, M3.3 may design separately authorized bounded semantic text; later milestones must not create all future projects at once.
+M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, M2.4.4 hardened diagnostics/input evidence, M3.1 accepted the smallest UIA worker boundary through a root-only probe, and M3.2 accepted the generated, budgeted non-text snapshot governed by ADR 0008. M3.3 may now design separately authorized bounded semantic text; later milestones must not create all future projects at once.
 
 ## 8. Threading and lifecycle model
 
