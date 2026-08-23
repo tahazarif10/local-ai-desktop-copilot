@@ -40,15 +40,21 @@ public sealed class UiAutomationSemanticSnapshotTests
             StructuralNode(6, content: true)
         ];
 
-        IReadOnlyList<int> selected =
+        UiAutomationSemanticCandidateSelection selection =
             UiAutomationSemanticCandidateSelector
-                .SelectStructuralIndexes(
+                .Select(
                     nodes,
                     maxSelectedNodes: 3);
 
         Assert.AreSequenceEqual(
             new[] { 5, 4, 1 },
-            selected);
+            selection.SelectedIndexes);
+        Assert.AreEqual(7, selection.Metrics.StructuralNodeCount);
+        Assert.AreEqual(4, selection.Metrics.EligibleCount);
+        Assert.AreEqual(3, selection.Metrics.SelectedCount);
+        Assert.AreEqual(1, selection.Metrics.ExcludedNonContentCount);
+        Assert.AreEqual(1, selection.Metrics.ExcludedOffscreenCount);
+        Assert.AreEqual(1, selection.Metrics.ExcludedPasswordCount);
     }
 
     [TestMethod]
@@ -232,6 +238,9 @@ public sealed class UiAutomationSemanticSnapshotTests
         Assert.AreEqual(1, snapshot.NameCount);
         Assert.AreEqual(1, snapshot.ValueCount);
         Assert.AreEqual(1, snapshot.VisibleTextCount);
+        Assert.AreEqual(1, snapshot.Selection.StructuralNodeCount);
+        Assert.AreEqual(1, snapshot.Selection.EligibleCount);
+        Assert.AreEqual(1, snapshot.Selection.SelectedCount);
         Assert.IsFalse(snapshot.IsExpired(captured));
         Assert.IsTrue(snapshot.IsExpired(snapshot.ExpiresUtc));
         Assert.DoesNotContain("Editor", snapshot.ToString());

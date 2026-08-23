@@ -148,6 +148,15 @@ public static class UiAutomationSemanticCandidateSelector
         IReadOnlyList<UiAutomationStructuralNode> nodes,
         int maxSelectedNodes)
     {
+        return Select(
+            nodes,
+            maxSelectedNodes).SelectedIndexes;
+    }
+
+    public static UiAutomationSemanticCandidateSelection Select(
+        IReadOnlyList<UiAutomationStructuralNode> nodes,
+        int maxSelectedNodes)
+    {
         ArgumentNullException.ThrowIfNull(nodes);
 
         if (maxSelectedNodes <= 0)
@@ -156,15 +165,48 @@ public static class UiAutomationSemanticCandidateSelector
                 nameof(maxSelectedNodes));
         }
 
-        return nodes
-            .Where(IsEligible)
-            .OrderByDescending(node => node.HasKeyboardFocus)
-            .ThenByDescending(
-                node => node.ControlTypeId == WindowControlTypeId)
-            .ThenBy(node => node.Index)
-            .Take(maxSelectedNodes)
-            .Select(node => node.Index)
-            .ToArray();
+        int excludedNonContentCount =
+            nodes.Count(node => !node.IsContentElement);
+
+        int excludedOffscreenCount =
+            nodes.Count(
+                node =>
+                    node.IsContentElement &&
+                    node.IsOffscreen);
+
+        int excludedPasswordCount =
+            nodes.Count(
+                node =>
+                    node.IsContentElement &&
+                    !node.IsOffscreen &&
+                    node.IsPassword);
+
+        int[] selectedIndexes =
+            nodes
+                .Where(IsEligible)
+                .OrderByDescending(node => node.HasKeyboardFocus)
+                .ThenByDescending(
+                    node => node.ControlTypeId == WindowControlTypeId)
+                .ThenBy(node => node.Index)
+                .Take(maxSelectedNodes)
+                .Select(node => node.Index)
+                .ToArray();
+
+        int eligibleCount = checked(
+            nodes.Count -
+            excludedNonContentCount -
+            excludedOffscreenCount -
+            excludedPasswordCount);
+
+        return new UiAutomationSemanticCandidateSelection(
+            selectedIndexes,
+            new UiAutomationSemanticSelectionMetrics(
+                StructuralNodeCount: nodes.Count,
+                EligibleCount: eligibleCount,
+                SelectedCount: selectedIndexes.Length,
+                ExcludedNonContentCount: excludedNonContentCount,
+                ExcludedOffscreenCount: excludedOffscreenCount,
+                ExcludedPasswordCount: excludedPasswordCount));
     }
 
     public static bool IsEligible(
@@ -177,6 +219,18 @@ public static class UiAutomationSemanticCandidateSelector
             !node.IsPassword;
     }
 }
+
+public sealed record UiAutomationSemanticCandidateSelection(
+    IReadOnlyList<int> SelectedIndexes,
+    UiAutomationSemanticSelectionMetrics Metrics);
+
+public sealed record UiAutomationSemanticSelectionMetrics(
+    int StructuralNodeCount,
+    int EligibleCount,
+    int SelectedCount,
+    int ExcludedNonContentCount,
+    int ExcludedOffscreenCount,
+    int ExcludedPasswordCount);
 
 public sealed class UiAutomationSensitiveText : IDisposable
 {
@@ -785,7 +839,8 @@ public sealed class UiAutomationSemanticSnapshot : IDisposable
         UiAutomationSnapshotTruncation truncation,
         int visibleTextRangeCount,
         int estimatedResultBytes,
-        TimeSpan semanticElapsed)
+        TimeSpan semanticElapsed,
+        UiAutomationSemanticSelectionMetrics? selection = null)
     {
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(budgets);
@@ -805,6 +860,16 @@ public sealed class UiAutomationSemanticSnapshot : IDisposable
 
         UiAutomationSemanticNode[] copiedNodes = nodes.ToArray();
 
+        UiAutomationSemanticSelectionMetrics effectiveSelection =
+            selection ??
+            new UiAutomationSemanticSelectionMetrics(
+                StructuralNodeCount: copiedNodes.Length,
+                EligibleCount: copiedNodes.Length,
+                SelectedCount: copiedNodes.Length,
+                ExcludedNonContentCount: 0,
+                ExcludedOffscreenCount: 0,
+                ExcludedPasswordCount: 0);
+
         if (copiedNodes.Any(node => node is null) ||
             copiedNodes.Length > budgets.MaxSelectedNodes ||
             copiedNodes.Any(
@@ -820,6 +885,23 @@ public sealed class UiAutomationSemanticSnapshot : IDisposable
             throw new ArgumentException(
                 "Semantic nodes violate the selected-node contract.",
                 nameof(nodes));
+        }
+
+        if (effectiveSelection.StructuralNodeCount < 0 ||
+            effectiveSelection.EligibleCount < 0 ||
+            effectiveSelection.SelectedCount != copiedNodes.Length ||
+            effectiveSelection.ExcludedNonContentCount < 0 ||
+            effectiveSelection.ExcludedOffscreenCount < 0 ||
+            effectiveSelection.ExcludedPasswordCount < 0 ||
+            effectiveSelection.SelectedCount >
+                effectiveSelection.EligibleCount ||
+            effectiveSelection.StructuralNodeCount !=
+                effectiveSelection.EligibleCount +
+                effectiveSelection.ExcludedNonContentCount +
+                effectiveSelection.ExcludedOffscreenCount +
+                effectiveSelection.ExcludedPasswordCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(selection));
         }
 
         int stringCount = copiedNodes.Sum(node => node.Values.Count);
@@ -863,6 +945,7 @@ public sealed class UiAutomationSemanticSnapshot : IDisposable
         VisibleTextRangeCount = visibleTextRangeCount;
         EstimatedResultBytes = estimatedResultBytes;
         SemanticElapsed = semanticElapsed;
+        Selection = effectiveSelection;
         StringCount = stringCount;
         Utf8Bytes = utf8Bytes;
         _nodes = Array.AsReadOnly(copiedNodes);
@@ -891,6 +974,8 @@ public sealed class UiAutomationSemanticSnapshot : IDisposable
     public int EstimatedResultBytes { get; }
 
     public TimeSpan SemanticElapsed { get; }
+
+    public UiAutomationSemanticSelectionMetrics Selection { get; }
 
     public int StringCount { get; }
 

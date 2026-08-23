@@ -746,14 +746,16 @@ internal sealed class UiAutomationNativeClient : IDisposable
         UiAutomationSemanticBudgetTracker tracker =
             new(budgets);
 
-        IReadOnlyList<int> selectedIndexes =
+        UiAutomationSemanticCandidateSelection selection =
             UiAutomationSemanticCandidateSelector
-                .SelectStructuralIndexes(
+                .Select(
                     structuralNodes,
                     budgets.MaxSelectedNodes);
 
-        if (structuralNodes.Count(
-                UiAutomationSemanticCandidateSelector.IsEligible) >
+        IReadOnlyList<int> selectedIndexes =
+            selection.SelectedIndexes;
+
+        if (selection.Metrics.EligibleCount >
             selectedIndexes.Count)
         {
             tracker.MarkSelectedNodeLimit();
@@ -878,7 +880,11 @@ internal sealed class UiAutomationNativeClient : IDisposable
                     tracker.Truncation,
                     tracker.VisibleTextRangeCount,
                     tracker.EstimatedResultBytes,
-                    semanticElapsed);
+                    semanticElapsed,
+                    selection.Metrics with
+                    {
+                        SelectedCount = semanticNodes.Count
+                    });
 
             completed = true;
             return snapshot;

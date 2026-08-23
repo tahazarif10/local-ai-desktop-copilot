@@ -2019,6 +2019,10 @@ public sealed class DesktopCopilotCoordinator :
             structuralSummary + " " +
             $"semantic=selected-visible " +
             $"selectedNodes={semanticSnapshot.Nodes.Count} " +
+            $"candidateNodes={semanticSnapshot.Selection.EligibleCount} " +
+            $"excludedNonContent={semanticSnapshot.Selection.ExcludedNonContentCount} " +
+            $"excludedOffscreen={semanticSnapshot.Selection.ExcludedOffscreenCount} " +
+            $"excludedPassword={semanticSnapshot.Selection.ExcludedPasswordCount} " +
             $"names={semanticSnapshot.NameCount} " +
             $"values={semanticSnapshot.ValueCount} " +
             $"visibleTexts={semanticSnapshot.VisibleTextCount} " +
