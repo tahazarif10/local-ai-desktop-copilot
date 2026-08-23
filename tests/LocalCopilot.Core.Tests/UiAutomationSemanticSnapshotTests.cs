@@ -46,9 +46,9 @@ public sealed class UiAutomationSemanticSnapshotTests
                     nodes,
                     maxSelectedNodes: 3);
 
-        CollectionAssert.AreEqual(
+        Assert.AreSequenceEqual(
             new[] { 5, 4, 1 },
-            selected.ToArray());
+            selected);
     }
 
     [TestMethod]
