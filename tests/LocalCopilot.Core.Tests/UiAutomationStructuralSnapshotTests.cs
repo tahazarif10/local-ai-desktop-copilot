@@ -24,10 +24,10 @@ public sealed class UiAutomationStructuralSnapshotTests
         Assert.AreEqual(0, budgets.MaxStringBytes);
         Assert.AreEqual(32 * 1024, budgets.MaxResultBytes);
 
-        Assert.IsFalse(
+        Assert.IsEmpty(
             typeof(UiAutomationStructuralNode)
                 .GetProperties()
-                .Any(property =>
+                .Where(property =>
                     property.PropertyType == typeof(string)));
     }
 
@@ -41,7 +41,7 @@ public sealed class UiAutomationStructuralSnapshotTests
             };
 
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(
-            budgets.ValidateForNonTextSnapshot);
+            () => budgets.ValidateForNonTextSnapshot());
     }
 
     [TestMethod]
@@ -237,7 +237,7 @@ public sealed class UiAutomationStructuralSnapshotTests
         Assert.AreEqual(
             UiAutomationSnapshotView.Control,
             snapshot.View);
-        Assert.AreEqual(2, snapshot.Nodes.Count);
+        Assert.HasCount(2, snapshot.Nodes);
         Assert.AreEqual(1, snapshot.ContentNodeCount);
         Assert.AreEqual(1, snapshot.MaxDepthObserved);
         Assert.AreEqual(0, snapshot.StringCount);
@@ -283,7 +283,7 @@ public sealed class UiAutomationStructuralSnapshotTests
                         .MaxElapsed +
                     TimeSpan.FromTicks(1));
 
-        Assert.AreEqual(0, snapshot.Nodes.Count);
+        Assert.IsEmpty(snapshot.Nodes);
         Assert.AreEqual(-1, snapshot.MaxDepthObserved);
     }
 
