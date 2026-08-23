@@ -119,9 +119,9 @@ The accepted M2.3 baseline `c29099a` had no automated tests. M2.4.1 added a port
 dotnet test .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj -c Release --settings .\tests\LocalCopilot.Core.Tests\.runsettings
 ```
 
-The accepted M3.1 baseline contains 91 deterministic tests for capability-based `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, `ChangeCorrelationService`, the one-shot `ApplicationLifecycleGate`, launch-scoped `DiagnosticSession` parsing/logging, `InputHookHealthMonitor`, UIA native-result classification, stale/latest-request publication gating, and the capacity-one latest-pending slot. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, live global hooks, live UI Automation providers, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build or milestone-specific physical provider evidence.
+The accepted M3.2 baseline contains 108 deterministic tests for capability-based `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, `ChangeCorrelationService`, the one-shot `ApplicationLifecycleGate`, launch-scoped `DiagnosticSession` parsing/logging, `InputHookHealthMonitor`, UIA native-result classification, stale/latest-request publication gating, the capacity-one latest-pending slot, and the bounded structural snapshot contract. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, live global hooks, live UI Automation providers, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build or milestone-specific physical provider evidence.
 
-The M3.2 candidate adds portable tests for its immutable zero-string contract, exact budget boundaries, result-size accounting, topology validation, rectangle sanitation, conservative depth-boundary reporting, and stale-snapshot removal. Do not record a new total until the exact clean CI run reports it.
+M3.2 added 17 portable tests for its immutable zero-string contract, exact budget boundaries, result-size accounting, topology validation, rectangle sanitation, conservative depth-boundary reporting, and stale-snapshot removal. [CI run #28](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32648315641) reported the accepted 108-test total on both operating systems.
 
 The CI workflow runs the core suite on both Ubuntu and Windows, then builds the packaged app as `Debug/win-x64` on Windows. Test-result artifacts are retained for failed as well as successful runs. Do not write “all tests passed” unless the relevant local/CI run is identified and actually passed; report build, test, CI, and physical runtime evidence as separate facts.
 
@@ -213,7 +213,7 @@ A single happy-path screenshot is not acceptance.
 
 ### M3.1 physical matrix
 
-This matrix was accepted on 2026-08-23 at functional head `e48b067f1c13ee5ba211bcd36de663b30ca27246`. Keep it as the root-worker regression matrix when M3.2 expands UIA.
+This matrix was accepted on 2026-08-23 at functional head `e48b067f1c13ee5ba211bcd36de663b30ca27246`. Keep it as the root-worker regression matrix when later UIA milestones expand semantics.
 
 Run `run-debug.ps1`, Arm once, and keep the generated bundle open until all cases are complete. For each external target, focus the target, return to LocalCopilot, and use the root-probe command; own-process foreground transitions are excluded, so the coordinator retains the last external epoch.
 
@@ -232,7 +232,7 @@ All successful native probes must use one nonzero worker managed-thread ID disti
 
 ### M3.2 physical matrix
 
-This matrix is pending. Run it only on the exact candidate SHA after Ubuntu/Windows core tests and the clean-restore strict Windows build pass.
+This matrix was accepted on 2026-08-23 at functional head `e1a50741580379f0f65c80e212f04c449e5a8c9b`. Keep it as the structural-provider, budget, privacy, stale, and teardown regression matrix for M3.3 and M3.4.
 
 Use one non-elevated `run-debug.ps1` session, Arm once, focus each external target before returning to LocalCopilot, and use `Capture bounded structural snapshot`. Record the complete aggregate status and matching `UIA.QUEUE`, `UIA.INTEGRITY_CHECK`, `UIA.REQUEST_COMPLETE`, and `UIA.PROBE_RESULT` records.
 
@@ -248,7 +248,7 @@ Required cases:
 8. **Teardown:** close during active worker work and require one worker stop plus `UIA.WORKER_DISPOSE started=True joined=True`, along with clean observer/capture/input/coordinator shutdown.
 9. **Privacy scan:** the bundle may contain aggregate view/node/content/depth/property/string/estimated-byte/truncation/timing fields. It must contain no UIA Name/Value/Text, title text, bounding coordinate, control-type ID, per-node state, pattern detail, key/input value, clipboard, pixel payload, prompt, response, exception message, or stack.
 
-CI success alone does not accept the generated COM projection. Record the exact functional SHA, provider/process matrix, worker thread ID, counters/timings, denial/stale/teardown evidence, and prohibited-content scan before changing ADR 0008 or `completed_through` to Accepted/M3.2.
+Acceptance record: [CI run #28](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32648315641) passed 108 tests on Ubuntu/Windows, PowerShell runner parsing, and the strict Windows build. Full session `22e567be-059d-4d19-bb1f-55b60a7a8646` passed the complete matrix at the functional SHA; short session `fd287eb1-c062-423f-881a-4f4c3ca1b0a7` confirmed the corrected `Milestone: M3.2` metadata at diagnostic-label-only descendant `26770254618189d693ad9553d92bcba896a8b81b`. Detailed measured provider counts/timings and privacy evidence are retained in `PROJECT_STATE.md`. CI success alone remains insufficient for future generated COM or content-bearing changes.
 
 ## 8. Performance evidence
 

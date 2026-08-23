@@ -4,11 +4,11 @@
 
 Privacy is a control-plane boundary, not a filter applied after capture.
 
-The accepted M2.4.3 implementation evaluates process identity before content, keeps all target observation Off until explicit Arm, and uses independent typed capabilities rather than a single sensing Boolean. The foreground hook, identity lookup, title read, WGC, and input correlation all stop on Disarm. Every current capture entry point requires `CapturePixels` and revalidates HWND/PID immediately before WGC creation. M2.4.4 adds validated launch-scoped diagnostics, isolated whitelisted bundles, exception type/HRESULT redaction, and measured content-free input-hook health; a normal launch has no diagnostic sink. The accepted M3.1 implementation applies the same pattern to root-only UIA: `ReadUiStructure` is checked before queueing and again before publication, then HWND/PID and integrity are revalidated on the MTA worker immediately before `ElementFromHandle`.
+The accepted M2.4.3 implementation evaluates process identity before content, keeps all target observation Off until explicit Arm, and uses independent typed capabilities rather than a single sensing Boolean. The foreground hook, identity lookup, title read, WGC, and input correlation all stop on Disarm. Every current capture entry point requires `CapturePixels` and revalidates HWND/PID immediately before WGC creation. M2.4.4 adds validated launch-scoped diagnostics, isolated whitelisted bundles, exception type/HRESULT redaction, and measured content-free input-hook health; a normal launch has no diagnostic sink. The accepted M3.1 implementation applies the same pattern to root-only UIA, and accepted M3.2 preserves it for a bounded non-text Control View snapshot: `ReadUiStructure` is checked before queueing and again before publication, then HWND/PID and integrity are revalidated on the MTA worker immediately before UIA.
 
 The policy configuration boundary supports emergency deny, normalized exact-application rules, global grants, strict precedence, immutable revisioned snapshots, and change notification. Product defaults grant only Armed ephemeral identity/title/pixel work. The opt-in launch-scoped diagnostic configuration separately adds derived-event retention and, for M3.1 validation, `ReadUiStructure`; it still does not grant `ReadUiText`. OCR, microphone, and local-server transmission capabilities remain denied. Notepad remains an exact deny fixture only while diagnostic mode is enabled.
 
-The accepted product is still a diagnostic foundation: there is no user-facing policy editor, persisted rule store, pause control, accepted semantic content source, or server transport. The feature branch's non-text structural source remains an M3.2 validation candidate; that does not weaken its implemented source gates or authorize M3.3 text.
+The accepted product is still a diagnostic foundation: there is no user-facing policy editor, persisted rule store, pause control, accepted semantic text source, or server transport. M3.2 structure is accepted but carries zero strings and does not weaken its source gates or authorize M3.3 text.
 
 ## 2. Privacy goals
 
@@ -150,7 +150,7 @@ Cancellation is advisory for APIs that cannot be interrupted. The publication ga
 UIA can expose structured text beyond what a naive screenshot pipeline might expect, including off-screen controls. Therefore:
 
 - the M3.1 probe resolves and immediately releases only the foreground root interface pointer; it requests no property, child, cache, pattern, Name, Value, or Text data;
-- the M3.2 candidate requests only 27 enumerated non-text Boolean/numeric properties through an Element-scope cache, walks only foreground-HWND Control View breadth-first, and represents Content membership with cached `IsContentElement`; it never uses Raw View or a desktop/descendant-wide query;
+- accepted M3.2 requests only 27 enumerated non-text Boolean/numeric properties through an Element-scope cache, walks only foreground-HWND Control View breadth-first, and represents Content membership with cached `IsContentElement`; it never uses Raw View or a desktop/descendant-wide query;
 - its immutable defaults are 256 nodes, depth 8, 1,200 ms traversal, 6,912 total property values, zero strings and zero string bytes, and 32 KiB estimated result; a boundary produces truncation flags rather than widening collection;
 - product-default policy denies the probe, while the temporary diagnostic grant is activated only by the validated expiring launch token;
 - at most one request executes and one newest request waits; a context/policy change cancels the epoch and the publication gate converts late completion to `Stale`;
@@ -250,6 +250,7 @@ Foundation hardening and read-only UIA advance in this order:
 3. ✅ implement capability decisions, a product policy configuration boundary, true Off semantics, and cancel-on-policy-change (M2.4.3);
 4. ✅ remove fixed diagnostic paths/content-risky exception logging and measure input-hook hardening (M2.4.4);
 5. ✅ validate the capability-gated, root-only MTA worker probe in M3.1; UIA text remains a later, separately authorized slice;
-6. ▶ validate the implemented bounded non-text structural candidate behind the same gates in M3.2; Proposed ADR 0008 must not become Accepted before CI and physical evidence pass.
+6. ✅ validate bounded non-text structure behind the same gates in M3.2; ADR 0008 is accepted after CI and physical provider/privacy/budget/stale/teardown evidence passed;
+7. ▶ define M3.3's separate `ReadUiText` authorization, selected-node policy, string-count/UTF-8-byte/time/result budgets, RAM-only expiry, stale disposal, and diagnostic prohibition before implementing semantic content reads.
 
-See [ADR 0001](decisions/0001-privacy-before-content.md), [ADR 0005](decisions/0005-foundation-hardening-before-uia.md), accepted [ADR 0007](decisions/0007-root-only-uia-mta-probe.md), and Proposed [ADR 0008](decisions/0008-generated-bounded-uia-snapshot.md).
+See [ADR 0001](decisions/0001-privacy-before-content.md), [ADR 0005](decisions/0005-foundation-hardening-before-uia.md), accepted [ADR 0007](decisions/0007-root-only-uia-mta-probe.md), and accepted [ADR 0008](decisions/0008-generated-bounded-uia-snapshot.md).

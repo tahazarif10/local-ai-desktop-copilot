@@ -1,8 +1,8 @@
 # ADR 0008: Generated interop for bounded non-text UIA snapshots
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-23
-- Supersedes: the M3.1-only manual UIA ABI portion of ADR 0007 when accepted
+- Supersedes: the M3.1-only manual UIA ABI portion of ADR 0007
 
 ## Context
 
@@ -33,9 +33,9 @@ The interop alternatives were:
 5. move UIA into a restartable helper process now, before M3.2 supplies evidence
    that the added packaging/protocol/trust boundary is necessary.
 
-## Proposed decision
+## Decision
 
-For the M3.2 candidate:
+For the accepted M3.2 implementation:
 
 - Pin `Microsoft.Windows.CsWin32` `0.3.321` as a private build-time dependency.
   Generate the managed `IUIAutomation2` dependency graph from the checked-in
@@ -105,26 +105,35 @@ For the M3.2 candidate:
 - The snapshot is process-local and short-lived. It is not persisted or sent to
   the AI server, and a stale/capability-revoked result loses its snapshot before
   publication.
-- Helper-process isolation remains evidence-gated for M3.4. Physical provider
-  timeout/recovery and teardown evidence are still required before this ADR can
-  be accepted.
+- Helper-process isolation remains evidence-gated for M3.4. M3.2 provider,
+  timeout/recovery, stale-publication, and teardown evidence passed, but it does
+  not prove that every future content-bearing provider call is interruptible.
 
-## Acceptance evidence required
+## Verification
 
-- Portable boundary/topology/publication tests pass on Ubuntu and Windows,
-  including proof that stale publication removes the snapshot and the node
-  contract exposes no string property.
-- The packaged `Debug/win-x64 --warnaserror` build proves the generated COM
-  projection compiles from a clean restore.
-- Physical classic Win32, packaged/WinUI, and browser targets produce bounded
-  structural summaries on one non-UI MTA worker.
-- Capability denial occurs before queueing; higher-integrity targets fail
-  closed; rapid context changes publish no stale snapshot.
-- A reached node/depth/time/result boundary returns a typed truncation summary,
-  a subsequent normal request recovers on the same worker, and active-worker
-  shutdown joins cleanly.
-- The diagnostic bundle contains no UIA text, bounds, control-type IDs,
-  per-node states, or pattern details.
+- [CI run #28](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32648315641)
+  passed all 108 deterministic tests on Ubuntu and Windows, Windows PowerShell
+  runner parsing, and the packaged `Debug/win-x64 --warnaserror` build.
+- Full physical session `22e567be-059d-4d19-bb1f-55b60a7a8646` at functional
+  head `e1a50741580379f0f65c80e212f04c449e5a8c9b` produced bounded snapshots
+  from classic PowerShell, packaged `ApplicationFrameHost`, and Chrome on one
+  non-UI MTA worker. Every result obeyed the node/depth/property/string/result
+  budgets.
+- The deterministic depth-zero boundary produced one node, 27 values, zero
+  strings, 224 estimated bytes, and `DepthLimit`; the next normal request
+  recovered on the same worker.
+- Notepad capability denial occurred before queue/native work. A higher-
+  integrity PowerShell target failed closed before UIA, and a later allowed
+  request recovered normally.
+- Latest-wins bursts removed older raw snapshots at publication, M3.1 timeout
+  and root-burst regressions passed, and active-worker shutdown emitted one stop
+  and joined cleanly.
+- The diagnostic scan contained no UIA text, bounds, control-type IDs,
+  per-node states, pattern details, input content, pixels, prompt/response,
+  exception message, or stack.
+- Short session `fd287eb1-c062-423f-881a-4f4c3ca1b0a7` at diagnostic-label-only
+  descendant `26770254618189d693ad9553d92bcba896a8b81b` confirmed the corrected
+  `Milestone: M3.2` runner metadata and passing build/application/runner results.
 
 ## References
 
