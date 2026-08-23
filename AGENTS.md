@@ -58,7 +58,7 @@ Read `docs/PRIVACY_MODEL.md` before adding any new source of content.
 ## Architecture discipline
 
 - Preserve the verified M2 sensing path unless a failing test or measured problem requires change.
-- M2.4 foundation hardening, the M3.1 root-only UIA worker probe, and the M3.2 bounded non-text structural snapshot have passed their acceptance matrices. Expand semantics only through the M3.3 separately authorized text/content-bounds gate; do not skip directly to OCR or orchestration.
+- M2.4 foundation hardening, the M3.1 root-only UIA worker probe, and the M3.2 bounded non-text structural snapshot have passed their acceptance matrices. Draft PR #18 contains the separately authorized M3.3 semantic candidate under proposed ADR 0009; treat it as unaccepted until physical evidence and merge. Do not skip directly to OCR or orchestration.
 - Keep Win32/WinRT/COM adapters behind narrow contracts; pure policy and event logic must be unit-testable without Windows interop.
 - UI code must not become the lifetime owner and orchestration implementation for new product services. M2.4.2 moved composition/lifecycle out of `MainPage`; preserve the application-owned coordinator boundary.
 - UI Automation calls belong on a dedicated COM MTA worker, never the WinUI thread. Accepted M3.2 uses breadth-first Control View traversal, cached `IsContentElement` as the Content subset marker, and explicit node/depth/property/string/time/result budgets. Do not add Raw View or a second unbounded traversal.
@@ -99,4 +99,4 @@ A milestone is complete only when all of the following are true:
 
 ## Current handoff
 
-The last verified functional code baseline is `e1a50741580379f0f65c80e212f04c449e5a8c9b`; PR #16 and squash merge `be0a437ddbe09fc2a9830a9b10da56f83a8051d9` are its review/main records, and `26770254618189d693ad9553d92bcba896a8b81b` is a diagnostic-label-only feature-branch descendant. M3.2's pinned generated interop and zero-string budgeted Control View snapshot are accepted under ADR 0008. The active branch is `dev/m3-3-semantic-ui-snapshot`; begin with a separate `ReadUiText` privacy/content-bounds contract, not live or unbounded text extraction. Resolve live Git/PR state, then compare it with `docs/PROJECT_STATE.md` before working.
+The last accepted functional baseline is `e1a50741580379f0f65c80e212f04c449e5a8c9b`; PR #16 and squash merge `be0a437ddbe09fc2a9830a9b10da56f83a8051d9` are its review/main records. M3.2's pinned generated interop and zero-string budgeted Control View snapshot are accepted under ADR 0008. The active branch is `dev/m3-3-semantic-ui-snapshot`; Draft PR #18 functional head `3dccdbc24fc60093f46f903dec4f7ca04c08dc14` passes 124 automated tests and the strict Windows build, and implements proposed ADR 0009, but physical M3.3 acceptance remains open. Resolve live Git/PR state, then compare it with `docs/PROJECT_STATE.md` before working; do not mark ADR 0009 accepted or merge solely from CI.

@@ -123,6 +123,8 @@ The accepted M3.2 baseline contains 108 deterministic tests for capability-based
 
 M3.2 added 17 portable tests for its immutable zero-string contract, exact budget boundaries, result-size accounting, topology validation, rectangle sanitation, conservative depth-boundary reporting, and stale-snapshot removal. [CI run #28](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32648315641) reported the accepted 108-test total on both operating systems.
 
+The M3.3 Draft PR candidate raises the suite to 124 tests covering capability separation, selected-node/exclusion policy, independent character/string/range/UTF-8/result/time/TTL limits, provenance/sensitivity, clear-on-dispose, and expired/revoked/stale publication. [CI run #40](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32652845504) passed that candidate on Ubuntu/Windows plus runner parsing and the strict app build. This is automated evidence, not physical acceptance.
+
 The CI workflow runs the core suite on both Ubuntu and Windows, then builds the packaged app as `Debug/win-x64` on Windows. Test-result artifacts are retained for failed as well as successful runs. Do not write “all tests passed” unless the relevant local/CI run is identified and actually passed; report build, test, CI, and physical runtime evidence as separate facts.
 
 Run a focused filter during diagnosis when useful, then the full suite before commit:
@@ -139,6 +141,14 @@ Run only when diagnostics are intentionally required:
 Set-Location H:\AIProjects\local-ai-desktop-copilot
 .\run-debug.ps1
 ```
+
+The ordinary command above intentionally grants structure without text. Only the M3.3 physical content matrix uses the extra, launch-scoped opt-in:
+
+```powershell
+.\run-debug.ps1 -EnableUiText
+```
+
+`-EnableUiText` is not persistent and does not authorize logging, retention, OCR, or transmission. It only adds `ReadUiText` to this validated expiring diagnostic launch; the exact Notepad deny fixture and every identity/integrity/epoch/publication gate still apply.
 
 Current behavior:
 
@@ -249,6 +259,23 @@ Required cases:
 9. **Privacy scan:** the bundle may contain aggregate view/node/content/depth/property/string/estimated-byte/truncation/timing fields. It must contain no UIA Name/Value/Text, title text, bounding coordinate, control-type ID, per-node state, pattern detail, key/input value, clipboard, pixel payload, prompt, response, exception message, or stack.
 
 Acceptance record: [CI run #28](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32648315641) passed 108 tests on Ubuntu/Windows, PowerShell runner parsing, and the strict Windows build. Full session `22e567be-059d-4d19-bb1f-55b60a7a8646` passed the complete matrix at the functional SHA; short session `fd287eb1-c062-423f-881a-4f4c3ca1b0a7` confirmed the corrected `Milestone: M3.2` metadata at diagnostic-label-only descendant `26770254618189d693ad9553d92bcba896a8b81b`. Detailed measured provider counts/timings and privacy evidence are retained in `PROJECT_STATE.md`. CI success alone remains insufficient for future generated COM or content-bearing changes.
+
+### M3.3 physical matrix
+
+This matrix is open for Draft PR #18. Use two non-elevated sessions and record the exact branch/HEAD plus a clean working tree.
+
+1. **Ordinary diagnostic denial:** run `run-debug.ps1` without `-EnableUiText`, Arm, retain an allowed external epoch, and click the semantic command. Require `Unavailable/CapabilityDenied` with no semantic `UIA.QUEUE` or native content work.
+2. **Explicit opt-in and deny precedence:** start a fresh `run-debug.ps1 -EnableUiText` session. Confirm `UI text opt-in: True`. Diagnostic Notepad must still return `Unavailable/CapabilityDenied` before queueing.
+3. **Classic, packaged, and browser sources:** on PowerShell/another classic window, Calculator/another packaged UI, and Chrome, run the normal semantic command. Require `Available/SnapshotCaptured`, `content=redacted`, aggregate Name/Value/visible-Text counts, and no raw string. Across the matrix, exercise at least one nonzero Name, Value, and visible-Text count.
+4. **Eligibility evidence:** exercise a target with a visible password control and a target/tree containing off-screen controls. Require nonzero aggregate `excludedPassword` and `excludedOffscreen` where the provider exposes those facts; no excluded node may contribute a selected string. Deterministic selector/snapshot tests remain the source of exact functional proof when a provider does not expose the relevant property.
+5. **Default budgets:** every normal result must report selected nodes `<=32`, strings `<=64`, per-string cap 1,024, visible ranges `<=32`, retained UTF-8 `<=16384`, semantic elapsed/truncation against 800 ms, estimated semantic result `<=24576`, and TTL 5,000 ms.
+6. **Tiny-budget path:** click `Exercise tiny semantic budgets`. Require selected nodes `<=1`, strings `<=1`, per-string cap 4, visible ranges `<=1`, UTF-8 `<=8`, estimated result within the reported tiny budget, typed truncation when the provider exceeds a boundary, and immediate normal-request recovery on the same MTA worker.
+7. **Latest-wins and clearing:** click `Exercise semantic latest-wins/clear-on-stale burst`. Require one active/one newest pending behavior, middle `Cancelled/Superseded`, non-latest `Stale/PublicationRejected`, only the newest semantic aggregate published, and `UIA.SEMANTIC_DISPOSE ... disposed=True` for stale and consumer-complete paths.
+8. **Integrity, timeout, and M3.1/M3.2 regressions:** an elevated target must fail before UIA; rerun root forced-timeout/recovery, root latest-wins, structural normal/depth-budget/latest-wins, and verify the same non-UI MTA thread remains usable.
+9. **Teardown:** close during the held semantic burst. Require cancelled worker results, one `UIA.WORKER_STOP`, `UIA.WORKER_DISPOSE ... joined=True`, and clean existing sensing/input/observer/coordinator teardown.
+10. **Prohibited-content scan:** place unique known sentinel strings in the exercised Name/Value/Text/password sources, then scan all three whitelisted sources and the final bundle for those exact sentinels plus titles, keys, coordinates, clipboard, pixels, prompts, responses, exception messages, and stacks. Only aggregate counts/budgets/truncation/timing and `content=redacted` are allowed.
+
+Do not mark ADR 0009 Accepted, mark PR #18 ready, or merge until every applicable case is PASS and any provider-inapplicable case is explicitly explained rather than silently skipped.
 
 ## 8. Performance evidence
 

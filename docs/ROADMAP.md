@@ -140,13 +140,15 @@ Accepted evidence: [CI run #28](https://github.com/tahazarif10/local-ai-desktop-
 
 ### ▶ M3.3 Semantic UI snapshot
 
-- Begin with a privacy/content-bounds design on `dev/m3-3-semantic-ui-snapshot`; structure acceptance does not authorize text.
-- Add a separately authorized `ReadUiText` path for Name/Value/Text only from selected nodes in the already bounded structure.
-- Fix independent string-count, UTF-8-byte, elapsed-time, result-size, and expiry budgets before live provider reads; keep content RAM-only and absent from logs, persistence, and implicit server egress.
-- Normalize focus, dialog/window, control type, enabled/off-screen state, bounding rectangle, and read-only pattern facts without widening the accepted structural traversal.
-- Never call action patterns such as Invoke, SetValue, ExpandCollapse, Selection, or Scroll.
-- Attach provenance, epoch, timestamps, sensitivity, and expiry to every snapshot.
-- Drop all semantic content when epoch, capability, identity, or latest-request publication validation fails.
+Draft [PR #18](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/18) contains the implementation candidate. Functional head `3dccdbc` passed 124 tests on Ubuntu/Windows, PowerShell parsing, and the strict win-x64 build in [CI #40](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32652845504). It remains active—not complete—until physical acceptance and merge.
+
+- Candidate implemented: separate `ReadUiText` authorization before queue and publication; structure acceptance alone never authorizes text.
+- Candidate implemented: Name, advertised ValuePattern value/read-only state, and advertised TextPattern visible ranges only for selected nodes in the already bounded structure.
+- Candidate implemented: 32-node, 64-string, 1,024-character, 32-visible-range, 16-KiB UTF-8, 800-ms, 24-KiB result, and five-second TTL budgets with clear-on-dispose RAM ownership.
+- Candidate implemented: focus/window priority plus control type, dialog, enabled/off-screen, bounds, password/content eligibility, and read-only facts without widening the structural traversal.
+- Candidate invariant: no Invoke, SetValue, ExpandCollapse, Selection, Scroll, Raw View, DocumentRange, OCR, persistence, elevation, or implicit egress.
+- Candidate implemented: provenance, epoch, timestamps, sensitivity, expiry, finalizer fallback, and removal on stale/latest/capability/expiry rejection.
+- Acceptance still required: physical classic/packaged/browser sources, ordinary-deny and explicit-opt-in behavior, password/off-screen exclusion, tiny budgets, latest-wins clearing, higher-integrity denial, teardown, regressions, and prohibited-content scan.
 
 ### M3.4 Orchestrated UI enrichment
 
