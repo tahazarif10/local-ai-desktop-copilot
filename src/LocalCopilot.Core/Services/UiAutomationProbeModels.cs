@@ -15,6 +15,7 @@ public enum UiAutomationProbeOutcome
 public enum UiAutomationProbeReason
 {
     RootResolved,
+    SnapshotCaptured,
     NoCurrentEpoch,
     CapabilityDenied,
     IdentityChanged,
@@ -38,7 +39,8 @@ public sealed record UiAutomationProbeResult(
     TimeSpan Elapsed,
     int? HResult,
     int WorkerThreadId,
-    bool IdentityRevalidated);
+    bool IdentityRevalidated,
+    UiAutomationStructuralSnapshot? Snapshot = null);
 
 public sealed record UiAutomationProbeClassification(
     UiAutomationProbeOutcome Outcome,
@@ -150,7 +152,8 @@ public static class UiAutomationProbePublicationGate
             : result with
             {
                 Outcome = UiAutomationProbeOutcome.Stale,
-                Reason = UiAutomationProbeReason.PublicationRejected
+                Reason = UiAutomationProbeReason.PublicationRejected,
+                Snapshot = null
             };
     }
 }

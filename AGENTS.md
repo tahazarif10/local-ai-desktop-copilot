@@ -61,7 +61,7 @@ Read `docs/PRIVACY_MODEL.md` before adding any new source of content.
 - M2.4 foundation hardening and the M3.1 root-only UIA worker probe are complete. Expand semantics only through the bounded M3.2 structural-snapshot gate; do not skip directly to text extraction, OCR, or orchestration.
 - Keep Win32/WinRT/COM adapters behind narrow contracts; pure policy and event logic must be unit-testable without Windows interop.
 - UI code must not become the lifetime owner and orchestration implementation for new product services. M2.4.2 moved composition/lifecycle out of `MainPage`; preserve the application-owned coordinator boundary.
-- UI Automation calls belong on a dedicated COM MTA worker, never the WinUI thread. Scope traversal to the foreground HWND, use Control/Content views and property caching, and enforce node/depth/text/time budgets.
+- UI Automation calls belong on a dedicated COM MTA worker, never the WinUI thread. The M3.2 candidate uses breadth-first Control View traversal, cached `IsContentElement` as the Content subset marker, and explicit node/depth/property/string/time/result budgets. Do not add Raw View or a second unbounded traversal.
 - Do not assume `Task` cancellation can interrupt a blocked cross-process COM provider. Continuous UIA must have a measured recovery/isolation strategy before acceptance.
 - Do not make OCR or VLM always-on. Use the semantic escalation ladder: UIA, then changed-region OCR, then VLM only if required.
 - The newer Windows AI OCR API currently requires an NPU and therefore is not a default fit for the fixed machines. Re-evaluate official hardware support at M4 and benchmark candidates.
@@ -99,4 +99,4 @@ A milestone is complete only when all of the following are true:
 
 ## Current handoff
 
-The last verified functional code baseline is `e48b067f1c13ee5ba211bcd36de663b30ca27246`; PR #15 is its review/merge record. M3.1 accepts diagnostic-only `ReadUiStructure`, one active plus one latest pending request, dedicated COM MTA ownership, typed outcomes, integrity fail-closed behavior, and no property/text/traversal/action call. The only approved next branch is `dev/m3-2-bounded-structural-snapshot`: define explicit budgets and a non-text structural contract before expanding UIA interop. Resolve live Git/PR state, then compare it with `docs/PROJECT_STATE.md` before working.
+The last verified functional code baseline is `e48b067f1c13ee5ba211bcd36de663b30ca27246`; PR #15 and squash merge `01a64f8e35ccce53702f55db6d750572a1b96e6a` are its review/main records. The active branch is `dev/m3-2-bounded-structural-snapshot`. Its candidate replaces only the M3.1 manual UIA ABI with pinned CsWin32 generation and adds a zero-string, budgeted Control View snapshot; ADR 0008 remains Proposed until CI and physical Windows acceptance pass. Do not describe M3.2 as accepted, and do not proceed to M3.3 text extraction. Resolve live Git/PR state, then compare it with `docs/PROJECT_STATE.md` before working.

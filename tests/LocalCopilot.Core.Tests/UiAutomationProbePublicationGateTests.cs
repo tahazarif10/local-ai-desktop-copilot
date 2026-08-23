@@ -149,6 +149,61 @@ public sealed class UiAutomationProbePublicationGateTests
         AssertStale(published);
     }
 
+    [TestMethod]
+    public void Apply_RejectedResult_DropsStructuralSnapshot()
+    {
+        UiAutomationProbeResult result =
+            Available(epochId: 7) with
+            {
+                Snapshot = EmptySnapshot()
+            };
+
+        UiAutomationProbeResult published =
+            UiAutomationProbePublicationGate.Apply(
+                result,
+                currentEpoch: null,
+                latestRequestId: result.RequestId);
+
+        AssertStale(published);
+        Assert.IsNull(published.Snapshot);
+    }
+
+    [TestMethod]
+    public void Apply_CurrentStructuralSnapshot_PreservesSnapshot()
+    {
+        using ContextEpochManager manager = new();
+
+        ContextEpoch epoch = manager.GetOrAdvance(
+            TestData.Snapshot(),
+            TestData.Allowed(
+                capabilities:
+                    PrivacyCapability.ObserveIdentity |
+                    PrivacyCapability.ReadUiStructure));
+
+        UiAutomationStructuralSnapshot snapshot =
+            EmptySnapshot();
+
+        UiAutomationProbeResult result =
+            Available(epoch.Id) with
+            {
+                Reason =
+                    UiAutomationProbeReason.SnapshotCaptured,
+                Snapshot = snapshot
+            };
+
+        UiAutomationProbeResult published =
+            UiAutomationProbePublicationGate.Apply(
+                result,
+                epoch,
+                latestRequestId: result.RequestId);
+
+        Assert.AreSame(result, published);
+        Assert.AreSame(snapshot, published.Snapshot);
+        Assert.AreEqual(
+            UiAutomationProbeReason.SnapshotCaptured,
+            published.Reason);
+    }
+
     private static UiAutomationProbeResult Available(
         long epochId) =>
         new(
@@ -171,4 +226,14 @@ public sealed class UiAutomationProbePublicationGateTests
             UiAutomationProbeReason.PublicationRejected,
             result.Reason);
     }
+
+    private static UiAutomationStructuralSnapshot EmptySnapshot() =>
+        new(
+            Array.Empty<UiAutomationStructuralNode>(),
+            UiAutomationSnapshotBudgets.M3_2Default,
+            UiAutomationSnapshotTruncation.None,
+            propertyValueCount: 0,
+            estimatedResultBytes:
+                UiAutomationSnapshotSizeEstimator.HeaderBytes,
+            traversalElapsed: TimeSpan.Zero);
 }

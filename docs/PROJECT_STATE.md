@@ -1,10 +1,14 @@
 ---
-state_schema: 1
+state_schema: 2
 reference_code_commit: e48b067f1c13ee5ba211bcd36de663b30ca27246
+accepted_main_commit: 01a64f8e35ccce53702f55db6d750572a1b96e6a
 last_verified_date: 2026-08-23
 completed_through: M3.1
+active_milestone: M3.2
+active_branch: dev/m3-2-bounded-structural-snapshot
+active_status: implementation candidate; CI and physical acceptance pending
 next_milestone: M3.2
-next_milestone_name: Bounded Structural Snapshot
+next_milestone_name: Bounded Structural Snapshot acceptance
 ---
 
 # Project state
@@ -17,7 +21,7 @@ The implementation at `e48b067f1c13ee5ba211bcd36de663b30ca27246` is the accepted
 
 There is no known blocking defect in the accepted M2 sensing path, completed M2.4 foundation-hardening gate, or M3.1 root-probe boundary. No rework is required unless a reproducible regression appears.
 
-The repository is not yet a complete copilot. It is a hardened diagnostic WinUI shell around the sensing foundation plus a metadata-only UIA root-availability probe. M3.1 intentionally reads no UIA property, child, view, text, pattern, or action. M3.2 bounded structural snapshots are the only approved next implementation gate; semantic text collection remains M3.3.
+The repository is not yet a complete copilot. The accepted product state is a hardened diagnostic WinUI shell around the sensing foundation plus a metadata-only UIA root-availability probe. The active M3.2 branch adds an **unaccepted candidate** for a bounded non-text structural snapshot. It must pass clean generated-interop CI and physical Windows provider/privacy/stale/teardown acceptance before this document may advance `completed_through`; semantic text collection remains M3.3.
 
 ## Accepted milestone evidence
 
@@ -36,6 +40,8 @@ The repository is not yet a complete copilot. It is a hardened diagnostic WinUI 
 | M2.4.3 Capability-based privacy policy | Complete | [PR #13](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/13), validated code head `a9c0adb` | 58/58 deterministic tests locally and on Ubuntu/Windows CI; canonical Windows build; true Off, capability gates, deny/recovery, identity revalidation, Disarm/Re-arm, stale rejection, and armed shutdown passed |
 | M2.4.4 Diagnostics and input hardening | Complete | [PR #14](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/14), validated code head `cfcc480` | 68/68 deterministic tests on Ubuntu/Windows CI; strict Windows build; default/custom diagnostic roots, normal-launch no-write proof, all four correlation outcomes, 1,965 measured callbacks with zero errors/mismatches, and clean unhook/shutdown passed |
 | M3.1 UIA capability and worker probe | Complete | [PR #15](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/15), validated code head `e48b067` | 91/91 deterministic tests on Ubuntu/Windows CI; strict Windows build; Win32/packaged/browser roots, privacy and integrity denial, timeout recovery, latest-wins/stale publication, and active-worker teardown passed |
+
+Active but not accepted: M3.2 is implemented only as a feature-branch candidate. No M3.2 CI or physical evidence may be entered in the accepted table until it actually passes.
 
 PR #7 was squash-merged as `c29099a`. Its feature-branch head (`abcbf08`) is not the `main` baseline.
 
@@ -143,7 +149,7 @@ Verdict: **accepted**. PR #15 is the review and merge record. M3.2 is the only a
 | Characterization tests | MSTest 4.3.3 | Accepted M3.1 baseline: 91/91 deterministic tests |
 | Continuous integration | GitHub Actions | [PR #15 code-head run](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32633213008) passed 91 core tests on Ubuntu/Windows, Windows PowerShell parsing, and the strict `Debug/win-x64` app build |
 | Capture/image interop | Windows Graphics Capture + Win2D | `Microsoft.Graphics.Win2D` 1.4.0 |
-| UIA interop | Direct minimal `CUIAutomation8`/`IUIAutomation2` ABI inside `LocalCopilot.App` | Accepted root-only manual probe; no property/text/traversal/action and no extra runtime package/process |
+| UIA interop | Accepted M3.1 manual root ABI; M3.2 candidate uses private build-time CsWin32 0.3.321 generation inside `LocalCopilot.App` | Generated cache/traversal build and runtime evidence pending; no runtime interop package or extra process |
 | Packaging/trust | MSIX tooling, full-trust desktop app | Development package identity used by `dotnet run` |
 | Canonical validated target | `Debug`, `win-x64` | Physical Windows client acceptance |
 | Declared OS minimum | Windows build 17763 | Declaration only; it is not broad runtime-support evidence |
@@ -171,7 +177,9 @@ Qwen3-VL-2B appeared as an early candidate in the original product prompt. It is
 | `DiagnosticLog` / `run-debug.ps1` | Expiring launch-scoped metadata sink, isolated session directory, activation handshake, and exact three-file bundle | No persistent enable flag; normal launch writes nothing; default root is ignored and custom roots are supported |
 | `ApplicationCompositionRoot` | Constructs the current service graph once for the desktop process | Concrete composition remains in the Windows app assembly |
 | `DesktopCopilotCoordinator` | Owns sensing integration, subscriptions, immutable view state, commands, start/stop, and teardown | One UI-thread-owned coordinator per application/window lifetime |
-| `UiAutomationProbeWorker` | Owns the lazy COM MTA, capacity-one latest-pending slot, integrity/identity checks, native timeouts, root resolution, and same-thread COM release | `ElementFromHandle` only; returns metadata outcomes and exposes no UIA object, property, tree, text, pattern, or action |
+| `UiAutomationProbeWorker` | Accepted M3.1 ownership plus candidate M3.2 bounded structural capture on the same lazy COM MTA and latest-pending slot | Candidate snapshots are foreground-HWND, Control View, cached, zero-string, and short-lived; no COM object or action crosses the worker |
+| `UiAutomationStructuralSnapshot` | Candidate immutable node/topology, pattern-availability flags, deterministic size model, and node/depth/elapsed/property/string/result budgets | Not accepted; no persistence/egress and stale publication strips the complete snapshot |
+| `UiAutomationNativeClient` | Candidate CsWin32-generated `IUIAutomation2` boundary, cache request, breadth-first Control View walker, and same-thread COM release | Exactly 27 non-text properties; no Name/Value/Text content, Raw View, action pattern, or descendant-wide query |
 | `ApplicationLifecycleGate` | Thread-safe one-shot Created/Running/Stopped/Disposed transitions | Portable lifecycle state only; Windows resource teardown remains coordinator-owned |
 | `MainPage` | Diagnostic rendering and command forwarding through `IDesktopCopilotView` | Attaches/detaches as a view; it does not construct or own sensing resources |
 
@@ -193,14 +201,14 @@ Qwen3-VL-2B appeared as an early candidate in the original product prompt. It is
 - Diagnostics are disabled unless one validated, expiring process launch token binds the app to one isolated session; a normal launch does not create or modify diagnostic files.
 - `App` owns one coordinator; page load/unload only attaches/detaches the view.
 - Service subscription, observer, capture/input session, epoch, and coordinator teardown paths were exercised without a resource leak.
-- Root-only UIA work starts only after `ReadUiStructure`, runs on one dedicated COM MTA worker, revalidates HWND/PID and integrity, releases COM pointers on that worker, and passes the epoch/capability/latest-request publication gate.
+- Accepted root-only UIA work starts only after `ReadUiStructure`, runs on one dedicated COM MTA worker, revalidates HWND/PID and integrity, releases COM pointers on that worker, and passes the epoch/capability/latest-request publication gate. The M3.2 candidate preserves each gate and additionally strips the whole snapshot when publication is rejected.
 
-## Not implemented
+## Not accepted or not implemented
 
 The following capabilities do not exist in `main` and must not be described as complete:
 
 - Product privacy settings UI, pause control, or persisted policy configuration
-- Bounded UIA structural or semantic snapshot; the accepted root-only probe collects no properties, children, views, patterns, or text
+- Bounded UIA structural snapshot is present only as an M3.2 candidate; it is not accepted product state. Semantic Name/Value/Text extraction is not implemented.
 - Dialog/error/notification semantic detection
 - OCR or changed-region text extraction
 - Vision model or visual-description service
@@ -221,7 +229,7 @@ The `systemAIModels` manifest capability is present, but no Windows AI model API
 
 M2.4.1 through M2.4.4 resolved the characterization/CI, ownership/lifecycle, capability-privacy, diagnostic-session, exception-redaction, and input-measurement findings. M3.1 accepted the minimal UIA execution boundary. The next unresolved slice is narrower than continuous semantic sensing:
 
-1. **M3.2 needs a separately bounded structural contract.** Before any traversal, define and test explicit node, depth, elapsed-time, property-count/string-byte, and result-size budgets; choose Control/Content view behavior; batch only required non-text properties through caching; and reevaluate generated/CsWin32 interop because the accepted manual ABI was approved only for the tiny root probe.
+1. **M3.2 acceptance remains open.** The candidate now defines node, depth, elapsed-time, property-count, zero-string, and result-size budgets; breadth-first Control View with cached Content membership; a 27-property cache schema; and pinned CsWin32 generation under Proposed ADR 0008. Clean Ubuntu/Windows tests, strict packaged build, and physical provider/privacy/stale/truncation/recovery/teardown evidence remain mandatory.
 2. **Process isolation remains evidence-gated.** M3.1 platform timeouts and physical recovery are sufficient for a manual root probe, not proof that every hostile provider is interruptible. M3.4 must decide whether continuous UIA needs a restartable helper process from measured M3.2/M3.3 behavior.
 
 ### Important hardening debt
@@ -242,7 +250,7 @@ These are fixed design inputs, not upgrade suggestions:
 - All inference and data processing remain local. The LAN server is still a privacy/egress boundary.
 - The original single-machine RTX 3060 assumption is obsolete and must not drive new architecture.
 
-## Immediate next gate
+## Immediate acceptance gate
 
 The next implementation branch is:
 
@@ -250,7 +258,9 @@ The next implementation branch is:
 dev/m3-2-bounded-structural-snapshot
 ```
 
-M3.1 is accepted through PR #15. M3.2 may extend the same `ReadUiStructure` boundary only into a bounded, foreground-HWND structural snapshot with non-text metadata and explicit view/cache/traversal/result budgets. Its first task is contract and interop design backed by portable budget tests; it must preserve the accepted worker, privacy, epoch, latest-wins, and teardown behavior.
+M3.1 is accepted through PR #15. The M3.2 candidate extends the same `ReadUiStructure` boundary into a bounded foreground-HWND structural snapshot while preserving worker ownership, privacy, epoch, latest-wins, timeout, and teardown behavior. Its contract is recorded in Proposed [ADR 0008](decisions/0008-generated-bounded-uia-snapshot.md): Control View breadth-first traversal, cached Content membership, 256 nodes, depth 8, 1,200 ms, exactly 27 non-text values per node, zero strings, and a 32 KiB estimated result.
+
+The next action is not M3.3. It is to obtain clean CI for the generated interop, then run the M3.2 physical matrix on the Windows client and record measured evidence. Only after that evidence passes may ADR 0008 become Accepted and M3.2 be merged/marked complete.
 
 Do not add UIA Name/Value/Text retention, OCR, action patterns, elevation/`uiAccess`, continuous semantic orchestration, or a speculative helper process in M3.2.
 

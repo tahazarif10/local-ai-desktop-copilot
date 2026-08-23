@@ -121,6 +121,8 @@ dotnet test .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj -c Re
 
 The accepted M3.1 baseline contains 91 deterministic tests for capability-based `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, `ChangeCorrelationService`, the one-shot `ApplicationLifecycleGate`, launch-scoped `DiagnosticSession` parsing/logging, `InputHookHealthMonitor`, UIA native-result classification, stale/latest-request publication gating, and the capacity-one latest-pending slot. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, live global hooks, live UI Automation providers, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build or milestone-specific physical provider evidence.
 
+The M3.2 candidate adds portable tests for its immutable zero-string contract, exact budget boundaries, result-size accounting, topology validation, rectangle sanitation, conservative depth-boundary reporting, and stale-snapshot removal. Do not record a new total until the exact clean CI run reports it.
+
 The CI workflow runs the core suite on both Ubuntu and Windows, then builds the packaged app as `Debug/win-x64` on Windows. Test-result artifacts are retained for failed as well as successful runs. Do not write “all tests passed” unless the relevant local/CI run is identified and actually passed; report build, test, CI, and physical runtime evidence as separate facts.
 
 Run a focused filter during diagnosis when useful, then the full suite before commit:
@@ -227,6 +229,26 @@ Required cases:
 8. **Teardown:** click `Exercise latest-wins/stale burst` and close the app before its two-second hold completes. Require cancellation/worker-stop metadata, one `UIA.WORKER_STOP`, and `UIA.WORKER_DISPOSE` with `joined=True`, plus the existing clean sensing/input/foreground/coordinator teardown.
 
 All successful native probes must use one nonzero worker managed-thread ID distinct from the UI log thread, and `UIA.WORKER_START` must report `apartment=MTA`. The bundle must contain no title text, UIA Name/Value/Text, control value, tree/property data, key/text value, coordinate, clipboard content, pixel payload, prompt, or response.
+
+### M3.2 physical matrix
+
+This matrix is pending. Run it only on the exact candidate SHA after Ubuntu/Windows core tests and the clean-restore strict Windows build pass.
+
+Use one non-elevated `run-debug.ps1` session, Arm once, focus each external target before returning to LocalCopilot, and use `Capture bounded structural snapshot`. Record the complete aggregate status and matching `UIA.QUEUE`, `UIA.INTEGRITY_CHECK`, `UIA.REQUEST_COMPLETE`, and `UIA.PROBE_RESULT` records.
+
+Required cases:
+
+1. **Classic Win32, packaged UI, browser:** PowerShell (or another classic window), Calculator (or another packaged UI), and Chrome each return `Available/SnapshotCaptured` with `view=Control`, `nodes` in `0..256`, `propertyValues=nodes*27`, `stringCount=0`, `stringBytes=0`, `estimatedBytes<=32768`, and a nonnegative traversal time.
+2. **Budget evidence:** use `Exercise depth-0 structural budget` on an allowed target and require one node, 27 property values, zero strings/bytes, the one-node estimate, and `DepthLimit`. This diagnostic command passes a smaller immutable budget through the same production worker API; it does not change product defaults or rely on a timing race.
+3. **Recovery:** immediately after a truncated/timeout/unavailable case, the same allowed target returns another typed snapshot on the same worker thread.
+4. **Privacy deny:** diagnostic Notepad returns `Unavailable/CapabilityDenied` and produces no queue/native snapshot work for its epoch.
+5. **Integrity deny:** from the required non-elevated runner, an explicitly elevated target fails before UIA as `HigherIntegrity` or `AccessInspectionFailed`; do not add elevation or `uiAccess`.
+6. **Stale disposal:** use `Exercise structural latest-wins/stale burst`. Its held first request must produce a raw structural snapshot, the middle pending request must be superseded, both non-latest publications must become `Stale/PublicationRejected` with `snapshot=none`, and only the newest structural result may publish aggregate counts.
+7. **Backpressure and timeout regression:** rerun the accepted M3.1 forced-timeout/recovery and root latest-wins burst controls. One active/one-newest behavior, typed outcomes, and the non-UI MTA thread must remain unchanged after generated interop replaces the manual ABI.
+8. **Teardown:** close during active worker work and require one worker stop plus `UIA.WORKER_DISPOSE started=True joined=True`, along with clean observer/capture/input/coordinator shutdown.
+9. **Privacy scan:** the bundle may contain aggregate view/node/content/depth/property/string/estimated-byte/truncation/timing fields. It must contain no UIA Name/Value/Text, title text, bounding coordinate, control-type ID, per-node state, pattern detail, key/input value, clipboard, pixel payload, prompt, response, exception message, or stack.
+
+CI success alone does not accept the generated COM projection. Record the exact functional SHA, provider/process matrix, worker thread ID, counters/timings, denial/stale/teardown evidence, and prohibited-content scan before changing ADR 0008 or `completed_through` to Accepted/M3.2.
 
 ## 8. Performance evidence
 

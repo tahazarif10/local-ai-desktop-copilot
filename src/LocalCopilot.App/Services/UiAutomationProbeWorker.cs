@@ -62,12 +62,69 @@ public sealed class UiAutomationProbeWorker :
         return ProbeCore(
             epoch,
             timeout,
-            diagnosticHold: TimeSpan.Zero);
+            diagnosticHold: TimeSpan.Zero,
+            UiAutomationWorkKind.RootProbe,
+            snapshotBudgets: null);
+    }
+
+    public UiAutomationProbeOperation CaptureStructuralSnapshot(
+        ContextEpoch epoch,
+        TimeSpan timeout,
+        UiAutomationSnapshotBudgets? budgets = null)
+    {
+        UiAutomationSnapshotBudgets effectiveBudgets =
+            budgets ??
+            UiAutomationSnapshotBudgets.M3_2Default;
+
+        effectiveBudgets.ValidateForNonTextSnapshot();
+
+        return ProbeCore(
+            epoch,
+            timeout,
+            diagnosticHold: TimeSpan.Zero,
+            UiAutomationWorkKind.StructuralSnapshot,
+            effectiveBudgets);
     }
 
     internal UiAutomationProbeOperation ProbeForDiagnostics(
         ContextEpoch epoch,
         TimeSpan timeout,
+        TimeSpan diagnosticHold)
+    {
+        ValidateDiagnosticHold(diagnosticHold);
+
+        return ProbeCore(
+            epoch,
+            timeout,
+            diagnosticHold,
+            UiAutomationWorkKind.RootProbe,
+            snapshotBudgets: null);
+    }
+
+    internal UiAutomationProbeOperation
+        CaptureStructuralSnapshotForDiagnostics(
+            ContextEpoch epoch,
+            TimeSpan timeout,
+            TimeSpan diagnosticHold,
+            UiAutomationSnapshotBudgets? budgets = null)
+    {
+        ValidateDiagnosticHold(diagnosticHold);
+
+        UiAutomationSnapshotBudgets effectiveBudgets =
+            budgets ??
+            UiAutomationSnapshotBudgets.M3_2Default;
+
+        effectiveBudgets.ValidateForNonTextSnapshot();
+
+        return ProbeCore(
+            epoch,
+            timeout,
+            diagnosticHold,
+            UiAutomationWorkKind.StructuralSnapshot,
+            effectiveBudgets);
+    }
+
+    private static void ValidateDiagnosticHold(
         TimeSpan diagnosticHold)
     {
         if (diagnosticHold <= TimeSpan.Zero ||
@@ -76,17 +133,14 @@ public sealed class UiAutomationProbeWorker :
             throw new ArgumentOutOfRangeException(
                 nameof(diagnosticHold));
         }
-
-        return ProbeCore(
-            epoch,
-            timeout,
-            diagnosticHold);
     }
 
     private UiAutomationProbeOperation ProbeCore(
         ContextEpoch epoch,
         TimeSpan timeout,
-        TimeSpan diagnosticHold)
+        TimeSpan diagnosticHold,
+        UiAutomationWorkKind kind,
+        UiAutomationSnapshotBudgets? snapshotBudgets)
     {
         ArgumentNullException.ThrowIfNull(epoch);
 
@@ -107,6 +161,8 @@ public sealed class UiAutomationProbeWorker :
                 Stopwatch.GetTimestamp(),
                 timeout,
                 diagnosticHold,
+                kind,
+                snapshotBudgets,
                 epoch.CancellationToken);
 
         WorkItem? replaced;
@@ -176,6 +232,7 @@ public sealed class UiAutomationProbeWorker :
             "UIA.QUEUE",
             $"request={item.RequestId} " +
             $"epoch={item.EpochId} " +
+            $"kind={item.Kind} " +
             $"replacedRequest={replaced?.RequestId ?? 0} " +
             $"replacedEpoch={replaced?.EpochId ?? 0}");
 
@@ -529,8 +586,18 @@ public sealed class UiAutomationProbeWorker :
                 identityRevalidated);
         }
 
-        nint element =
-            nint.Zero;
+        if (item.Kind ==
+            UiAutomationWorkKind.StructuralSnapshot)
+        {
+            return ExecuteStructuralSnapshot(
+                item,
+                workerThreadId,
+                client,
+                identityRevalidated);
+        }
+
+        object? element =
+            null;
 
         try
         {
@@ -551,7 +618,7 @@ public sealed class UiAutomationProbeWorker :
             UiAutomationProbeClassification classification =
                 UiAutomationProbeNativeClassifier.Classify(
                     hresult,
-                    element != nint.Zero,
+                    element is not null,
                     item.HasExpired);
 
             return item.CreateResult(
@@ -577,6 +644,85 @@ public sealed class UiAutomationProbeWorker :
         }
     }
 
+    private UiAutomationProbeResult ExecuteStructuralSnapshot(
+        WorkItem item,
+        int workerThreadId,
+        UiAutomationNativeClient client,
+        bool identityRevalidated)
+    {
+        UiAutomationSnapshotBudgets budgets =
+            item.SnapshotBudgets ??
+            throw new InvalidOperationException(
+                "Structural snapshot budgets are required.");
+
+        try
+        {
+            UiAutomationNativeSnapshotResult nativeResult =
+                client.CaptureStructuralSnapshot(
+                    item.Handle,
+                    budgets,
+                    () =>
+                        item.CancellationToken
+                            .IsCancellationRequested ||
+                        _stopRequested.WaitOne(0));
+
+            if (_stopRequested.WaitOne(0))
+            {
+                return item.CreateResult(
+                    UiAutomationProbeOutcome.Cancelled,
+                    UiAutomationProbeReason.WorkerStopped,
+                    nativeResult.HResult,
+                    workerThreadId,
+                    identityRevalidated);
+            }
+
+            if (nativeResult.Cancelled ||
+                item.CancellationToken.IsCancellationRequested)
+            {
+                return item.CreateResult(
+                    UiAutomationProbeOutcome.Cancelled,
+                    UiAutomationProbeReason.RequestCancelled,
+                    nativeResult.HResult,
+                    workerThreadId,
+                    identityRevalidated);
+            }
+
+            UiAutomationProbeClassification classification =
+                UiAutomationProbeNativeClassifier.Classify(
+                    nativeResult.HResult,
+                    nativeResult.Snapshot is not null,
+                    item.HasExpired);
+
+            if (classification.Outcome !=
+                UiAutomationProbeOutcome.Available)
+            {
+                return item.CreateResult(
+                    classification.Outcome,
+                    classification.Reason,
+                    classification.HResult,
+                    workerThreadId,
+                    identityRevalidated);
+            }
+
+            return item.CreateResult(
+                UiAutomationProbeOutcome.Available,
+                UiAutomationProbeReason.SnapshotCaptured,
+                classification.HResult,
+                workerThreadId,
+                identityRevalidated,
+                nativeResult.Snapshot);
+        }
+        catch (Exception ex)
+        {
+            return item.CreateResult(
+                UiAutomationProbeOutcome.Faulted,
+                UiAutomationProbeReason.NativeFailure,
+                ex.HResult,
+                workerThreadId,
+                identityRevalidated);
+        }
+    }
+
     private sealed class WorkItem
     {
         private readonly TaskCompletionSource<bool>
@@ -597,6 +743,8 @@ public sealed class UiAutomationProbeWorker :
             long startedTimestamp,
             TimeSpan timeout,
             TimeSpan diagnosticHold,
+            UiAutomationWorkKind kind,
+            UiAutomationSnapshotBudgets? snapshotBudgets,
             CancellationToken cancellationToken)
         {
             RequestId = requestId;
@@ -606,6 +754,8 @@ public sealed class UiAutomationProbeWorker :
             StartedTimestamp = startedTimestamp;
             Timeout = timeout;
             DiagnosticHold = diagnosticHold;
+            Kind = kind;
+            SnapshotBudgets = snapshotBudgets;
             CancellationToken = cancellationToken;
         }
 
@@ -622,6 +772,10 @@ public sealed class UiAutomationProbeWorker :
         public TimeSpan Timeout { get; }
 
         public TimeSpan DiagnosticHold { get; }
+
+        public UiAutomationWorkKind Kind { get; }
+
+        public UiAutomationSnapshotBudgets? SnapshotBudgets { get; }
 
         public CancellationToken CancellationToken { get; }
 
@@ -643,7 +797,8 @@ public sealed class UiAutomationProbeWorker :
             UiAutomationProbeReason reason,
             int? hresult,
             int workerThreadId,
-            bool identityRevalidated)
+            bool identityRevalidated,
+            UiAutomationStructuralSnapshot? snapshot = null)
         {
             return new UiAutomationProbeResult(
                 RequestId,
@@ -653,7 +808,8 @@ public sealed class UiAutomationProbeWorker :
                 Elapsed,
                 hresult,
                 workerThreadId,
-                identityRevalidated);
+                identityRevalidated,
+                snapshot);
         }
 
         public void MarkStarted()
@@ -680,13 +836,21 @@ public sealed class UiAutomationProbeWorker :
                 "UIA.REQUEST_COMPLETE",
                 $"request={result.RequestId} " +
                 $"epoch={result.EpochId} " +
+                $"kind={Kind} " +
                 $"outcome={result.Outcome} " +
                 $"reason={result.Reason} " +
                 $"elapsedMs={result.Elapsed.TotalMilliseconds:0.000} " +
                 $"hresult={hresult} " +
                 $"workerThread={result.WorkerThreadId} " +
-                $"identityRevalidated={result.IdentityRevalidated}");
+                $"identityRevalidated={result.IdentityRevalidated} " +
+                $"snapshotProduced={result.Snapshot is not null}");
         }
+    }
+
+    private enum UiAutomationWorkKind
+    {
+        RootProbe,
+        StructuralSnapshot
     }
 }
 

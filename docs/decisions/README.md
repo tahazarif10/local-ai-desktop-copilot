@@ -20,6 +20,7 @@ ADRs preserve why a material decision exists so a new session does not undo it a
 | [0005](0005-foundation-hardening-before-uia.md) | Accepted | Complete M2.4 hardening before M3 UIA |
 | [0006](0006-launch-scoped-diagnostics.md) | Accepted | Use expiring launch-scoped diagnostic sessions and explicit bundle sources |
 | [0007](0007-root-only-uia-mta-probe.md) | Accepted | Validate a root-only probe on an application-owned COM MTA worker before broader UIA |
+| [0008](0008-generated-bounded-uia-snapshot.md) | Proposed | Use generated interop and explicit budgets for a non-text Control View snapshot |
 
 ## When to add an ADR
 

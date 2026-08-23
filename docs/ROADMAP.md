@@ -128,13 +128,15 @@ Accepted evidence: [PR #15](https://github.com/tahazarif10/local-ai-desktop-copi
 
 ### ▶ M3.2 Bounded structural snapshot
 
-- Traverse only the foreground HWND subtree.
-- Prefer Control View; use Content View for user-relevant content; never default to the unbounded Raw View.
-- Batch properties through UIA caching to reduce cross-process calls.
-- Enforce explicit budgets for nodes, depth, elapsed time, string count/bytes, and result size.
-- Initially collect structural metadata and pattern availability; raw text remains out of logs.
-- Reevaluate CsWin32/generated interop before expanding the narrow manual ABI accepted only for M3.1.
-- Preserve one-active/one-latest backpressure, current epoch/capability publication, same-worker COM release, typed unavailable/timeout outcomes, and deterministic teardown.
+- Candidate implemented on `dev/m3-2-bounded-structural-snapshot`; acceptance remains pending.
+- Traverse only the foreground HWND subtree breadth-first through Control View. Cache `IsContentElement` for the user-relevant Content subset; never use Raw View or an unbounded descendant query.
+- Batch exactly 27 non-text Boolean/numeric properties through an Element-scope UIA cache request. Pattern availability is metadata only; never obtain or invoke a pattern object.
+- Enforce immutable defaults of 256 nodes, depth 8, 1,200 ms traversal, 27 values per node / 6,912 total, zero strings/bytes, and 32 KiB estimated result. Report every reached boundary with truncation flags.
+- Use pinned private build-time CsWin32 source generation from Microsoft Win32 metadata instead of expanding the M3.1 manual ABI; Proposed ADR 0008 records the decision.
+- Preserve one-active/one-latest backpressure, current epoch/capability/latest publication, snapshot removal on stale publication, same-worker COM release, typed unavailable/timeout/cancelled/faulted outcomes, and deterministic teardown.
+- Publish/log only aggregate counts, truncation, estimated bytes, and timing. Name, Value, Text content, bounds, control IDs, per-node states, and pattern details remain absent from diagnostics.
+
+Exit criteria: clean portable tests on Ubuntu/Windows, strict clean-restore `Debug/win-x64 --warnaserror` build, classic/packaged/browser provider evidence, privacy/integrity denial, stale snapshot disposal, a live budget boundary plus recovery, joined teardown, and a prohibited-content scan. Until then M3.1 remains the accepted baseline and M3.3 is closed.
 
 ### M3.3 Semantic UI snapshot
 

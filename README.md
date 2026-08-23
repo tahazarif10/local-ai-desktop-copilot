@@ -33,19 +33,19 @@
 This is a product-grade system, not a screenshot-to-LLM demo. It uses the smallest useful local context, escalates from cheap sensing to richer semantics only when required, and treats privacy as a control-plane boundary.
 
 > [!IMPORTANT]
-> The accepted baseline contains a validated sensing foundation, diagnostic UI, and manual metadata-only UI Automation root-availability probe. It does **not** yet contain a UIA structural/text snapshot, OCR, memory, model inference, voice, autonomous actions, or a production privacy-settings UI.
+> The accepted baseline ends at the validated M3.1 metadata-only UI Automation root probe. The active M3.2 branch contains a bounded, non-text structural-snapshot candidate, but it is **not accepted** until clean CI and physical Windows provider/privacy/teardown evidence pass. UIA text, OCR, memory, model inference, voice, autonomous actions, and a production privacy-settings UI do not exist.
 
 ## Project status in 60 seconds
 
 | Item | Current truth |
 | --- | --- |
 | Last verified functional code baseline | `e48b067f1c13ee5ba211bcd36de663b30ca27246` (later documentation-only or merge commits may be descendants) |
-| Accepted merge record | [PR #15](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/15); resolve the live `main` HEAD from GitHub/Git |
+| Accepted merge record | [PR #15](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/15), squash merge `01a64f8`; resolve live HEAD from GitHub/Git |
 | Baseline date | 2026-08-23 (Windows runtime acceptance) |
 | Completed | Foreground context, RAM-only capture, capability privacy/epochs, low-resolution change detection, persistent latest-wins sensing, diagnostic correlation, portable core/CI, application-owned lifecycle, launch-scoped diagnostics/input hardening, and the root-only UIA worker probe |
-| Current implementation shape | One packaged WinUI 3 process split into a Windows/UI app assembly and a portable core assembly; `App` owns composition/lifecycle; one lazy application-owned COM MTA thread permits one active plus one latest pending root request; there is no separate UIA process |
-| Active milestone | `M3.2 Bounded Structural Snapshot`; next branch `dev/m3-2-bounded-structural-snapshot` |
-| Current product capability target | A bounded foreground-HWND structural snapshot with explicit view/cache/traversal/result budgets and no UIA text |
+| Current implementation shape | M3.2 candidate on the existing packaged WinUI process: one application-owned COM MTA, one active plus one newest pending request, SDK-generated UIA interop, and a short-lived bounded Control View result; there is no separate UIA process |
+| Active milestone | `M3.2 Bounded Structural Snapshot`; branch `dev/m3-2-bounded-structural-snapshot`; CI and physical acceptance pending |
+| Candidate contract | Foreground HWND only; breadth-first Control View; Content subset marker; 256 nodes / depth 8 / 1,200 ms / 27 properties per node / zero strings / 32 KiB estimated result |
 | Automated tests / CI | Accepted baseline: 91/91 deterministic tests on Ubuntu/Windows plus Windows PowerShell parsing and strict `Debug/win-x64 --warnaserror` app build in [CI #22](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32633213008) |
 | Cloud use | Forbidden by the product architecture |
 | Autonomous input/actions | Out of scope |
@@ -151,11 +151,13 @@ explicit diagnostic launch + Arm
   -> current epoch/capability publication gate
 ```
 
-The probe never requests UIA Name, Value, Text, tree children, patterns, or actions. Product-default launches do not grant `ReadUiStructure`; the grant exists only inside an explicit launch-scoped diagnostic session. M3.2 may add only budgeted non-text structure behind the same capability and publication gates.
+The M3.1 probe never requests UIA Name, Value, Text, tree children, patterns, or actions. Product-default launches do not grant `ReadUiStructure`; the grant exists only inside an explicit launch-scoped diagnostic session.
+
+The unaccepted M3.2 candidate extends that same gated request path with a breadth-first Control View snapshot. It uses an Element-scope UIA cache request and generated `IUIAutomation2` interop, records only structural Boolean/numeric facts and pattern availability, and exposes `IsContentElement` for selective downstream use. The hard defaults are 256 nodes, depth 8, 1,200 ms traversal, 27 values per node, 6,912 total values, zero strings/bytes, and a 32 KiB estimated result. UI and diagnostics receive only aggregate counts/timing/truncation; no bounds, control IDs, per-node facts, or text are logged.
 
 The activity tracker records only `MouseClick`, `MouseWheel`, or `KeyboardActivity` plus an epoch and monotonic timestamp. It does not record keys, text, mouse coordinates, clipboard data, or target controls. M2.4.4 measured 1,965 callbacks across four physical hook lifetimes with zero callback/subscriber errors, zero installing-thread mismatches, successful keyboard/mouse unhook, a weighted mean of 92.8 microseconds, and a maximum of 929.8 microseconds; the current synchronous diagnostic-only hook path therefore remains accepted.
 
-Current stack: C#/.NET 10, packaged WinUI 3, Windows App SDK 2.4.0, Win2D 1.4.0, and Windows Graphics Capture. Only the explicit `Debug/win-x64` path has runtime acceptance. Model/OCR/STT/TTS backends are not selected yet; early candidate names are not commitments.
+Current stack: C#/.NET 10, packaged WinUI 3, Windows App SDK 2.4.0, Win2D 1.4.0, Windows Graphics Capture, and private build-time CsWin32 0.3.321 generation for the M3.2 candidate. Only the explicit `Debug/win-x64` path has runtime acceptance. Model/OCR/STT/TTS backends are not selected yet; early candidate names are not commitments.
 
 ## Build and diagnostic entry points
 

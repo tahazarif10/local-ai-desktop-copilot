@@ -637,6 +637,18 @@ public sealed class DesktopCopilotCoordinator :
             TimeSpan.FromMilliseconds(2500));
     }
 
+    public Task CaptureUiAutomationStructuralSnapshotAsync()
+    {
+        return RunUiAutomationRequestAsync(
+            "uia_structural_snapshot",
+            "Capturing a bounded non-text Control View snapshot...",
+            epoch =>
+                _uiAutomationProbeWorker
+                    .CaptureStructuralSnapshot(
+                        epoch,
+                        TimeSpan.FromMilliseconds(2500)));
+    }
+
     public Task ProbeUiAutomationForcedTimeoutAsync()
     {
         EnsureUiThread(
@@ -655,10 +667,94 @@ public sealed class DesktopCopilotCoordinator :
             TimeSpan.FromTicks(1));
     }
 
-    public async Task ProbeUiAutomationLatestWinsBurstAsync()
+    public Task ProbeUiAutomationLatestWinsBurstAsync()
     {
-        const string operation =
-            "uia_latest_wins_burst";
+        return RunUiAutomationBurstAsync(
+            "uia_latest_wins_burst",
+            "Exercising the M3.1 root latest-wins/stale path...",
+            epoch =>
+                _uiAutomationProbeWorker
+                    .ProbeForDiagnostics(
+                        epoch,
+                        TimeSpan.FromSeconds(5),
+                        TimeSpan.FromSeconds(2)),
+            epoch =>
+                _uiAutomationProbeWorker.Probe(
+                    epoch,
+                    TimeSpan.FromSeconds(5)));
+    }
+
+    public Task ProbeUiAutomationStructuralLatestWinsBurstAsync()
+    {
+        return RunUiAutomationBurstAsync(
+            "uia_structural_latest_wins_burst",
+            "Exercising structural latest-wins and stale disposal...",
+            epoch =>
+                _uiAutomationProbeWorker
+                    .CaptureStructuralSnapshotForDiagnostics(
+                        epoch,
+                        TimeSpan.FromSeconds(8),
+                        TimeSpan.FromSeconds(2)),
+            epoch =>
+                _uiAutomationProbeWorker
+                    .CaptureStructuralSnapshot(
+                        epoch,
+                        TimeSpan.FromSeconds(5)));
+    }
+
+    public Task ProbeUiAutomationDepthBudgetAsync()
+    {
+        EnsureUiThread(
+            "uia_depth_budget");
+
+        if (!DiagnosticLog.IsEnabled)
+        {
+            SetUiAutomationProbeStatus(
+                "A launch-scoped diagnostic session is required.");
+
+            return Task.CompletedTask;
+        }
+
+        UiAutomationSnapshotBudgets budgets =
+            UiAutomationSnapshotBudgets.M3_2Default with
+            {
+                MaxNodes = 1,
+                MaxDepth = 0,
+                MaxElapsed =
+                    TimeSpan.FromMilliseconds(2000),
+                MaxPropertyValues =
+                    UiAutomationSnapshotBudgets
+                        .M3_2RequiredPropertyCount,
+                MaxResultBytes =
+                    UiAutomationSnapshotSizeEstimator
+                        .EstimateBytes(1)
+            };
+
+        return RunUiAutomationRequestAsync(
+            "uia_depth_budget",
+            "Capturing a deterministic depth-0 budget boundary...",
+            epoch =>
+                _uiAutomationProbeWorker
+                    .CaptureStructuralSnapshot(
+                        epoch,
+                        TimeSpan.FromMilliseconds(2500),
+                        budgets));
+    }
+
+    private async Task RunUiAutomationBurstAsync(
+        string operation,
+        string pendingStatus,
+        Func<ContextEpoch, UiAutomationProbeOperation> queueHeld,
+        Func<ContextEpoch, UiAutomationProbeOperation> queueNormal)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            operation);
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            pendingStatus);
+        ArgumentNullException.ThrowIfNull(
+            queueHeld);
+        ArgumentNullException.ThrowIfNull(
+            queueNormal);
 
         EnsureUiThread(
             operation);
@@ -698,13 +794,10 @@ public sealed class DesktopCopilotCoordinator :
         }
 
         SetUiAutomationProbeStatus(
-            "Exercising one active plus one latest pending request...");
+            pendingStatus);
 
         UiAutomationProbeOperation first =
-            _uiAutomationProbeWorker.ProbeForDiagnostics(
-                epoch,
-                TimeSpan.FromSeconds(5),
-                TimeSpan.FromSeconds(2));
+            queueHeld(epoch);
 
         _latestUiAutomationProbeRequestId =
             first.RequestId;
@@ -712,23 +805,20 @@ public sealed class DesktopCopilotCoordinator :
         await first.Started;
 
         UiAutomationProbeOperation second =
-            _uiAutomationProbeWorker.Probe(
-                epoch,
-                TimeSpan.FromSeconds(5));
+            queueNormal(epoch);
 
         _latestUiAutomationProbeRequestId =
             second.RequestId;
 
         UiAutomationProbeOperation third =
-            _uiAutomationProbeWorker.Probe(
-                epoch,
-                TimeSpan.FromSeconds(5));
+            queueNormal(epoch);
 
         _latestUiAutomationProbeRequestId =
             third.RequestId;
 
         DiagnosticLog.Write(
             "UIA.BURST_QUEUED",
+            $"operation={operation} " +
             $"epoch={epoch.Id} " +
             $"first={first.RequestId} " +
             $"second={second.RequestId} " +
@@ -757,6 +847,29 @@ public sealed class DesktopCopilotCoordinator :
         string operation,
         TimeSpan timeout)
     {
+        await RunUiAutomationRequestAsync(
+            operation,
+            operation == "uia_forced_timeout"
+                ? "Forcing an expired request deadline..."
+                : "Resolving root on dedicated MTA worker...",
+            epoch =>
+                _uiAutomationProbeWorker.Probe(
+                    epoch,
+                    timeout));
+    }
+
+    private async Task RunUiAutomationRequestAsync(
+        string operation,
+        string pendingStatus,
+        Func<ContextEpoch, UiAutomationProbeOperation> queueRequest)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            operation);
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            pendingStatus);
+        ArgumentNullException.ThrowIfNull(
+            queueRequest);
+
         EnsureUiThread(
             operation);
 
@@ -787,9 +900,7 @@ public sealed class DesktopCopilotCoordinator :
         }
 
         SetUiAutomationProbeStatus(
-            operation == "uia_forced_timeout"
-                ? "Forcing an expired request deadline..."
-                : "Resolving root on dedicated MTA worker...");
+            pendingStatus);
 
         DiagnosticLog.Write(
             "UIA.PROBE_BEGIN",
@@ -799,9 +910,7 @@ public sealed class DesktopCopilotCoordinator :
             $"pid={epoch.Snapshot.ProcessId}");
 
         UiAutomationProbeOperation probe =
-            _uiAutomationProbeWorker.Probe(
-                epoch,
-                timeout);
+            queueRequest(epoch);
 
         _latestUiAutomationProbeRequestId =
             probe.RequestId;
@@ -1723,6 +1832,10 @@ public sealed class DesktopCopilotCoordinator :
                 ? $"0x{result.HResult.Value:X8}"
                 : "none";
 
+        string snapshotSummary =
+            GetUiAutomationSnapshotSummary(
+                result.Snapshot);
+
         DiagnosticLog.Write(
             "UIA.PROBE_RESULT",
             $"request={result.RequestId} " +
@@ -1732,12 +1845,38 @@ public sealed class DesktopCopilotCoordinator :
             $"elapsedMs={result.Elapsed.TotalMilliseconds:0.000} " +
             $"hresult={hresult} " +
             $"workerThread={result.WorkerThreadId} " +
-            $"identityRevalidated={result.IdentityRevalidated}");
+            $"identityRevalidated={result.IdentityRevalidated} " +
+            snapshotSummary);
 
         SetUiAutomationProbeStatus(
             $"{result.Outcome} | {result.Reason} | " +
             $"{result.Elapsed.TotalMilliseconds:0.0} ms | " +
-            $"HRESULT {hresult}");
+            $"HRESULT {hresult}" +
+            (result.Snapshot is null
+                ? string.Empty
+                : " | " + snapshotSummary));
+    }
+
+    private static string GetUiAutomationSnapshotSummary(
+        UiAutomationStructuralSnapshot? snapshot)
+    {
+        if (snapshot is null)
+        {
+            return "snapshot=none";
+        }
+
+        return
+            $"snapshot=structural " +
+            $"view={snapshot.View} " +
+            $"nodes={snapshot.Nodes.Count} " +
+            $"contentNodes={snapshot.ContentNodeCount} " +
+            $"maxDepth={snapshot.MaxDepthObserved} " +
+            $"truncation={snapshot.Truncation} " +
+            $"propertyValues={snapshot.PropertyValueCount} " +
+            $"stringCount={snapshot.StringCount} " +
+            $"stringBytes={snapshot.StringBytes} " +
+            $"estimatedBytes={snapshot.EstimatedResultBytes} " +
+            $"traversalMs={snapshot.TraversalElapsed.TotalMilliseconds:0.000}";
     }
 
     private void UpdateViewState(
