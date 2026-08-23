@@ -53,8 +53,20 @@ public sealed record UiAutomationSemanticBudgets(
                 nameof(MaxSelectedNodes));
         }
 
+        if (MaxVisibleTextRanges <= 0 ||
+            MaxVisibleTextRanges > 256)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MaxVisibleTextRanges));
+        }
+
+        int maximumPossibleStrings =
+            checked(
+                (MaxSelectedNodes * 2) +
+                MaxVisibleTextRanges);
+
         if (MaxStrings <= 0 ||
-            MaxStrings > checked(MaxSelectedNodes * 3))
+            MaxStrings > maximumPossibleStrings)
         {
             throw new ArgumentOutOfRangeException(nameof(MaxStrings));
         }
@@ -64,13 +76,6 @@ public sealed record UiAutomationSemanticBudgets(
         {
             throw new ArgumentOutOfRangeException(
                 nameof(MaxCharactersPerString));
-        }
-
-        if (MaxVisibleTextRanges <= 0 ||
-            MaxVisibleTextRanges > 256)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(MaxVisibleTextRanges));
         }
 
         if (MaxUtf8Bytes <= 0 || MaxUtf8Bytes > 64 * 1024)
@@ -231,6 +236,11 @@ public sealed class UiAutomationSensitiveText : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    ~UiAutomationSensitiveText()
+    {
+        Dispose();
+    }
+
     public override string ToString()
     {
         return IsDisposed
@@ -304,6 +314,42 @@ public sealed class UiAutomationSemanticBudgetTracker
     public int EstimatedResultBytes => _estimatedResultBytes;
 
     public UiAutomationSnapshotTruncation Truncation => _truncation;
+
+    public bool CanReadAnotherString()
+    {
+        bool allowed = true;
+
+        if (_stringCount >= _budgets.MaxStrings)
+        {
+            _truncation |=
+                UiAutomationSnapshotTruncation.StringCountLimit;
+            allowed = false;
+        }
+
+        if (_utf8Bytes >= _budgets.MaxUtf8Bytes)
+        {
+            _truncation |=
+                UiAutomationSnapshotTruncation.StringByteLimit;
+            allowed = false;
+        }
+
+        if (_estimatedResultBytes >
+            _budgets.MaxResultBytes -
+            UiAutomationSemanticSizeEstimator.ValueBytes - 1)
+        {
+            _truncation |=
+                UiAutomationSnapshotTruncation.ResultByteLimit;
+            allowed = false;
+        }
+
+        return allowed;
+    }
+
+    public void MarkProviderContentUnavailable()
+    {
+        _truncation |=
+            UiAutomationSnapshotTruncation.ProviderContentUnavailable;
+    }
 
     public bool TryReserveSelectedNode(TimeSpan elapsed)
     {
@@ -642,7 +688,12 @@ public sealed class UiAutomationSemanticNode : IDisposable
         UiAutomationSemanticValue[] copied = values.ToArray();
 
         if (copied.Any(value => value is null) ||
-            copied.GroupBy(value => value.Kind).Any(group => group.Count() > 1))
+            copied
+                .Where(value =>
+                    value.Kind !=
+                    UiAutomationSemanticContentKind.VisibleText)
+                .GroupBy(value => value.Kind)
+                .Any(group => group.Count() > 1))
         {
             throw new ArgumentException(
                 "Semantic values must be non-null and unique by source.",

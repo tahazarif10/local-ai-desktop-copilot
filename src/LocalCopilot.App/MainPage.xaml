@@ -161,6 +161,11 @@
                 Margin="0,6,0,0" />
 
             <Button
+                Content="Capture bounded semantic snapshot (explicit opt-in)"
+                Click="UiAutomationSemanticSnapshotButton_Click"
+                HorizontalAlignment="Left" />
+
+            <Button
                 Content="Exercise depth-0 structural budget"
                 Click="UiAutomationDepthBudgetButton_Click"
                 HorizontalAlignment="Left" />

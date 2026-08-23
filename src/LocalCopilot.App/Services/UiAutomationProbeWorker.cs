@@ -64,7 +64,8 @@ public sealed class UiAutomationProbeWorker :
             timeout,
             diagnosticHold: TimeSpan.Zero,
             UiAutomationWorkKind.RootProbe,
-            snapshotBudgets: null);
+            snapshotBudgets: null,
+            semanticBudgets: null);
     }
 
     public UiAutomationProbeOperation CaptureStructuralSnapshot(
@@ -83,7 +84,34 @@ public sealed class UiAutomationProbeWorker :
             timeout,
             diagnosticHold: TimeSpan.Zero,
             UiAutomationWorkKind.StructuralSnapshot,
-            effectiveBudgets);
+            effectiveBudgets,
+            semanticBudgets: null);
+    }
+
+    public UiAutomationProbeOperation CaptureSemanticSnapshot(
+        ContextEpoch epoch,
+        TimeSpan timeout,
+        UiAutomationSnapshotBudgets? structuralBudgets = null,
+        UiAutomationSemanticBudgets? semanticBudgets = null)
+    {
+        UiAutomationSnapshotBudgets effectiveStructuralBudgets =
+            structuralBudgets ??
+            UiAutomationSnapshotBudgets.M3_2Default;
+
+        UiAutomationSemanticBudgets effectiveSemanticBudgets =
+            semanticBudgets ??
+            UiAutomationSemanticBudgets.M3_3Default;
+
+        effectiveStructuralBudgets.ValidateForNonTextSnapshot();
+        effectiveSemanticBudgets.Validate();
+
+        return ProbeCore(
+            epoch,
+            timeout,
+            diagnosticHold: TimeSpan.Zero,
+            UiAutomationWorkKind.SemanticSnapshot,
+            effectiveStructuralBudgets,
+            effectiveSemanticBudgets);
     }
 
     internal UiAutomationProbeOperation ProbeForDiagnostics(
@@ -98,7 +126,8 @@ public sealed class UiAutomationProbeWorker :
             timeout,
             diagnosticHold,
             UiAutomationWorkKind.RootProbe,
-            snapshotBudgets: null);
+            snapshotBudgets: null,
+            semanticBudgets: null);
     }
 
     internal UiAutomationProbeOperation
@@ -121,7 +150,8 @@ public sealed class UiAutomationProbeWorker :
             timeout,
             diagnosticHold,
             UiAutomationWorkKind.StructuralSnapshot,
-            effectiveBudgets);
+            effectiveBudgets,
+            semanticBudgets: null);
     }
 
     private static void ValidateDiagnosticHold(
@@ -140,7 +170,8 @@ public sealed class UiAutomationProbeWorker :
         TimeSpan timeout,
         TimeSpan diagnosticHold,
         UiAutomationWorkKind kind,
-        UiAutomationSnapshotBudgets? snapshotBudgets)
+        UiAutomationSnapshotBudgets? snapshotBudgets,
+        UiAutomationSemanticBudgets? semanticBudgets)
     {
         ArgumentNullException.ThrowIfNull(epoch);
 
@@ -163,7 +194,34 @@ public sealed class UiAutomationProbeWorker :
                 diagnosticHold,
                 kind,
                 snapshotBudgets,
+                semanticBudgets,
                 epoch.CancellationToken);
+
+        PrivacyCapability requiredCapabilities =
+            kind == UiAutomationWorkKind.SemanticSnapshot
+                ? PrivacyCapability.ReadUiStructure |
+                  PrivacyCapability.ReadUiText
+                : PrivacyCapability.ReadUiStructure;
+
+        if (!epoch.Privacy.Allows(requiredCapabilities))
+        {
+            item.TryComplete(
+                item.CreateResult(
+                    UiAutomationProbeOutcome.Unavailable,
+                    UiAutomationProbeReason.CapabilityDenied,
+                    hresult: null,
+                    workerThreadId: 0,
+                    identityRevalidated: false));
+
+            DiagnosticLog.Write(
+                "UIA.QUEUE_DENY",
+                $"request={item.RequestId} " +
+                $"epoch={item.EpochId} " +
+                $"kind={item.Kind} " +
+                $"requiredCapabilities={requiredCapabilities}");
+
+            return item.Operation;
+        }
 
         WorkItem? replaced;
 
@@ -596,6 +654,16 @@ public sealed class UiAutomationProbeWorker :
                 identityRevalidated);
         }
 
+        if (item.Kind ==
+            UiAutomationWorkKind.SemanticSnapshot)
+        {
+            return ExecuteSemanticSnapshot(
+                item,
+                workerThreadId,
+                client,
+                identityRevalidated);
+        }
+
         object? element =
             null;
 
@@ -723,6 +791,100 @@ public sealed class UiAutomationProbeWorker :
         }
     }
 
+    private UiAutomationProbeResult ExecuteSemanticSnapshot(
+        WorkItem item,
+        int workerThreadId,
+        UiAutomationNativeClient client,
+        bool identityRevalidated)
+    {
+        UiAutomationSnapshotBudgets structuralBudgets =
+            item.SnapshotBudgets ??
+            throw new InvalidOperationException(
+                "Structural snapshot budgets are required.");
+
+        UiAutomationSemanticBudgets semanticBudgets =
+            item.SemanticBudgets ??
+            throw new InvalidOperationException(
+                "Semantic snapshot budgets are required.");
+
+        try
+        {
+            UiAutomationNativeSnapshotResult nativeResult =
+                client.CaptureSemanticSnapshot(
+                    item.Handle,
+                    item.EpochId,
+                    structuralBudgets,
+                    semanticBudgets,
+                    () =>
+                        item.CancellationToken
+                            .IsCancellationRequested ||
+                        _stopRequested.WaitOne(0));
+
+            if (_stopRequested.WaitOne(0))
+            {
+                nativeResult.SemanticSnapshot?.Dispose();
+
+                return item.CreateResult(
+                    UiAutomationProbeOutcome.Cancelled,
+                    UiAutomationProbeReason.WorkerStopped,
+                    nativeResult.HResult,
+                    workerThreadId,
+                    identityRevalidated);
+            }
+
+            if (nativeResult.Cancelled ||
+                item.CancellationToken.IsCancellationRequested)
+            {
+                nativeResult.SemanticSnapshot?.Dispose();
+
+                return item.CreateResult(
+                    UiAutomationProbeOutcome.Cancelled,
+                    UiAutomationProbeReason.RequestCancelled,
+                    nativeResult.HResult,
+                    workerThreadId,
+                    identityRevalidated);
+            }
+
+            UiAutomationProbeClassification classification =
+                UiAutomationProbeNativeClassifier.Classify(
+                    nativeResult.HResult,
+                    nativeResult.Snapshot is not null &&
+                    nativeResult.SemanticSnapshot is not null,
+                    item.HasExpired);
+
+            if (classification.Outcome !=
+                UiAutomationProbeOutcome.Available)
+            {
+                nativeResult.SemanticSnapshot?.Dispose();
+
+                return item.CreateResult(
+                    classification.Outcome,
+                    classification.Reason,
+                    classification.HResult,
+                    workerThreadId,
+                    identityRevalidated);
+            }
+
+            return item.CreateResult(
+                UiAutomationProbeOutcome.Available,
+                UiAutomationProbeReason.SnapshotCaptured,
+                classification.HResult,
+                workerThreadId,
+                identityRevalidated,
+                nativeResult.Snapshot,
+                nativeResult.SemanticSnapshot);
+        }
+        catch (Exception ex)
+        {
+            return item.CreateResult(
+                UiAutomationProbeOutcome.Faulted,
+                UiAutomationProbeReason.NativeFailure,
+                ex.HResult,
+                workerThreadId,
+                identityRevalidated);
+        }
+    }
+
     private sealed class WorkItem
     {
         private readonly TaskCompletionSource<bool>
@@ -745,6 +907,7 @@ public sealed class UiAutomationProbeWorker :
             TimeSpan diagnosticHold,
             UiAutomationWorkKind kind,
             UiAutomationSnapshotBudgets? snapshotBudgets,
+            UiAutomationSemanticBudgets? semanticBudgets,
             CancellationToken cancellationToken)
         {
             RequestId = requestId;
@@ -756,6 +919,7 @@ public sealed class UiAutomationProbeWorker :
             DiagnosticHold = diagnosticHold;
             Kind = kind;
             SnapshotBudgets = snapshotBudgets;
+            SemanticBudgets = semanticBudgets;
             CancellationToken = cancellationToken;
         }
 
@@ -776,6 +940,8 @@ public sealed class UiAutomationProbeWorker :
         public UiAutomationWorkKind Kind { get; }
 
         public UiAutomationSnapshotBudgets? SnapshotBudgets { get; }
+
+        public UiAutomationSemanticBudgets? SemanticBudgets { get; }
 
         public CancellationToken CancellationToken { get; }
 
@@ -798,7 +964,8 @@ public sealed class UiAutomationProbeWorker :
             int? hresult,
             int workerThreadId,
             bool identityRevalidated,
-            UiAutomationStructuralSnapshot? snapshot = null)
+            UiAutomationStructuralSnapshot? snapshot = null,
+            UiAutomationSemanticSnapshot? semanticSnapshot = null)
         {
             return new UiAutomationProbeResult(
                 RequestId,
@@ -809,7 +976,8 @@ public sealed class UiAutomationProbeWorker :
                 hresult,
                 workerThreadId,
                 identityRevalidated,
-                snapshot);
+                snapshot,
+                semanticSnapshot);
         }
 
         public void MarkStarted()
@@ -824,6 +992,7 @@ public sealed class UiAutomationProbeWorker :
 
             if (!_completion.TrySetResult(result))
             {
+                result.SemanticSnapshot?.Dispose();
                 return;
             }
 
@@ -843,14 +1012,16 @@ public sealed class UiAutomationProbeWorker :
                 $"hresult={hresult} " +
                 $"workerThread={result.WorkerThreadId} " +
                 $"identityRevalidated={result.IdentityRevalidated} " +
-                $"snapshotProduced={result.Snapshot is not null}");
+                $"snapshotProduced={result.Snapshot is not null} " +
+                $"semanticProduced={result.SemanticSnapshot is not null}");
         }
     }
 
     private enum UiAutomationWorkKind
     {
         RootProbe,
-        StructuralSnapshot
+        StructuralSnapshot,
+        SemanticSnapshot
     }
 }
 

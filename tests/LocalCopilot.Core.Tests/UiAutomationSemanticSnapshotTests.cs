@@ -239,6 +239,52 @@ public sealed class UiAutomationSemanticSnapshotTests
     }
 
     [TestMethod]
+    public void SemanticNode_AllowsMultipleIndependentlyBoundedVisibleRanges()
+    {
+        UiAutomationSemanticBudgets budgets =
+            TinyBudgets(
+                maxStrings: 4,
+                maxVisibleTextRanges: 2);
+
+        UiAutomationSemanticBudgetTracker tracker =
+            new(budgets);
+
+        Assert.IsTrue(
+            tracker.TryReserveSelectedNode(TimeSpan.Zero));
+        Assert.IsTrue(tracker.TryReserveVisibleTextRange());
+        Assert.IsTrue(tracker.TryReserveVisibleTextRange());
+
+        using UiAutomationSemanticNode node =
+            SemanticNode(
+                [
+                    CreateValue(
+                        tracker,
+                        UiAutomationSemanticContentKind.Name,
+                        "Editor"),
+                    CreateValue(
+                        tracker,
+                        UiAutomationSemanticContentKind.Value,
+                        "Read only"),
+                    CreateValue(
+                        tracker,
+                        UiAutomationSemanticContentKind.VisibleText,
+                        "First"),
+                    CreateValue(
+                        tracker,
+                        UiAutomationSemanticContentKind.VisibleText,
+                        "Second")
+                ]);
+
+        Assert.AreEqual(4, node.Values.Count);
+        Assert.AreEqual(
+            2,
+            node.Values.Count(
+                value =>
+                    value.Kind ==
+                    UiAutomationSemanticContentKind.VisibleText));
+    }
+
+    [TestMethod]
     public void Dispose_ClearsPreviouslyExposedMemoryAndIsIdempotent()
     {
         DateTimeOffset captured = DateTimeOffset.UtcNow;

@@ -42,7 +42,8 @@ public enum UiAutomationSnapshotTruncation
     ResultByteLimit = 1 << 6,
     SelectedNodeLimit = 1 << 7,
     TextRangeLimit = 1 << 8,
-    StringCharacterLimit = 1 << 9
+    StringCharacterLimit = 1 << 9,
+    ProviderContentUnavailable = 1 << 10
 }
 
 public enum UiAutomationSnapshotView
