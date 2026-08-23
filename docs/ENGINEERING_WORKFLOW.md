@@ -119,7 +119,7 @@ The accepted M2.3 baseline `c29099a` had no automated tests. M2.4.1 added a port
 dotnet test .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj -c Release --settings .\tests\LocalCopilot.Core.Tests\.runsettings
 ```
 
-The M3.1 branch contains 91 deterministic tests for capability-based `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, `ChangeCorrelationService`, the one-shot `ApplicationLifecycleGate`, launch-scoped `DiagnosticSession` parsing/logging, `InputHookHealthMonitor`, UIA native-result classification, stale/latest-request publication gating, and the capacity-one latest-pending slot. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, live global hooks, live UI Automation providers, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build or the M3.1 physical provider matrix.
+The accepted M3.1 baseline contains 91 deterministic tests for capability-based `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, `ChangeCorrelationService`, the one-shot `ApplicationLifecycleGate`, launch-scoped `DiagnosticSession` parsing/logging, `InputHookHealthMonitor`, UIA native-result classification, stale/latest-request publication gating, and the capacity-one latest-pending slot. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, live global hooks, live UI Automation providers, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build or milestone-specific physical provider evidence.
 
 The CI workflow runs the core suite on both Ubuntu and Windows, then builds the packaged app as `Debug/win-x64` on Windows. Test-result artifacts are retained for failed as well as successful runs. Do not write “all tests passed” unless the relevant local/CI run is identified and actually passed; report build, test, CI, and physical runtime evidence as separate facts.
 
@@ -210,6 +210,8 @@ Required categories for a content-bearing asynchronous feature:
 A single happy-path screenshot is not acceptance.
 
 ### M3.1 physical matrix
+
+This matrix was accepted on 2026-08-23 at functional head `e48b067f1c13ee5ba211bcd36de663b30ca27246`. Keep it as the root-worker regression matrix when M3.2 expands UIA.
 
 Run `run-debug.ps1`, Arm once, and keep the generated bundle open until all cases are complete. For each external target, focus the target, return to LocalCopilot, and use the root-probe command; own-process foreground transitions are excluded, so the coordinator retains the last external epoch.
 

@@ -58,7 +58,7 @@ Read `docs/PRIVACY_MODEL.md` before adding any new source of content.
 ## Architecture discipline
 
 - Preserve the verified M2 sensing path unless a failing test or measured problem requires change.
-- M2.4 foundation hardening is complete. Begin semantic work only through the bounded M3.1 UIA capability/worker probe; do not skip directly to traversal, text extraction, OCR, or orchestration.
+- M2.4 foundation hardening and the M3.1 root-only UIA worker probe are complete. Expand semantics only through the bounded M3.2 structural-snapshot gate; do not skip directly to text extraction, OCR, or orchestration.
 - Keep Win32/WinRT/COM adapters behind narrow contracts; pure policy and event logic must be unit-testable without Windows interop.
 - UI code must not become the lifetime owner and orchestration implementation for new product services. M2.4.2 moved composition/lifecycle out of `MainPage`; preserve the application-owned coordinator boundary.
 - UI Automation calls belong on a dedicated COM MTA worker, never the WinUI thread. Scope traversal to the foreground HWND, use Control/Content views and property caching, and enforce node/depth/text/time budgets.
@@ -99,4 +99,4 @@ A milestone is complete only when all of the following are true:
 
 ## Current handoff
 
-The last verified functional code baseline is `cfcc4806b266bd8654fa93745783e8c8ae6b5b60`; accepted `main` is its PR #14 merge descendant `3925a34f7ddfcaca33fdeb3b78df403438a16bcc`. Branch `dev/m3-1-uia-worker-probe` contains an M3.1 root-only worker candidate: diagnostic-only `ReadUiStructure`, one active plus one latest pending request, dedicated COM MTA ownership, typed outcomes, integrity fail-closed behavior, and no property/text/traversal/action call. Treat it as unaccepted until CI and the physical Windows matrix pass. Do not expand it into M3.2/M3.3 while validation is open. Resolve live Git/PR state, then compare it with `docs/PROJECT_STATE.md` before working.
+The last verified functional code baseline is `e48b067f1c13ee5ba211bcd36de663b30ca27246`; PR #15 is its review/merge record. M3.1 accepts diagnostic-only `ReadUiStructure`, one active plus one latest pending request, dedicated COM MTA ownership, typed outcomes, integrity fail-closed behavior, and no property/text/traversal/action call. The only approved next branch is `dev/m3-2-bounded-structural-snapshot`: define explicit budgets and a non-text structural contract before expanding UIA interop. Resolve live Git/PR state, then compare it with `docs/PROJECT_STATE.md` before working.

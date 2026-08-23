@@ -1,7 +1,8 @@
 # ADR 0007: Root-only UIA probe on an application-owned COM MTA worker
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-21
+- Accepted: 2026-08-23
 - Supersedes: none
 
 ## Context
@@ -43,6 +44,14 @@ For M3.1 only:
 - Pure queue, HRESULT-classification, privacy-separation, and stale-publication logic remains portable and deterministic.
 - A manual ABI surface is acceptable only while it stays this small. Any expansion to cache requests, element properties, traversal, subscriptions, or patterns must reevaluate CsWin32/generated interop before proceeding.
 - The platform timeouts bound expected provider failures but are not a hard process-isolation guarantee. M3.1 requires physical timeout/recovery and teardown evidence; M3.4 decides whether continuous UIA needs a restartable helper process.
+
+## Verification
+
+- [PR #15](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/15) is the implementation/review record at validated functional head `e48b067f1c13ee5ba211bcd36de663b30ca27246`.
+- [CI run #22](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32633213008) passed 91 deterministic tests on Ubuntu and Windows, Windows PowerShell parsing, and the strict packaged Windows build.
+- Physical session `cefae151-90c8-4d52-a94c-a445ef39e55b` proved classic, browser, and packaged roots; deny-before-queue; same-worker deadline recovery; rapid context transitions; MTA ownership; and joined teardown.
+- Physical session `6db7d86a-526f-421d-a729-befd76fff088` proved a non-elevated runner, higher-integrity fail-closed RID comparison, deterministic pending replacement/stale publication, and joined disposal while work was active.
+- Both whitelisted bundles passed the prohibited-content scan; no UIA property, tree, text, input content, pixel payload, prompt, or response was recorded.
 
 ## References
 

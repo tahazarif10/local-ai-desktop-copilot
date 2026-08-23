@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 560" role="img" aria-labelledby="title desc">
   <title id="title">Local AI Desktop Copilot visual overview</title>
-  <desc id="desc">A privacy-first Windows client connected only to a local AI server, with no cloud path.</desc>
+  <desc id="desc">A privacy-first Windows client with verified sensing and a root-only UIA worker, connected only to a planned local AI server with no cloud path. The active gate is a bounded structural snapshot.</desc>
   <defs>
     <linearGradient id="heroBg" x1="0" y1="0" x2="1600" y2="560" gradientUnits="userSpaceOnUse">
       <stop stop-color="#07111F"/>
@@ -62,7 +62,7 @@
     <circle cx="30" cy="29" r="9" fill="#FBBF24"/>
     <circle cx="30" cy="29" r="16" fill="#FBBF24" opacity="0.15"/>
     <text x="56" y="24" fill="#FDE68A" font-size="16" font-weight="700" letter-spacing="2.3">CURRENT GATE</text>
-    <text x="56" y="45" fill="#FFF7D6" font-size="19" font-weight="700">M2.4 • Foundation Hardening</text>
+    <text x="56" y="45" fill="#FFF7D6" font-size="19" font-weight="700">M3.2 • Bounded Structure</text>
   </g>
 
   <g transform="translate(840 80)">
@@ -86,7 +86,7 @@
       <rect x="86" width="84" height="35" rx="11" fill="#171F42" stroke="#818CF8" stroke-opacity="0.42"/>
       <text x="128" y="24" text-anchor="middle" class="micro">EPOCH</text>
       <rect x="184" width="84" height="35" rx="11" fill="#171833" stroke="#C084FC" stroke-opacity="0.42"/>
-      <text x="226" y="24" text-anchor="middle" class="micro">CHANGE</text>
+      <text x="226" y="24" text-anchor="middle" class="micro">UIA</text>
     </g>
     <text x="146" y="329" text-anchor="middle" fill="#6EE7B7" font-size="17" font-weight="700">IDENTITY → POLICY → CONTENT</text>
   </g>
@@ -135,7 +135,7 @@
     <text x="240" y="32" fill="#D5F1FE" font-size="20" font-weight="700">RAM-ONLY PIXELS</text>
     <path d="M456 14V36" stroke="#2E4365"/>
     <circle cx="486" cy="25" r="7" fill="#A78BFA"/>
-    <text x="506" y="31" fill="#ECE7FF" font-size="16" font-weight="700">READ-ONLY UIA • NEXT</text>
+    <text x="506" y="31" fill="#ECE7FF" font-size="16" font-weight="700">UIA ROOT • VERIFIED</text>
   </g>
 
   <rect x="1" y="1" width="1598" height="558" rx="33" fill="none" stroke="#DCEBFF" stroke-opacity="0.1" stroke-width="2"/>

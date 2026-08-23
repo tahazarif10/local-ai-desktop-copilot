@@ -104,7 +104,7 @@ Decision: keep the measured synchronous diagnostic-only hooks. Reconsider a dedi
 
 UI Automation is a semantic source, not an automation/action feature.
 
-### ▶ M3.1 UIA capability and worker probe
+### ✅ M3.1 UIA capability and worker probe
 
 - Resolve the foreground root element from its HWND only after the capability privacy gate.
 - Run all UIA calls on a dedicated COM MTA worker, never the WinUI thread.
@@ -114,7 +114,7 @@ UI Automation is a semantic source, not an automation/action feature.
 
 Acceptance includes accessible Win32/WinUI/browser targets, an inaccessible target, rapid window switches, timeout/recovery, and clean worker teardown.
 
-Implementation candidate on `dev/m3-1-uia-worker-probe`:
+Accepted implementation on `dev/m3-1-uia-worker-probe`:
 
 - Product defaults keep `ReadUiStructure` denied; an expiring diagnostic launch grants structure without granting UIA text.
 - A lazy application-owned thread initializes COM as MTA and owns `CUIAutomation8`, every returned root pointer, and final release.
@@ -122,15 +122,19 @@ Implementation candidate on `dev/m3-1-uia-worker-probe`:
 - The queue permits one executing request plus one coalesced newest pending request. Replaced work completes as `Cancelled/Superseded`.
 - HWND/PID is revalidated immediately before UIA; targets above the client integrity level fail closed as `Unavailable/HigherIntegrity`.
 - Only typed outcome, reason, timing, HRESULT, worker-thread ID, and identity-check metadata leave the worker. No property, text, tree, pattern, or action call is in scope.
-- Portable tests cover the result classifier, publication gate, capability separation, and bounded pending slot. Windows CI and the physical acceptance matrix are still required before this milestone can become complete.
+- Portable tests cover the result classifier, publication gate, capability separation, and bounded pending slot.
 
-### M3.2 Bounded structural snapshot
+Accepted evidence: [PR #15](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/15), 91 deterministic tests on Ubuntu/Windows, Windows PowerShell parsing, strict `Debug/win-x64 --warnaserror` build, and two physical Windows sessions proving classic/packaged/browser roots, privacy denial before queueing, higher-integrity fail-closed behavior from a non-elevated runner, same-worker deadline recovery, deterministic latest-wins/stale publication, and joined teardown during active work. Both bundles passed the prohibited-content scan.
+
+### ▶ M3.2 Bounded structural snapshot
 
 - Traverse only the foreground HWND subtree.
 - Prefer Control View; use Content View for user-relevant content; never default to the unbounded Raw View.
 - Batch properties through UIA caching to reduce cross-process calls.
 - Enforce explicit budgets for nodes, depth, elapsed time, string count/bytes, and result size.
 - Initially collect structural metadata and pattern availability; raw text remains out of logs.
+- Reevaluate CsWin32/generated interop before expanding the narrow manual ABI accepted only for M3.1.
+- Preserve one-active/one-latest backpressure, current epoch/capability publication, same-worker COM release, typed unavailable/timeout outcomes, and deterministic teardown.
 
 ### M3.3 Semantic UI snapshot
 

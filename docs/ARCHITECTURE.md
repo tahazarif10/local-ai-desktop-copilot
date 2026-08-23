@@ -242,11 +242,11 @@ UIA is read-only and starts at M3. It must:
 - never call action methods or control patterns that mutate target UI;
 - not request elevation or `uiAccess`.
 
-The M3.1 candidate intentionally implements less than the later semantic reader: it performs only `ElementFromHandle` and immediately releases the returned root pointer without requesting any property, child, cache, view, pattern, Name, Value, or Text. The call is admitted only after `ReadUiStructure`, runs on a lazy application-owned thread explicitly initialized as COM MTA, and publishes only a typed metadata result after a second current-epoch/capability check. `CUIAutomation8`/`IUIAutomation2` supplies 1.5-second connection and transaction timeouts inside a 2.5-second request deadline. One request may execute while one newest request waits; a newer pending request cancels the older pending request as superseded.
+The accepted M3.1 implementation intentionally provides less than the later semantic reader: it performs only `ElementFromHandle` and immediately releases the returned root pointer without requesting any property, child, cache, view, pattern, Name, Value, or Text. The call is admitted only after `ReadUiStructure`, runs on a lazy application-owned thread explicitly initialized as COM MTA, and publishes only a typed metadata result after a second current-epoch/capability check. `CUIAutomation8`/`IUIAutomation2` supplies 1.5-second connection and transaction timeouts inside a 2.5-second request deadline. One request may execute while one newest request waits; a newer pending request cancels the older pending request as superseded.
 
 The worker also revalidates HWND/PID and fail-closes if the target token cannot be inspected or has a higher integrity level than the client. The manifest remains without `uiAccess`; the app never elevates or attempts secure-desktop access. Every COM interface pointer is created, used, and released on the worker before a result crosses the boundary.
 
-UIA properties are cross-process calls and providers vary in quality. `CancellationToken` alone cannot be assumed to interrupt a blocked COM call. The platform timeout makes the M3.1 probe bounded under expected provider failures, but physical timeout/recovery evidence is still required. M3.4 must decide whether continuous UIA needs a restartable helper process; M3.1 does not create that process speculatively.
+UIA properties are cross-process calls and providers vary in quality. `CancellationToken` alone cannot be assumed to interrupt a blocked COM call. M3.1 physically validated forced deadline/recovery on the same worker and joined teardown during active work; this is sufficient for the manual root probe but not a guarantee against every hostile provider. M3.4 must decide whether continuous UIA needs a restartable helper process from measured evidence; M3.1 does not create that process speculatively.
 
 ### 6.8 OCR and visual fallback
 
@@ -354,7 +354,7 @@ LocalCopilot.Inference.Server   local endpoint, resource manager, runtime adapte
 *.Tests                         pure, contract, and Windows integration suites
 ```
 
-M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, and M2.4.4 hardened diagnostics/input evidence. M3.1 may introduce only the smallest UIA worker boundary required by its probe; later milestones must not create all future projects at once.
+M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, M2.4.4 hardened diagnostics/input evidence, and M3.1 accepted the smallest UIA worker boundary through a root-only probe. M3.2 may extend that boundary only for a budgeted non-text structural snapshot; later milestones must not create all future projects at once.
 
 ## 8. Threading and lifecycle model
 
