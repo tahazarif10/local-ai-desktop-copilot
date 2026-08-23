@@ -128,7 +128,7 @@ Accepted evidence: [PR #15](https://github.com/tahazarif10/local-ai-desktop-copi
 
 ### ✅ M3.2 Bounded structural snapshot
 
-- Runtime accepted on `dev/m3-2-bounded-structural-snapshot` at functional head `e1a50741580379f0f65c80e212f04c449e5a8c9b`; [PR #16](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/16) remains unmerged until explicitly authorized.
+- Runtime accepted on `dev/m3-2-bounded-structural-snapshot` at functional head `e1a50741580379f0f65c80e212f04c449e5a8c9b`; [PR #16](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/16) squash-merged the accepted tree as `be0a437ddbe09fc2a9830a9b10da56f83a8051d9`.
 - Traverse only the foreground HWND subtree breadth-first through Control View. Cache `IsContentElement` for the user-relevant Content subset; never use Raw View or an unbounded descendant query.
 - Batch exactly 27 non-text Boolean/numeric properties through an Element-scope UIA cache request. Pattern availability is metadata only; never obtain or invoke a pattern object.
 - Enforce immutable defaults of 256 nodes, depth 8, 1,200 ms traversal, 27 values per node / 6,912 total, zero strings/bytes, and 32 KiB estimated result. Report every reached boundary with truncation flags.
@@ -140,7 +140,7 @@ Accepted evidence: [CI run #28](https://github.com/tahazarif10/local-ai-desktop-
 
 ### ▶ M3.3 Semantic UI snapshot
 
-- Begin with a privacy/content-bounds design on `dev/m3-3-semantic-ui-snapshot` after PR #16 merges; structure acceptance does not authorize text.
+- Begin with a privacy/content-bounds design on `dev/m3-3-semantic-ui-snapshot`; structure acceptance does not authorize text.
 - Add a separately authorized `ReadUiText` path for Name/Value/Text only from selected nodes in the already bounded structure.
 - Fix independent string-count, UTF-8-byte, elapsed-time, result-size, and expiry budgets before live provider reads; keep content RAM-only and absent from logs, persistence, and implicit server egress.
 - Normalize focus, dialog/window, control type, enabled/off-screen state, bounding rectangle, and read-only pattern facts without widening the accepted structural traversal.
