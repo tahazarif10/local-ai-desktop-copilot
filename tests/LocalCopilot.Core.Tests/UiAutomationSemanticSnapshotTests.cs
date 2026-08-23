@@ -343,6 +343,39 @@ public sealed class UiAutomationSemanticSnapshotTests
                 TimeSpan.Zero));
     }
 
+    [TestMethod]
+    public void Snapshot_RejectsPasswordOrNonContentSelectedNode()
+    {
+        DateTimeOffset captured = DateTimeOffset.UtcNow;
+        UiAutomationSemanticBudgets budgets = TinyBudgets();
+        int estimatedBytes =
+            UiAutomationSemanticSizeEstimator.EstimateBytes(1, 0, 0);
+
+        Assert.ThrowsExactly<ArgumentException>(
+            () => new UiAutomationSemanticSnapshot(
+                1,
+                captured,
+                captured + budgets.TimeToLive,
+                [SemanticNode([], isPassword: true)],
+                budgets,
+                UiAutomationSnapshotTruncation.None,
+                visibleTextRangeCount: 0,
+                estimatedBytes,
+                TimeSpan.Zero));
+
+        Assert.ThrowsExactly<ArgumentException>(
+            () => new UiAutomationSemanticSnapshot(
+                1,
+                captured,
+                captured + budgets.TimeToLive,
+                [SemanticNode([], isContentElement: false)],
+                budgets,
+                UiAutomationSnapshotTruncation.None,
+                visibleTextRangeCount: 0,
+                estimatedBytes,
+                TimeSpan.Zero));
+    }
+
     private static UiAutomationSemanticBudgets TinyBudgets(
         int maxSelectedNodes = 1,
         int maxStrings = 1,
@@ -381,20 +414,24 @@ public sealed class UiAutomationSemanticSnapshotTests
 
     private static UiAutomationSemanticNode SemanticNode(
         IEnumerable<UiAutomationSemanticValue> values,
+        bool isContentElement = true,
+        bool isPassword = false,
         bool isOffscreen = false) =>
         new(
             structuralIndex: 1,
             parentStructuralIndex: 0,
             depth: 1,
             controlTypeId: 50004,
-            UiAutomationRectangle.Empty,
+            bounds: UiAutomationRectangle.Empty,
             hasKeyboardFocus: false,
             isEnabled: true,
-            isOffscreen,
+            isContentElement: isContentElement,
+            isPassword: isPassword,
+            isOffscreen: isOffscreen,
             isWindow: false,
             isDialog: false,
             isReadOnly: true,
-            values);
+            values: values);
 
     private static UiAutomationStructuralNode StructuralNode(
         int index,

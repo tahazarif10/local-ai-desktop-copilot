@@ -752,6 +752,13 @@ internal sealed class UiAutomationNativeClient : IDisposable
                     structuralNodes,
                     budgets.MaxSelectedNodes);
 
+        if (structuralNodes.Count(
+                UiAutomationSemanticCandidateSelector.IsEligible) >
+            selectedIndexes.Count)
+        {
+            tracker.MarkSelectedNodeLimit();
+        }
+
         List<UiAutomationSemanticNode> semanticNodes =
             new(capacity: selectedIndexes.Count);
 
@@ -800,6 +807,7 @@ internal sealed class UiAutomationNativeClient : IDisposable
 
                     if (structural.AvailablePatterns.HasFlag(
                             UiAutomationPatternAvailability.Text) &&
+                        tracker.CanReadAnotherString() &&
                         tracker.MayContinue(Elapsed()) &&
                         !cancellationRequested())
                     {
@@ -812,10 +820,16 @@ internal sealed class UiAutomationNativeClient : IDisposable
                             cancellationRequested);
                     }
 
-                    bool isDialog =
-                        TryReadIsDialog(
-                            element,
-                            tracker);
+                    bool isDialog = false;
+
+                    if (tracker.MayContinue(Elapsed()) &&
+                        !cancellationRequested())
+                    {
+                        isDialog =
+                            TryReadIsDialog(
+                                element,
+                                tracker);
+                    }
 
                     UiAutomationSemanticNode semanticNode =
                         new(
@@ -826,13 +840,15 @@ internal sealed class UiAutomationNativeClient : IDisposable
                             structural.Bounds,
                             structural.HasKeyboardFocus,
                             structural.IsEnabled,
+                            structural.IsContentElement,
+                            structural.IsPassword,
                             structural.IsOffscreen,
                             isWindow:
                                 structural.ControlTypeId ==
                                 WindowControlTypeId,
-                            isDialog,
-                            isReadOnly,
-                            values);
+                            isDialog: isDialog,
+                            isReadOnly: isReadOnly,
+                            values: values);
 
                     semanticNodes.Add(semanticNode);
                     nodeOwnsValues = true;

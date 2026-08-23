@@ -154,6 +154,36 @@ public sealed class UiAutomationProbeWorker :
             semanticBudgets: null);
     }
 
+    internal UiAutomationProbeOperation
+        CaptureSemanticSnapshotForDiagnostics(
+            ContextEpoch epoch,
+            TimeSpan timeout,
+            TimeSpan diagnosticHold,
+            UiAutomationSnapshotBudgets? structuralBudgets = null,
+            UiAutomationSemanticBudgets? semanticBudgets = null)
+    {
+        ValidateDiagnosticHold(diagnosticHold);
+
+        UiAutomationSnapshotBudgets effectiveStructuralBudgets =
+            structuralBudgets ??
+            UiAutomationSnapshotBudgets.M3_2Default;
+
+        UiAutomationSemanticBudgets effectiveSemanticBudgets =
+            semanticBudgets ??
+            UiAutomationSemanticBudgets.M3_3Default;
+
+        effectiveStructuralBudgets.ValidateForNonTextSnapshot();
+        effectiveSemanticBudgets.Validate();
+
+        return ProbeCore(
+            epoch,
+            timeout,
+            diagnosticHold,
+            UiAutomationWorkKind.SemanticSnapshot,
+            effectiveStructuralBudgets,
+            effectiveSemanticBudgets);
+    }
+
     private static void ValidateDiagnosticHold(
         TimeSpan diagnosticHold)
     {

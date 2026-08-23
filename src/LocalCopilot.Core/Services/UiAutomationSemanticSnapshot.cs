@@ -351,6 +351,12 @@ public sealed class UiAutomationSemanticBudgetTracker
             UiAutomationSnapshotTruncation.ProviderContentUnavailable;
     }
 
+    public void MarkSelectedNodeLimit()
+    {
+        _truncation |=
+            UiAutomationSnapshotTruncation.SelectedNodeLimit;
+    }
+
     public bool TryReserveSelectedNode(TimeSpan elapsed)
     {
         if (elapsed < TimeSpan.Zero)
@@ -660,6 +666,8 @@ public sealed class UiAutomationSemanticNode : IDisposable
         UiAutomationRectangle bounds,
         bool hasKeyboardFocus,
         bool isEnabled,
+        bool isContentElement,
+        bool isPassword,
         bool isOffscreen,
         bool isWindow,
         bool isDialog,
@@ -688,6 +696,7 @@ public sealed class UiAutomationSemanticNode : IDisposable
         UiAutomationSemanticValue[] copied = values.ToArray();
 
         if (copied.Any(value => value is null) ||
+            copied.Any(value => value.Content.IsDisposed) ||
             copied
                 .Where(value =>
                     value.Kind !=
@@ -707,6 +716,8 @@ public sealed class UiAutomationSemanticNode : IDisposable
         Bounds = bounds;
         HasKeyboardFocus = hasKeyboardFocus;
         IsEnabled = isEnabled;
+        IsContentElement = isContentElement;
+        IsPassword = isPassword;
         IsOffscreen = isOffscreen;
         IsWindow = isWindow;
         IsDialog = isDialog;
@@ -727,6 +738,10 @@ public sealed class UiAutomationSemanticNode : IDisposable
     public bool HasKeyboardFocus { get; }
 
     public bool IsEnabled { get; }
+
+    public bool IsContentElement { get; }
+
+    public bool IsPassword { get; }
 
     public bool IsOffscreen { get; }
 
@@ -792,7 +807,13 @@ public sealed class UiAutomationSemanticSnapshot : IDisposable
 
         if (copiedNodes.Any(node => node is null) ||
             copiedNodes.Length > budgets.MaxSelectedNodes ||
-            copiedNodes.Any(node => node.IsOffscreen) ||
+            copiedNodes.Any(
+                node =>
+                    !node.IsContentElement ||
+                    node.IsPassword ||
+                    node.IsOffscreen ||
+                    node.Values.Any(
+                        value => value.Content.IsDisposed)) ||
             copiedNodes.Select(node => node.StructuralIndex).Distinct().Count() !=
                 copiedNodes.Length)
         {
