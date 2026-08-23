@@ -10,6 +10,7 @@ public sealed record DesktopCopilotViewState(
     string CapturedFrameStatus,
     string ChangeDetectionStatus,
     string PersistentChangeStatus,
+    string UiAutomationProbeStatus,
     string OrchestratorStatus)
 {
     public static DesktopCopilotViewState Initial { get; } =
@@ -23,6 +24,7 @@ public sealed record DesktopCopilotViewState(
             "Not captured",
             "No change samples yet",
             "Stopped",
+            "Not probed",
             "OFF");
 }
 

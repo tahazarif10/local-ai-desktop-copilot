@@ -119,7 +119,7 @@ The accepted M2.3 baseline `c29099a` had no automated tests. M2.4.1 added a port
 dotnet test .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj -c Release --settings .\tests\LocalCopilot.Core.Tests\.runsettings
 ```
 
-The suite currently contains 68 deterministic tests for capability-based `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, `ChangeCorrelationService`, the one-shot `ApplicationLifecycleGate`, launch-scoped `DiagnosticSession` parsing/logging, and `InputHookHealthMonitor`. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, live global hooks, UI Automation, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build above.
+The M3.1 branch contains 91 deterministic tests for capability-based `PrivacyPolicy`, `ContextEpochManager`, `ChangeDetector`, `DiagnosticTimeline`, `ChangeCorrelationService`, the one-shot `ApplicationLifecycleGate`, launch-scoped `DiagnosticSession` parsing/logging, `InputHookHealthMonitor`, UIA native-result classification, stale/latest-request publication gating, and the capacity-one latest-pending slot. The runsettings file makes zero discovered tests a hard failure. The suite must remain free of WGC, live global hooks, live UI Automation providers, XAML, and a live desktop. A passing core suite does not replace the canonical Windows app build or the M3.1 physical provider matrix.
 
 The CI workflow runs the core suite on both Ubuntu and Windows, then builds the packaged app as `Debug/win-x64` on Windows. Test-result artifacts are retained for failed as well as successful runs. Do not write “all tests passed” unless the relevant local/CI run is identified and actually passed; report build, test, CI, and physical runtime evidence as separate facts.
 
@@ -207,6 +207,23 @@ Required categories for a content-bearing asynchronous feature:
 - relevant prior-milestone regression.
 
 A single happy-path screenshot is not acceptance.
+
+### M3.1 physical matrix
+
+Run `run-debug.ps1`, Arm once, and keep the generated bundle open until all cases are complete. For each external target, focus the target, return to LocalCopilot, and use the root-probe command; own-process foreground transitions are excluded, so the coordinator retains the last external epoch.
+
+Required cases:
+
+1. **Classic Win32:** a non-elevated classic process such as a standalone PowerShell console or another known Win32 window returns `Available/RootResolved`.
+2. **WinUI/packaged UI:** Calculator or another non-elevated packaged Windows UI returns `Available/RootResolved`.
+3. **Browser:** the normal non-elevated Chrome window returns `Available/RootResolved`.
+4. **Privacy deny:** diagnostic Notepad returns `Unavailable/CapabilityDenied` and produces no `UIA.QUEUE`/native probe for that epoch.
+5. **Integrity deny:** an explicitly elevated target returns `Unavailable/HigherIntegrity` or `Unavailable/AccessInspectionFailed`; the manifest/process remains non-elevated and without `uiAccess`.
+6. **Deterministic deadline/recovery:** on an allowed epoch, click `Force timeout, then retry normal probe`; first observe `Timeout/DeadlineExpired`, then immediately run the normal probe and observe `Available/RootResolved` on the same worker thread. This validates the request deadline/recovery path; it is not evidence that every hostile provider is interruptible.
+7. **Rapid transitions:** switch among allowed, denied, and own windows while issuing multiple probes. Raw `UIA.REQUEST_COMPLETE` records may show a replaced pending request as `Cancelled/Superseded`; final `UIA.PROBE_RESULT` converts any non-latest or no-longer-current completion to `Stale/PublicationRejected`. No prior target result may render as current.
+8. **Teardown:** close while a probe is active or immediately after repeated probes. Require one `UIA.WORKER_STOP` and `UIA.WORKER_DISPOSE` with `joined=True`, plus the existing clean sensing/input/foreground/coordinator teardown.
+
+All successful native probes must use one nonzero worker managed-thread ID distinct from the UI log thread, and `UIA.WORKER_START` must report `apartment=MTA`. The bundle must contain no title text, UIA Name/Value/Text, control value, tree/property data, key/text value, coordinate, clipboard content, pixel payload, prompt, or response.
 
 ## 8. Performance evidence
 

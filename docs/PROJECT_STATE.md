@@ -17,7 +17,7 @@ The implementation at `cfcc4806b266bd8654fa93745783e8c8ae6b5b60` is the accepted
 
 There is no known blocking defect in the accepted M2 sensing path or the completed M2.4 foundation-hardening gate. No rework is required unless a reproducible regression appears.
 
-The repository is not yet a complete copilot. It is a hardened diagnostic WinUI shell around the sensing foundation. The next implementation work is M3.1: a read-only UIA capability and dedicated COM MTA worker probe, before bounded traversal or semantic text collection.
+The repository is not yet a complete copilot. It is a hardened diagnostic WinUI shell around the sensing foundation. Branch `dev/m3-1-uia-worker-probe` now contains an M3.1 implementation candidate, but M3.1 remains incomplete until CI and the physical Windows provider/timeout/lifecycle matrix pass. Bounded traversal and semantic text collection remain later milestones.
 
 ## Accepted milestone evidence
 
@@ -102,6 +102,20 @@ The behavior-bearing code was validated at PR #14 head `cfcc4806b266bd8654fa9374
 
 Verdict: **accepted**. PR #14 is the review/merge record. M2.4 is complete; M3.1 is the only approved next implementation gate.
 
+## M3.1 implementation candidate — not yet accepted
+
+The feature branch adds the smallest root-only UIA execution boundary required by the roadmap:
+
+- `ReadUiStructure` remains denied by product defaults and is granted without `ReadUiText` only by a validated expiring diagnostic launch.
+- `DesktopCopilotCoordinator` gates before queueing and applies a current epoch/capability publication gate after completion.
+- `UiAutomationProbeWorker` starts lazily, owns one dedicated COM MTA thread, and permits one active plus one coalesced newest pending request.
+- The worker revalidates HWND/PID, rejects unreadable or higher-integrity targets before UIA, creates `CUIAutomation8` as `IUIAutomation2`, configures 1.5-second native connection/transaction timeouts, and applies a 2.5-second normal end-to-end deadline. A separate diagnostic command forces an expired request so typed timeout and immediate same-worker recovery can be observed deterministically.
+- `ElementFromHandle` is the only UIA operation. The root pointer is released on the worker and no UIA object, property, text, tree node, pattern, or action crosses the apartment.
+- Outcomes are typed as `Available`, `Unavailable`, `Timeout`, `Cancelled`, `Stale`, or `Faulted`; diagnostics contain only reason/timing/HRESULT/thread/identity metadata.
+- The portable suite grows from the accepted 68-test baseline to 91 candidate tests, adding capability separation, HRESULT classification, stale/latest-request publication, and bounded latest-pending replacement coverage.
+
+This section describes branch contents, not acceptance evidence. Do not change `completed_through`, `reference_code_commit`, or the accepted milestone table until the strict Windows build, Ubuntu/Windows tests, physical Win32/WinUI/browser/inaccessible matrix, rapid-switch stale behavior, timeout recovery, privacy scan, and clean worker teardown are verified.
+
 ## Current implementation map
 
 ### Current stack
@@ -111,9 +125,10 @@ Verdict: **accepted**. PR #14 is the review/merge record. M2.4 is complete; M3.1
 | Language/runtime | C# on .NET 10 | `net10.0-windows10.0.26100.0` |
 | Desktop UI | Packaged WinUI 3 | `Microsoft.WindowsAppSDK` 2.4.0 |
 | Portable logic | `LocalCopilot.Core` class library | `net10.0`; no WinUI/Windows API dependency |
-| Characterization tests | MSTest 4.3.3 | 68 deterministic tests; 68/68 passed on both CI runners at the accepted M2.4.4 baseline |
+| Characterization tests | MSTest 4.3.3 | Accepted M2.4.4 baseline: 68/68; M3.1 branch candidate: 91 tests pending recorded CI evidence |
 | Continuous integration | GitHub Actions | [PR #14 code-head run](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32500012379) passed 68 core tests on Ubuntu/Windows, Windows PowerShell parsing, and the strict `Debug/win-x64` app build |
 | Capture/image interop | Windows Graphics Capture + Win2D | `Microsoft.Graphics.Win2D` 1.4.0 |
+| UIA interop candidate | Direct minimal `CUIAutomation8`/`IUIAutomation2` ABI inside `LocalCopilot.App` | Root-only manual probe; no extra runtime package/process; Windows CI and physical evidence required |
 | Packaging/trust | MSIX tooling, full-trust desktop app | Development package identity used by `dotnet run` |
 | Canonical validated target | `Debug`, `win-x64` | Physical Windows client acceptance |
 | Declared OS minimum | Windows build 17763 | Declaration only; it is not broad runtime-support evidence |
@@ -187,9 +202,9 @@ The `systemAIModels` manifest capability is present, but no Windows AI model API
 
 ### Must be resolved before M3 continuous semantic sensing
 
-M2.4.1 through M2.4.4 resolved the characterization/CI, ownership/lifecycle, capability-privacy, diagnostic-session, exception-redaction, and input-measurement findings. M3.1 now begins with one required execution boundary:
+M2.4.1 through M2.4.4 resolved the characterization/CI, ownership/lifecycle, capability-privacy, diagnostic-session, exception-redaction, and input-measurement findings. M3.1 now has one implementation candidate whose runtime evidence is still required:
 
-1. **No UIA execution boundary exists yet.** Official Windows guidance requires UIA client calls on a separate COM MTA worker, not the UI thread. M3.1 must establish capability gating, typed outcomes, deadlines, provider-hang recovery evidence, and clean worker teardown before traversal or text collection.
+1. **The UIA boundary is implemented but unaccepted.** It follows official Windows guidance with a separate COM MTA worker, typed outcomes, platform/request deadlines, latest-wins pending work, and same-worker COM release. CI must validate the ABI/build and physical testing must prove accessible/inaccessible providers, stale rejection, timeout recovery, and clean teardown before traversal or text collection.
 
 ### Important hardening debt
 
@@ -217,7 +232,7 @@ The next implementation branch is:
 dev/m3-1-uia-worker-probe
 ```
 
-M2.4.4 is accepted through PR #14 and completes foundation hardening. M3.1 must add the `ReadUiStructure` capability gate at the call boundary and probe foreground-HWND root resolution on a dedicated COM MTA worker with typed outcomes, deadlines, stale-result rejection, inaccessible-target handling, recovery, and deterministic teardown.
+M2.4.4 is accepted through PR #14 and completes foundation hardening. The M3.1 branch implements the `ReadUiStructure` call gate and foreground-HWND root probe on a dedicated COM MTA worker with typed outcomes, deadlines, stale-result rejection, integrity fail-closed behavior, and deterministic teardown. The immediate gate is now validation, not additional feature scope.
 
 Do not add bounded traversal, UIA text retention, OCR, action patterns, elevation/`uiAccess`, or continuous semantic orchestration in M3.1.
 

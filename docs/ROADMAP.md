@@ -114,6 +114,16 @@ UI Automation is a semantic source, not an automation/action feature.
 
 Acceptance includes accessible Win32/WinUI/browser targets, an inaccessible target, rapid window switches, timeout/recovery, and clean worker teardown.
 
+Implementation candidate on `dev/m3-1-uia-worker-probe`:
+
+- Product defaults keep `ReadUiStructure` denied; an expiring diagnostic launch grants structure without granting UIA text.
+- A lazy application-owned thread initializes COM as MTA and owns `CUIAutomation8`, every returned root pointer, and final release.
+- `IUIAutomation2` connection/transaction timeouts are 1.5 seconds; the normal end-to-end request deadline is 2.5 seconds. A diagnostic command forces an already-expired request, then requires a normal retry, to prove typed deadline/recovery deterministically without pretending to simulate every hostile provider.
+- The queue permits one executing request plus one coalesced newest pending request. Replaced work completes as `Cancelled/Superseded`.
+- HWND/PID is revalidated immediately before UIA; targets above the client integrity level fail closed as `Unavailable/HigherIntegrity`.
+- Only typed outcome, reason, timing, HRESULT, worker-thread ID, and identity-check metadata leave the worker. No property, text, tree, pattern, or action call is in scope.
+- Portable tests cover the result classifier, publication gate, capability separation, and bounded pending slot. Windows CI and the physical acceptance matrix are still required before this milestone can become complete.
+
 ### M3.2 Bounded structural snapshot
 
 - Traverse only the foreground HWND subtree.

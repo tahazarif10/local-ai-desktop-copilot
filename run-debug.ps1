@@ -161,7 +161,7 @@ try {
 LOCALCOPILOT LIVE DIAGNOSTIC SESSION
 =================================================
 Schema: 1
-Milestone: M2.4.4
+Milestone: M3.1
 Session ID: $($sessionId.ToString("D"))
 Session Start UTC: $($sessionStartUtc.ToString("o"))
 Branch: $branch
@@ -185,7 +185,7 @@ $gitStatus
 
     Write-Host ""
     Write-Host "=============================================="
-    Write-Host "NEW M2.4.4 DIAGNOSTIC SESSION"
+    Write-Host "NEW M3.1 DIAGNOSTIC SESSION"
     Write-Host "=============================================="
     Write-Host "Session: $($sessionId.ToString("D"))"
     Write-Host "Directory:"

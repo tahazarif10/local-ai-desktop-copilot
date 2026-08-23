@@ -33,19 +33,20 @@
 This is a product-grade system, not a screenshot-to-LLM demo. It uses the smallest useful local context, escalates from cheap sensing to richer semantics only when required, and treats privacy as a control-plane boundary.
 
 > [!IMPORTANT]
-> The repository currently contains a validated sensing foundation and diagnostic UI. It does **not** yet contain UI Automation understanding, OCR, memory, model inference, voice, autonomous actions, or a production privacy-settings UI.
+> The accepted baseline contains a validated sensing foundation and diagnostic UI. The M3.1 feature branch adds only a manual, metadata-only UI Automation root-availability probe; it does **not** yet contain UIA traversal/text understanding, OCR, memory, model inference, voice, autonomous actions, or a production privacy-settings UI.
 
 ## Project status in 60 seconds
 
 | Item | Current truth |
 | --- | --- |
 | Last verified functional code baseline | `cfcc4806b266bd8654fa93745783e8c8ae6b5b60` (later documentation-only or merge commits may be descendants) |
+| Live accepted `main` merge | `3925a34f7ddfcaca33fdeb3b78df403438a16bcc` (`M2.4.4`, PR #14) |
 | Baseline date | 2026-08-21 (Windows runtime acceptance) |
 | Completed | Foreground context, RAM-only capture, capability privacy/epochs, low-resolution change detection, persistent latest-wins capture, sensing orchestration, diagnostic input correlation, portable core characterization/CI, application-owned composition/lifecycle, and launch-scoped diagnostics/input-hook hardening |
-| Current implementation shape | One packaged WinUI 3 process split into a Windows/UI app assembly and a portable core assembly; `App` owns a composition root/coordinator; screen observation is truly Off until Arm; capabilities are independent; diagnostics require an expiring launch token and an isolated session |
-| Next implementation milestone | `M3.1 UIA Capability and Worker Probe` on `dev/m3-1-uia-worker-probe` |
+| Current implementation shape | One packaged WinUI 3 process split into a Windows/UI app assembly and a portable core assembly; `App` owns composition/lifecycle; the M3.1 candidate adds one lazy application-owned COM MTA thread, one active plus one latest pending request, and no separate process |
+| Active milestone | `M3.1 UIA Capability and Worker Probe` on `dev/m3-1-uia-worker-probe`; implementation candidate, not accepted until CI plus physical Windows evidence |
 | Current product capability target | `M3 Read-only UI Understanding`, beginning with a dedicated COM MTA worker probe |
-| Automated tests / CI | 68 deterministic core tests; 68/68 passed on Ubuntu/Windows CI, Windows PowerShell parsed the diagnostic runner, and Windows CI passed the strict `Debug/win-x64` app build at the M2.4.4 validation head |
+| Automated tests / CI | Accepted baseline: 68/68 on Ubuntu/Windows. M3.1 candidate: 91 deterministic tests covering privacy separation, native-result classification, stale/latest-request publication, and bounded latest-wins pending work; CI/runtime evidence is recorded before acceptance |
 | Cloud use | Forbidden by the product architecture |
 | Autonomous input/actions | Out of scope |
 
@@ -135,6 +136,23 @@ WinEvent foreground hook
   -> optional diagnostic correlation with mouse/keyboard activity kind
 ```
 
+The bounded M3.1 candidate path is:
+
+```text
+explicit diagnostic launch + Arm
+  -> ReadUiStructure capability gate
+  -> immutable epoch/HWND/PID request
+  -> one active + one coalesced newest pending request
+  -> lazy dedicated COM MTA thread
+  -> HWND/PID revalidation + same-or-lower integrity check
+  -> CUIAutomation8 / IUIAutomation2 timeout-bounded ElementFromHandle
+  -> release root pointer on the worker
+  -> typed metadata-only outcome
+  -> current epoch/capability publication gate
+```
+
+The probe never requests UIA Name, Value, Text, tree children, patterns, or actions. Product-default launches do not grant `ReadUiStructure`; the grant exists only inside an explicit launch-scoped diagnostic session while this milestone is validated.
+
 The activity tracker records only `MouseClick`, `MouseWheel`, or `KeyboardActivity` plus an epoch and monotonic timestamp. It does not record keys, text, mouse coordinates, clipboard data, or target controls. M2.4.4 measured 1,965 callbacks across four physical hook lifetimes with zero callback/subscriber errors, zero installing-thread mismatches, successful keyboard/mouse unhook, a weighted mean of 92.8 microseconds, and a maximum of 929.8 microseconds; the current synchronous diagnostic-only hook path therefore remains accepted.
 
 Current stack: C#/.NET 10, packaged WinUI 3, Windows App SDK 2.4.0, Win2D 1.4.0, and Windows Graphics Capture. Only the explicit `Debug/win-x64` path has runtime acceptance. Model/OCR/STT/TTS backends are not selected yet; early candidate names are not commitments.
@@ -148,7 +166,7 @@ dotnet test .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj -c Re
 dotnet build .\src\LocalCopilot.App\LocalCopilot.App.csproj -c Debug -r win-x64
 ```
 
-The core suite does not require WinUI, capture, global hooks, UI Automation, or a live desktop. The Windows app build remains a separate required check because the portable tests do not validate WinUI/Windows interop composition.
+The core suite does not require WinUI, capture, global hooks, a live UI Automation provider, or a desktop. The Windows app build and physical probe remain separate required checks because portable tests validate queue/gate/classification logic, not COM ABI or provider behavior.
 
 For an explicit diagnostic session:
 

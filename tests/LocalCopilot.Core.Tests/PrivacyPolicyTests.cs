@@ -28,7 +28,7 @@ public sealed class PrivacyPolicyTests
     }
 
     [TestMethod]
-    public void DiagnosticDefault_SeparatelyGrantsDerivedRetention()
+    public void DiagnosticDefault_GrantsStructureWithoutGrantingUiText()
     {
         PrivacyPolicy policy = new(
             PrivacyPolicyConfiguration.CreateProductDefault(
@@ -37,6 +37,9 @@ public sealed class PrivacyPolicyTests
         PrivacyEvaluation result = Evaluate(policy, "editor");
 
         Assert.IsTrue(result.Allows(PrivacyCapability.RetainDerivedEvent));
+        Assert.IsTrue(result.Allows(PrivacyCapability.ReadUiStructure));
+        Assert.IsFalse(result.Allows(PrivacyCapability.ReadUiText));
+        Assert.IsFalse(result.Allows(PrivacyCapability.RunOcr));
     }
 
     [TestMethod]

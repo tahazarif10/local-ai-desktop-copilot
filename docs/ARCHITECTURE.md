@@ -242,7 +242,11 @@ UIA is read-only and starts at M3. It must:
 - never call action methods or control patterns that mutate target UI;
 - not request elevation or `uiAccess`.
 
-UIA properties are cross-process calls and providers vary in quality. `CancellationToken` alone cannot be assumed to interrupt a blocked COM call. M3 must measure recovery and decide whether the continuous reader needs a restartable helper process.
+The M3.1 candidate intentionally implements less than the later semantic reader: it performs only `ElementFromHandle` and immediately releases the returned root pointer without requesting any property, child, cache, view, pattern, Name, Value, or Text. The call is admitted only after `ReadUiStructure`, runs on a lazy application-owned thread explicitly initialized as COM MTA, and publishes only a typed metadata result after a second current-epoch/capability check. `CUIAutomation8`/`IUIAutomation2` supplies 1.5-second connection and transaction timeouts inside a 2.5-second request deadline. One request may execute while one newest request waits; a newer pending request cancels the older pending request as superseded.
+
+The worker also revalidates HWND/PID and fail-closes if the target token cannot be inspected or has a higher integrity level than the client. The manifest remains without `uiAccess`; the app never elevates or attempts secure-desktop access. Every COM interface pointer is created, used, and released on the worker before a result crosses the boundary.
+
+UIA properties are cross-process calls and providers vary in quality. `CancellationToken` alone cannot be assumed to interrupt a blocked COM call. The platform timeout makes the M3.1 probe bounded under expected provider failures, but physical timeout/recovery evidence is still required. M3.4 must decide whether continuous UIA needs a restartable helper process; M3.1 does not create that process speculatively.
 
 ### 6.8 OCR and visual fallback
 
@@ -323,16 +327,18 @@ LocalCopilot.App
   DesktopCopilotCoordinator (integration, subscriptions, commands, view state)
   MainPage (diagnostic rendering + command forwarding)
   Windows adapters (WinEvent, WGC, Win32 input)
+  UiAutomationProbeWorker (lazy dedicated COM MTA, root-only, bounded latest-wins)
         |
         v
 LocalCopilot.Core
   privacy policy, epochs, lifecycle gate, change classification,
-  timeline/correlation models
+  timeline/correlation models, UIA typed outcomes/classifier/publication gate,
+  capacity-one latest-pending slot
 
 LocalCopilot.Core.Tests -> LocalCopilot.Core
 ```
 
-The split deliberately keeps deterministic logic out of the WinUI target so it can be characterized without XAML, capture, hooks, UI Automation, or a live desktop. It does not add a process or trust boundary. `App` creates and owns one coordinator; the coordinator owns long-running sensing resources and service subscriptions; `MainPage` attaches/detaches only as an `IDesktopCopilotView` and forwards user commands. `DiagnosticLog` remains a static compatibility facade in Core, but its sink is initialized once from a validated, expiring packaged-app launch token read from `Environment.GetCommandLineArgs()` and writes only to that session's fixed `app.log` filename. WinUI desktop `OnLaunched` arguments are intentionally not used because that property is always empty for desktop apps. Normal process arguments cannot activate diagnostics accidentally.
+The split deliberately keeps deterministic logic out of the WinUI target so queue replacement, HRESULT classification, capability separation, and stale publication can be characterized without XAML, capture, hooks, a live UIA provider, or a desktop. It does not add a process or trust boundary. `App` creates and owns one coordinator; the coordinator owns long-running sensing resources, the lazy UIA worker, and service subscriptions; `MainPage` attaches/detaches only as an `IDesktopCopilotView` and forwards user commands. The UIA worker owns no window and no UIA object crosses its apartment. `DiagnosticLog` remains a static compatibility facade in Core, but its sink is initialized once from a validated, expiring packaged-app launch token read from `Environment.GetCommandLineArgs()` and writes only to that session's fixed `app.log` filename. WinUI desktop `OnLaunched` arguments are intentionally not used because that property is always empty for desktop apps. Normal process arguments cannot activate diagnostics accidentally and product defaults do not grant UI structure.
 
 ### 7.2 Incremental target
 
@@ -371,8 +377,9 @@ Application lifetime, not page navigation, owns the current long-running service
 4. stop content-free input tracking and reset the diagnostic timeline;
 5. reset/cancel the active epoch and capture probes;
 6. detach service subscriptions;
-7. dispose the input tracker, foreground observer, and epoch manager;
-8. detach the view when XAML unloads.
+7. stop/join the UIA worker and release its COM interfaces on that MTA thread;
+8. dispose the input tracker, foreground observer, and epoch manager;
+9. detach the view when XAML unloads.
 
 Already-queued sample/session UI notifications still pass through the epoch publication gate; the accepted shutdown run dropped them as stale after reset without rendering or touching disposed sensing resources.
 
@@ -496,6 +503,12 @@ Prefer reversible adapters and typed contracts. Split a process only for a measu
 
 - [UI Automation overview](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-uiautomationoverview)
 - [UI Automation threading issues](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-threading)
+- [Creating the CUIAutomation object](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-creatingcuiautomation)
+- [`IUIAutomation::ElementFromHandle`](https://learn.microsoft.com/en-us/windows/win32/api/uiautomationclient/nf-uiautomationclient-iuiautomation-elementfromhandle)
+- [`IUIAutomation2` provider timeouts](https://learn.microsoft.com/en-us/windows/win32/api/uiautomationclient/nn-uiautomationclient-iuiautomation2)
+- [`CUIAutomation8` and timeout-capable proxy behavior](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/legacy/hh448746(v=vs.85))
+- [UI Automation error codes](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-error-codes)
+- [Security considerations for assistive technologies](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-securityoverview)
 - [UI Automation tree views](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-treeoverview)
 - [Caching UI Automation properties and patterns](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-cachingforclients)
 - [UI Automation security overview](https://learn.microsoft.com/en-us/dotnet/framework/ui-automation/ui-automation-security-overview)
