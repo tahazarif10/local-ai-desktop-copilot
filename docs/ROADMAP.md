@@ -138,19 +138,18 @@ Accepted evidence: [PR #15](https://github.com/tahazarif10/local-ai-desktop-copi
 
 Accepted evidence: [CI run #28](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32648315641) passed 108 tests on Ubuntu/Windows, PowerShell runner parsing, and the strict Windows build. Full physical session `22e567be-059d-4d19-bb1f-55b60a7a8646` passed classic/packaged/browser providers, immutable budgets, privacy/integrity denial, stale disposal, M3.1 regression, recovery, joined teardown, and the prohibited-content scan. Short session `fd287eb1-c062-423f-881a-4f4c3ca1b0a7` confirmed corrected M3.2 runner metadata. Detailed measurements are in `PROJECT_STATE.md`.
 
-### ▶ M3.3 Semantic UI snapshot
+### ✅ M3.3 Semantic UI snapshot
 
-Draft [PR #18](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/18) contains the implementation candidate. Functional head `3dccdbc` passed 124 tests on Ubuntu/Windows, PowerShell parsing, and the strict win-x64 build in [CI #40](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32652845504). It remains active—not complete—until physical acceptance and merge.
+- Accepted at functional head `3dccdbc24fc60093f46f903dec4f7ca04c08dc14`; [PR #18](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/18) is the review/merge record and accepted [ADR 0009](decisions/0009-capability-gated-semantic-uia-snapshot.md) fixes the contract.
+- Require separate `ReadUiStructure` and `ReadUiText` authorization before queue and publication; structure acceptance alone never authorizes text.
+- Read only Name, advertised ValuePattern value/read-only state, and advertised TextPattern visible ranges for selected content/on-screen/non-password nodes from the already bounded structure.
+- Enforce 32-node, 64-string, 1,024-character, 32-visible-range, 16-KiB UTF-8, 800-ms, 24-KiB result, and five-second TTL budgets with clear-on-dispose RAM ownership.
+- Preserve focus/window priority plus control type, dialog, enabled/off-screen, bounds, password/content eligibility, provenance, sensitivity, expiry, and removal on stale/latest/capability/expiry rejection.
+- Keep Invoke, SetValue, ExpandCollapse, Selection, Scroll, Raw View, DocumentRange, OCR, persistence, elevation, and implicit egress out of scope.
 
-- Candidate implemented: separate `ReadUiText` authorization before queue and publication; structure acceptance alone never authorizes text.
-- Candidate implemented: Name, advertised ValuePattern value/read-only state, and advertised TextPattern visible ranges only for selected nodes in the already bounded structure.
-- Candidate implemented: 32-node, 64-string, 1,024-character, 32-visible-range, 16-KiB UTF-8, 800-ms, 24-KiB result, and five-second TTL budgets with clear-on-dispose RAM ownership.
-- Candidate implemented: focus/window priority plus control type, dialog, enabled/off-screen, bounds, password/content eligibility, and read-only facts without widening the structural traversal.
-- Candidate invariant: no Invoke, SetValue, ExpandCollapse, Selection, Scroll, Raw View, DocumentRange, OCR, persistence, elevation, or implicit egress.
-- Candidate implemented: provenance, epoch, timestamps, sensitivity, expiry, finalizer fallback, and removal on stale/latest/capability/expiry rejection.
-- Acceptance still required: physical classic/packaged/browser sources, ordinary-deny and explicit-opt-in behavior, password/off-screen exclusion, tiny budgets, latest-wins clearing, higher-integrity denial, teardown, regressions, and prohibited-content scan.
+Accepted evidence: 124/124 tests on Ubuntu/Windows, both runner parses, and strict win-x64 build passed through [CI #43](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32894314154). Physical provider sessions proved ordinary denial, explicit opt-in/Notepad precedence, classic/packaged/browser sources, budgets, tiny truncation/recovery, and redaction. Clean one-command session `b0af762a-6949-463f-98bf-aa1a0956ea87` at acceptance head `1f2383a2224904e94062c23e44375d42fbe7e3bd` passed semantic stale clearing, higher-integrity denial, M3.1/M3.2 regressions, held-work joined teardown, and the randomized prohibited-content scan.
 
-### M3.4 Orchestrated UI enrichment
+### ▶ M3.4 Orchestrated UI enrichment
 
 - Trigger bounded snapshots after meaningful changes and on high-priority user questions.
 - Add deduplication, debounce, backpressure, and stale-result disposal.

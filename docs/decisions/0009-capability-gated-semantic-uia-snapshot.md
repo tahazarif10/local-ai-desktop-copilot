@@ -1,7 +1,8 @@
 # ADR 0009: Capability-gated selected semantic UI snapshots
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-23
+- Accepted: 2026-08-25
 - Extends: ADR 0008
 
 ## Context
@@ -83,19 +84,35 @@ as a hard bound on a hostile provider's transient COM allocation.
   Name/Value BSTRs. This is recorded evidence for, not a premature decision
   about, helper-process isolation.
 
-## Verification required before acceptance
+## Verification
 
-- Portable tests for capability separation, candidate selection, every budget,
-  UTF-8-safe truncation, TTL, clear-on-dispose, and stale/revoked publication.
-- Strict Windows CI build and tests using the generated UIA interfaces.
-- Physical classic, packaged, and browser provider evidence for Name, Value,
-  and visible Text sources with all immutable budgets reported.
-- Separate evidence that ordinary diagnostics deny before queueing and the
-  explicit text opt-in still respects the exact Notepad deny fixture.
-- Password/off-screen exclusion, latest-wins stale disposal, forced deadline
-  recovery, higher-integrity fail-closed behavior, and active-worker teardown.
-- A prohibited-content scan proving that no captured semantic string entered
-  app logs, OS probe logs, session metadata, or the diagnostic bundle.
+- Functional head `3dccdbc24fc60093f46f903dec4f7ca04c08dc14`
+  passed 124 deterministic tests on Ubuntu and Windows, Windows PowerShell
+  runner parsing, and the strict packaged `Debug/win-x64 --warnaserror` build.
+  Acceptance-runner fix [CI #43](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32894314154)
+  repeated those gates and parsed both PowerShell runners.
+- Physical sessions proved ordinary diagnostic denial before queueing, explicit
+  text opt-in with Notepad deny precedence, and classic, packaged, and browser
+  Name/Value/visible-Text providers. Every result reported redacted aggregates
+  within the immutable semantic budgets.
+- Provider evidence exercised off-screen exclusion. Chrome did not expose its
+  visible password control as `IsPassword=true`; that provider limitation is
+  explicit, while deterministic selector/snapshot tests prove exact password
+  exclusion.
+- Browser session `dfb73977-bfe6-4165-95ce-e158bbe3efb7` proved default
+  budgets plus tiny-budget truncation and immediate recovery on the same MTA
+  worker.
+- One-command session `b0af762a-6949-463f-98bf-aa1a0956ea87` at clean
+  acceptance head `1f2383a2224904e94062c23e44375d42fbe7e3bd` passed
+  semantic latest-wins, stale `PublicationRejected` clearing, consumer
+  clearing, higher-integrity fail-closed behavior, M3.1 timeout/root
+  regressions, M3.2 structural/depth/latest-wins regressions, and held-work
+  teardown with exactly one worker stop and `joined=True`.
+- Both the provider matrix and randomized one-command fixture passed the exact
+  prohibited-content scan across session metadata, app log, OS foreground log,
+  and the final whitelisted bundle.
+- [PR #18](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/18)
+  is the review and merge record.
 
 ## References
 

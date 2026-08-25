@@ -123,7 +123,7 @@ The accepted M3.2 baseline contains 108 deterministic tests for capability-based
 
 M3.2 added 17 portable tests for its immutable zero-string contract, exact budget boundaries, result-size accounting, topology validation, rectangle sanitation, conservative depth-boundary reporting, and stale-snapshot removal. [CI run #28](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32648315641) reported the accepted 108-test total on both operating systems.
 
-The M3.3 Draft PR candidate raises the suite to 124 tests covering capability separation, selected-node/exclusion policy, independent character/string/range/UTF-8/result/time/TTL limits, provenance/sensitivity, clear-on-dispose, and expired/revoked/stale publication. [CI run #40](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32652845504) passed that candidate on Ubuntu/Windows plus runner parsing and the strict app build. This is automated evidence, not physical acceptance.
+Accepted M3.3 raises the suite to 124 tests covering capability separation, selected-node/exclusion policy, independent character/string/range/UTF-8/result/time/TTL limits, provenance/sensitivity, clear-on-dispose, and expired/revoked/stale publication. [CI run #43](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32894314154) passed all 124 tests on Ubuntu/Windows, parsed both PowerShell runners, and completed the strict app build. Its separate physical evidence is recorded below.
 
 The CI workflow runs the core suite on both Ubuntu and Windows, then builds the packaged app as `Debug/win-x64` on Windows. Test-result artifacts are retained for failed as well as successful runs. Do not write “all tests passed” unless the relevant local/CI run is identified and actually passed; report build, test, CI, and physical runtime evidence as separate facts.
 
@@ -150,13 +150,13 @@ The ordinary command above intentionally grants structure without text. Only the
 
 `-EnableUiText` is not persistent and does not authorize logging, retention, OCR, or transmission. It only adds `ReadUiText` to this validated expiring diagnostic launch; the exact Notepad deny fixture and every identity/integrity/epoch/publication gate still apply.
 
-For one-command completion of the remaining M3.3 controls, run this from the same normal, non-Administrator PowerShell:
+For the accepted one-command M3.3 regression and completion gate, run this from a normal, non-Administrator PowerShell:
 
 ```powershell
 .\run-m3-3-acceptance.ps1
 ```
 
-The wrapper delegates the strict build, launch token, and whitelisted bundle to `run-debug.ps1 -EnableUiText`. It creates controlled same-integrity and elevated WinForms fixtures, invokes only LocalCopilot's own diagnostic buttons from an external test harness, and automatically validates semantic latest-wins/clearing, the integrity gate, M3.1/M3.2 regressions, and held-work teardown. Windows still requires one operator UAC confirmation for the elevated fixture; the wrapper never approves or bypasses that prompt. It prints PASS only after one non-UI MTA remains reusable, the worker stops and joins exactly once, the runner completes cleanly, and randomized semantic sentinels are absent from the three whitelisted sources and final bundle. This route completes matrix items 7-9 and repeats the prohibited-content scan; it does not replace the already-recorded provider and capability evidence in items 1-6.
+The wrapper delegates the strict build, launch token, and whitelisted bundle to `run-debug.ps1 -EnableUiText`. It creates controlled same-integrity and elevated WinForms fixtures, invokes only LocalCopilot's own diagnostic buttons from an external test harness, and automatically validates semantic latest-wins/clearing, the integrity gate, M3.1/M3.2 regressions, and held-work teardown. Windows still requires one operator UAC confirmation for the elevated fixture; the wrapper never approves or bypasses that prompt. It prints PASS only after one non-UI MTA remains reusable, the worker stops and joins exactly once, the runner completes cleanly, and randomized semantic sentinels are absent from the three whitelisted sources and final bundle. Accepted session `b0af762a-6949-463f-98bf-aa1a0956ea87` passed this route at clean head `1f2383a2224904e94062c23e44375d42fbe7e3bd`; it complements rather than replaces the provider and capability evidence in matrix items 1-6.
 
 Current behavior:
 
@@ -229,6 +229,32 @@ Required categories for a content-bearing asynchronous feature:
 
 A single happy-path screenshot is not acceptance.
 
+### One-command physical acceptance standard
+
+Every future physical acceptance matrix must ship a PowerShell 5.1-compatible,
+normal-user wrapper before asking the operator to run the matrix. The wrapper
+must:
+
+- preflight the exact branch/HEAD and require a clean working tree;
+- delegate the canonical strict build and validated diagnostic activation path;
+- create controlled fixtures where deterministic provider behavior is required;
+- drive only the product's explicit diagnostic controls and never mutate target
+  application state;
+- assert every expected outcome, privacy-negative path, recovery, stale/latest
+  behavior, regression, and teardown condition;
+- fail closed on a missing or contradictory record and print per-control plus
+  overall `PASS/FAIL`;
+- stop all helper/app processes and produce only the approved whitelisted
+  evidence bundle;
+- use randomized exact sentinels and scan every whitelisted source plus the
+  final bundle for prohibited content; and
+- be parsed by Windows PowerShell in CI before physical use.
+
+Only an unavoidable OS security boundary such as UAC may require operator
+confirmation. A provider case that cannot be automated must be explicitly
+identified, justified, and retained as separate evidence; it must never be
+silently skipped or represented as automated.
+
 ### M3.1 physical matrix
 
 This matrix was accepted on 2026-08-23 at functional head `e48b067f1c13ee5ba211bcd36de663b30ca27246`. Keep it as the root-worker regression matrix when later UIA milestones expand semantics.
@@ -270,7 +296,7 @@ Acceptance record: [CI run #28](https://github.com/tahazarif10/local-ai-desktop-
 
 ### M3.3 physical matrix
 
-This matrix is open for Draft PR #18. Use two non-elevated sessions and record the exact branch/HEAD plus a clean working tree.
+This matrix was accepted on 2026-08-25 for PR #18. Provider/capability cases used non-elevated sessions, and the remaining controls used the one-command wrapper at exact clean head `1f2383a2224904e94062c23e44375d42fbe7e3bd`. Keep it as the semantic privacy/budget/stale/regression/teardown matrix for M3.4.
 
 1. **Ordinary diagnostic denial:** run `run-debug.ps1` without `-EnableUiText`, Arm, retain an allowed external epoch, and click the semantic command. Require `Unavailable/CapabilityDenied` with no semantic `UIA.QUEUE` or native content work.
 2. **Explicit opt-in and deny precedence:** start a fresh `run-debug.ps1 -EnableUiText` session. Confirm `UI text opt-in: True`. Diagnostic Notepad must still return `Unavailable/CapabilityDenied` before queueing.
@@ -283,7 +309,7 @@ This matrix is open for Draft PR #18. Use two non-elevated sessions and record t
 9. **Teardown:** close during the held semantic burst. Require cancelled worker results, one `UIA.WORKER_STOP`, `UIA.WORKER_DISPOSE ... joined=True`, and clean existing sensing/input/observer/coordinator teardown.
 10. **Prohibited-content scan:** place unique known sentinel strings in the exercised Name/Value/Text/password sources, then scan all three whitelisted sources and the final bundle for those exact sentinels plus titles, keys, coordinates, clipboard, pixels, prompts, responses, exception messages, and stacks. Only aggregate counts/budgets/truncation/timing and `content=redacted` are allowed.
 
-Do not mark ADR 0009 Accepted, mark PR #18 ready, or merge until every applicable case is PASS and any provider-inapplicable case is explicitly explained rather than silently skipped.
+Acceptance record: functional head `3dccdbc24fc60093f46f903dec4f7ca04c08dc14` and [CI #43](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32894314154) passed 124/124 tests on Ubuntu/Windows, both PowerShell runner parses, and the strict win-x64 build. Earlier provider sessions passed ordinary denial, opt-in/Notepad precedence, classic/packaged/browser sources, default/tiny budgets, recovery, and redaction; Chrome's non-exposure of `IsPassword` is recorded as provider-inapplicable with deterministic tests supplying exact exclusion proof. One-command session `b0af762a-6949-463f-98bf-aa1a0956ea87` passed semantic latest-wins clearing, higher-integrity denial, M3.1/M3.2 regressions, held-work joined teardown, and randomized prohibited-content scanning. ADR 0009 is accepted.
 
 ## 8. Performance evidence
 

@@ -58,10 +58,10 @@ Read `docs/PRIVACY_MODEL.md` before adding any new source of content.
 ## Architecture discipline
 
 - Preserve the verified M2 sensing path unless a failing test or measured problem requires change.
-- M2.4 foundation hardening, the M3.1 root-only UIA worker probe, and the M3.2 bounded non-text structural snapshot have passed their acceptance matrices. Draft PR #18 contains the separately authorized M3.3 semantic candidate under proposed ADR 0009; treat it as unaccepted until physical evidence and merge. Do not skip directly to OCR or orchestration.
+- M2.4 foundation hardening and the M3.1 through M3.3 UIA slices have passed their acceptance matrices. M3.3's separately authorized semantic snapshot is accepted under ADR 0009 and PR #18. M3.4 orchestration/isolation design is the only next gate; do not skip to OCR, VLM, actions, or unbounded semantic sensing.
 - Keep Win32/WinRT/COM adapters behind narrow contracts; pure policy and event logic must be unit-testable without Windows interop.
 - UI code must not become the lifetime owner and orchestration implementation for new product services. M2.4.2 moved composition/lifecycle out of `MainPage`; preserve the application-owned coordinator boundary.
-- UI Automation calls belong on a dedicated COM MTA worker, never the WinUI thread. Accepted M3.2 uses breadth-first Control View traversal, cached `IsContentElement` as the Content subset marker, and explicit node/depth/property/string/time/result budgets. Do not add Raw View or a second unbounded traversal.
+- UI Automation calls belong on a dedicated COM MTA worker, never the WinUI thread. Accepted M3.2 uses breadth-first Control View traversal, cached `IsContentElement` as the Content subset marker, and explicit structural budgets. Accepted M3.3 reads only separately authorized selected Name, advertised ValuePattern state/value, and visible TextPattern ranges under independent content budgets and clear-on-dispose ownership. Do not add Raw View or a second unbounded traversal.
 - Do not assume `Task` cancellation can interrupt a blocked cross-process COM provider. Continuous UIA must have a measured recovery/isolation strategy before acceptance.
 - Do not make OCR or VLM always-on. Use the semantic escalation ladder: UIA, then changed-region OCR, then VLM only if required.
 - The newer Windows AI OCR API currently requires an NPU and therefore is not a default fit for the fixed machines. Re-evaluate official hardware support at M4 and benchmark candidates.
@@ -79,6 +79,7 @@ Read `docs/PRIVACY_MODEL.md` before adding any new source of content.
 - After runtime PASS: cleanup, final diff review, build/test, commit, push, PR, review, then merge.
 - Include exact commands, observed evidence, privacy impact, performance measurements, and known limitations in the PR.
 - Use PowerShell 5.1-compatible, copy/paste-ready commands for the user. Avoid brittle regex rewrites and broad destructive commands.
+- Every future physical acceptance matrix must provide a normal-user, one-command PowerShell harness that automates deterministic fixtures, app commands, assertions, cleanup, and whitelisted evidence. Only unavoidable OS security prompts may remain manual; any other manual case needs an explicit non-automatable justification. CI must parse every acceptance runner before physical use.
 - Commit, push, PR creation, and merge require the user's authorization for those Git actions.
 
 Full details are in `docs/ENGINEERING_WORKFLOW.md`.
@@ -99,4 +100,4 @@ A milestone is complete only when all of the following are true:
 
 ## Current handoff
 
-The last accepted functional baseline is `e1a50741580379f0f65c80e212f04c449e5a8c9b`; PR #16 and squash merge `be0a437ddbe09fc2a9830a9b10da56f83a8051d9` are its review/main records. M3.2's pinned generated interop and zero-string budgeted Control View snapshot are accepted under ADR 0008. The active branch is `dev/m3-3-semantic-ui-snapshot`; Draft PR #18 functional head `3dccdbc24fc60093f46f903dec4f7ca04c08dc14` passes 124 automated tests and the strict Windows build, and implements proposed ADR 0009, but physical M3.3 acceptance remains open. Resolve live Git/PR state, then compare it with `docs/PROJECT_STATE.md` before working; do not mark ADR 0009 accepted or merge solely from CI.
+The accepted M3.3 functional baseline is `3dccdbc24fc60093f46f903dec4f7ca04c08dc14`; PR #18 is its review/merge record, and acceptance-runner head `1f2383a2224904e94062c23e44375d42fbe7e3bd` preserves that product code while adding the one-command physical gate. CI #43 passed 124 tests on Ubuntu/Windows, both PowerShell runners, and the strict Windows build. The full provider/privacy/budget matrix and remaining-control session `b0af762a-6949-463f-98bf-aa1a0956ea87` passed, so ADR 0009 and M3.3 are accepted. The only next gate is M3.4 orchestration/isolation design on `dev/m3-4-orchestrated-ui-enrichment`; begin from measured M3.2/M3.3 behavior and do not introduce OCR or continuous UIA before bounds and recovery are explicit. Resolve live Git/PR/main state, then compare it with `docs/PROJECT_STATE.md` before working.
