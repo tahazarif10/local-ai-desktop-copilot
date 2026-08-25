@@ -914,13 +914,19 @@ namespace LocalCopilotM33Acceptance
     $sentinelRoot =
         "M33_AUTO_" + [Guid]::NewGuid().ToString("N")
 
+    $nameSentinel = $sentinelRoot + "_NAME"
+    $valueSentinel = $sentinelRoot + "_VALUE"
+    $visibleTextSentinel = $sentinelRoot + "_VISIBLE_TEXT"
+    $passwordSentinel = $sentinelRoot + "_PASSWORD"
+    $offscreenSentinel = $sentinelRoot + "_OFFSCREEN"
+
     $sentinels =
         @(
-            $sentinelRoot + "_NAME",
-            $sentinelRoot + "_VALUE",
-            $sentinelRoot + "_VISIBLE_TEXT",
-            $sentinelRoot + "_PASSWORD",
-            $sentinelRoot + "_OFFSCREEN"
+            $nameSentinel
+            $valueSentinel
+            $visibleTextSentinel
+            $passwordSentinel
+            $offscreenSentinel
         )
 
     Write-Host ""
@@ -934,11 +940,11 @@ namespace LocalCopilotM33Acceptance
             -PowerShellPath $windowsPowerShell `
             -StopPath (Join-Path $runRoot "normal-target.stop") `
             -WindowTitle "LocalCopilot M3.3 acceptance target" `
-            -NameSentinel $sentinels[0] `
-            -ValueSentinel $sentinels[1] `
-            -VisibleTextSentinel $sentinels[2] `
-            -PasswordSentinel $sentinels[3] `
-            -OffscreenSentinel $sentinels[4]
+            -NameSentinel $nameSentinel `
+            -ValueSentinel $valueSentinel `
+            -VisibleTextSentinel $visibleTextSentinel `
+            -PasswordSentinel $passwordSentinel `
+            -OffscreenSentinel $offscreenSentinel
 
     $runnerArguments =
         @(
