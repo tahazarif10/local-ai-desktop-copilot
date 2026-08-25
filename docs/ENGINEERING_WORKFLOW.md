@@ -150,6 +150,14 @@ The ordinary command above intentionally grants structure without text. Only the
 
 `-EnableUiText` is not persistent and does not authorize logging, retention, OCR, or transmission. It only adds `ReadUiText` to this validated expiring diagnostic launch; the exact Notepad deny fixture and every identity/integrity/epoch/publication gate still apply.
 
+For one-command completion of the remaining M3.3 controls, run this from the same normal, non-Administrator PowerShell:
+
+```powershell
+.\run-m3-3-acceptance.ps1
+```
+
+The wrapper delegates the strict build, launch token, and whitelisted bundle to `run-debug.ps1 -EnableUiText`. It creates controlled same-integrity and elevated WinForms fixtures, invokes only LocalCopilot's own diagnostic buttons from an external test harness, and automatically validates semantic latest-wins/clearing, the integrity gate, M3.1/M3.2 regressions, and held-work teardown. Windows still requires one operator UAC confirmation for the elevated fixture; the wrapper never approves or bypasses that prompt. It prints PASS only after one non-UI MTA remains reusable, the worker stops and joins exactly once, the runner completes cleanly, and randomized semantic sentinels are absent from the three whitelisted sources and final bundle. This route completes matrix items 7-9 and repeats the prohibited-content scan; it does not replace the already-recorded provider and capability evidence in items 1-6.
+
 Current behavior:
 
 - rejects launch if `LocalCopilot.App` is already running;
@@ -391,3 +399,4 @@ Stop and investigate when:
 - a dependency/model choice is being made without target-hardware validation.
 
 Correctness and a trustworthy handoff are more important than advancing the milestone label.
+
