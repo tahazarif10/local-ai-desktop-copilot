@@ -43,6 +43,32 @@ public sealed class PrivacyPolicyTests
     }
 
     [TestMethod]
+    public void DiagnosticUiTextOptIn_GrantsTextWithoutGrantingEgressOrOcr()
+    {
+        PrivacyPolicy policy = new(
+            PrivacyPolicyConfiguration.CreateProductDefault(
+                diagnosticNotepadRuleEnabled: true,
+                diagnosticUiTextEnabled: true));
+
+        PrivacyEvaluation result = Evaluate(policy, "editor");
+
+        Assert.IsTrue(result.Allows(PrivacyCapability.ReadUiStructure));
+        Assert.IsTrue(result.Allows(PrivacyCapability.ReadUiText));
+        Assert.IsFalse(result.Allows(PrivacyCapability.RunOcr));
+        Assert.IsFalse(
+            result.Allows(PrivacyCapability.SendTextToLocalServer));
+    }
+
+    [TestMethod]
+    public void DiagnosticUiTextOptIn_WithoutDiagnosticSession_IsRejected()
+    {
+        Assert.ThrowsExactly<ArgumentException>(
+            () => PrivacyPolicyConfiguration.CreateProductDefault(
+                diagnosticNotepadRuleEnabled: false,
+                diagnosticUiTextEnabled: true));
+    }
+
+    [TestMethod]
     public void Evaluate_DiagnosticNotepadRule_DeniesAllCapabilities()
     {
         PrivacyPolicy policy = new(

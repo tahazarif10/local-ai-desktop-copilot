@@ -68,6 +68,8 @@ public sealed class DiagnosticSessionTests
                 sessionDirectory,
                 DiagnosticLog.ApplicationLogFileName),
             session.LogFilePath);
+
+        Assert.IsFalse(session.AllowUiText);
     }
 
     [TestMethod]
@@ -108,7 +110,9 @@ public sealed class DiagnosticSessionTests
                     expired.CreatedUtc,
                 ExpiresUtc =
                     now -
-                    TimeSpan.FromMinutes(1)
+                    TimeSpan.FromMinutes(1),
+                AllowUiText =
+                    expired.AllowUiText
             };
 
         Assert.IsFalse(
@@ -206,6 +210,9 @@ public sealed class DiagnosticSessionTests
         Assert.IsFalse(
             DiagnosticLog.IsEnabled);
 
+        Assert.IsFalse(
+            DiagnosticLog.IsUiTextEnabled);
+
         Assert.IsNull(
             DiagnosticLog.CurrentLogFilePath);
     }
@@ -247,6 +254,9 @@ public sealed class DiagnosticSessionTests
 
             Assert.IsTrue(
                 DiagnosticLog.IsEnabled);
+
+            Assert.IsFalse(
+                DiagnosticLog.IsUiTextEnabled);
 
             string expectedPath =
                 Path.Combine(
@@ -293,6 +303,47 @@ public sealed class DiagnosticSessionTests
     }
 
     [TestMethod]
+    public void DiagnosticLog_UiTextOptIn_IsExplicitAndSessionScoped()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        Guid sessionId = Guid.NewGuid();
+        string sessionDirectory = CreateSessionDirectory(sessionId);
+
+        try
+        {
+            DiagnosticLog.Initialize(
+                CreateArguments(
+                    CreateDescriptor(
+                        sessionId,
+                        sessionDirectory,
+                        now,
+                        allowUiText: true)),
+                now);
+
+            DiagnosticLog.ResetSession();
+
+            Assert.IsTrue(DiagnosticLog.IsEnabled);
+            Assert.IsTrue(DiagnosticLog.IsUiTextEnabled);
+
+            string content = File.ReadAllText(
+                Path.Combine(
+                    sessionDirectory,
+                    DiagnosticLog.ApplicationLogFileName));
+
+            Assert.Contains("uiTextEnabled=True", content);
+        }
+        finally
+        {
+            DiagnosticLog.ResetForTests();
+
+            if (Directory.Exists(sessionDirectory))
+            {
+                Directory.Delete(sessionDirectory, recursive: true);
+            }
+        }
+    }
+
+    [TestMethod]
     public void Sanitize_BoundsAndEscapesDiagnosticFields()
     {
         string sanitized =
@@ -318,7 +369,8 @@ public sealed class DiagnosticSessionTests
     private static DiagnosticLaunchDescriptor CreateDescriptor(
         Guid sessionId,
         string sessionDirectory,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        bool allowUiText = false)
     {
         return new DiagnosticLaunchDescriptor
         {
@@ -333,7 +385,9 @@ public sealed class DiagnosticSessionTests
                 now,
             ExpiresUtc =
                 now +
-                TimeSpan.FromHours(4)
+                TimeSpan.FromHours(4),
+            AllowUiText =
+                allowUiText
         };
     }
 

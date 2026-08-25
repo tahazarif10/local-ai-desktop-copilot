@@ -1,14 +1,14 @@
 ---
 state_schema: 2
-reference_code_commit: e1a50741580379f0f65c80e212f04c449e5a8c9b
+reference_code_commit: 3dccdbc24fc60093f46f903dec4f7ca04c08dc14
 accepted_main_commit: be0a437ddbe09fc2a9830a9b10da56f83a8051d9
-last_verified_date: 2026-08-23
-completed_through: M3.2
-active_milestone: M3.3
-active_branch: dev/m3-3-semantic-ui-snapshot
-active_status: M3.2 accepted and merged; M3.3 privacy/content-bounds design open
-next_milestone: M3.3
-next_milestone_name: Semantic UI Snapshot privacy and content-bounds design
+last_verified_date: 2026-08-25
+completed_through: M3.3
+active_milestone: M3.4
+active_branch: dev/m3-4-orchestrated-ui-enrichment
+active_status: M3.3 accepted through PR #18; M3.4 orchestration/isolation design is next
+next_milestone: M3.4
+next_milestone_name: Orchestrated UI enrichment and isolation decision
 ---
 
 # Project state
@@ -17,11 +17,11 @@ This document separates verified implementation from target architecture. Update
 
 ## Executive state
 
-The implementation at `e1a50741580379f0f65c80e212f04c449e5a8c9b` is the accepted M3.2 functional baseline. [PR #16](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/16) replaces the M3.1-only manual UIA ABI with pinned generated interop and adds a capability-gated, bounded, zero-string Control View snapshot on the existing application-owned COM MTA worker; it squash-merged the accepted tree to `main` as `be0a437ddbe09fc2a9830a9b10da56f83a8051d9`. CI run #28 passed 108 deterministic tests on Ubuntu and Windows plus the strict Windows build, and the full physical provider/privacy/budget/stale/teardown matrix passed. The diagnostic-label-only feature-branch descendant `26770254618189d693ad9553d92bcba896a8b81b` also passed CI and a short Windows runner check. Always resolve live Git/PR state.
+The accepted M3.3 functional baseline is `3dccdbc24fc60093f46f903dec4f7ca04c08dc14`. [PR #18](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/18) adds a separately authorized, bounded, RAM-only Name/advertised-Value/visible-Text snapshot on the existing application-owned COM MTA worker. Acceptance-runner head `1f2383a2224904e94062c23e44375d42fbe7e3bd` preserves the product code while adding the one-command physical gate. CI #43 passed 124 deterministic tests on Ubuntu and Windows, both PowerShell runner parses, and the strict Windows build; the full provider/privacy/budget/stale/regression/teardown/redaction matrix passed on the physical client. The current documentation commit cannot embed its future squash SHA, so `accepted_main_commit` remains the last resolved merge record above; always resolve live Git/PR/main state.
 
-There is no known blocking defect in the accepted M2 sensing path, completed M2.4 foundation-hardening gate, M3.1 root-probe boundary, or accepted M3.2 structural snapshot. No rework is required unless a reproducible regression appears.
+There is no known blocking defect in the accepted M2 sensing path, completed M2.4 foundation-hardening gate, or accepted M3.1 root, M3.2 structural, and M3.3 semantic UIA boundaries. No rework is required unless a reproducible regression appears.
 
-The repository is not yet a complete copilot. The accepted product state is a hardened diagnostic WinUI shell around the sensing foundation, the M3.1 metadata-only UIA root probe, and the M3.2 short-lived non-text structural snapshot. Semantic Name/Value/Text collection is not implemented. M3.3 is the only approved next gate and must define a separately authorized, bounded, RAM-only content contract before adding any live UIA text read.
+The repository is not yet a complete copilot. The accepted product state is a hardened diagnostic WinUI shell around the sensing foundation, M3.1 metadata-only root probing, M3.2 short-lived non-text structure, and M3.3 separately authorized bounded semantic snapshots. Product defaults and ordinary diagnostics still deny `ReadUiText`; accepted semantic content remains short-lived, clearable, aggregate-only in diagnostics, and unavailable to rendering, persistence, implicit egress, actions, or automatic orchestration.
 
 ## Accepted milestone evidence
 
@@ -41,6 +41,7 @@ The repository is not yet a complete copilot. The accepted product state is a ha
 | M2.4.4 Diagnostics and input hardening | Complete | [PR #14](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/14), validated code head `cfcc480` | 68/68 deterministic tests on Ubuntu/Windows CI; strict Windows build; default/custom diagnostic roots, normal-launch no-write proof, all four correlation outcomes, 1,965 measured callbacks with zero errors/mismatches, and clean unhook/shutdown passed |
 | M3.1 UIA capability and worker probe | Complete | [PR #15](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/15), validated code head `e48b067` | 91/91 deterministic tests on Ubuntu/Windows CI; strict Windows build; Win32/packaged/browser roots, privacy and integrity denial, timeout recovery, latest-wins/stale publication, and active-worker teardown passed |
 | M3.2 Bounded structural snapshot | Complete | [PR #16](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/16), validated code head `e1a5074`, squash `be0a437` | 108/108 deterministic tests on Ubuntu/Windows CI; strict Windows build; classic/packaged/browser snapshots, hard budgets, privacy/integrity denial, recovery, stale disposal, M3.1 regressions, joined teardown, and prohibited-content scan passed |
+| M3.3 Semantic UI snapshot | Complete | [PR #18](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/18), functional head `3dccdbc`, physical head `1f2383a` | 124/124 deterministic tests on Ubuntu/Windows CI; both runner parses; strict Windows build; capability/provider/budget evidence plus semantic stale clearing, higher-integrity denial, M3.1/M3.2 regressions, joined held-work teardown, and prohibited-content scans passed |
 
 PR #7 was squash-merged as `c29099a`. Its feature-branch head (`abcbf08`) is not the `main` baseline.
 
@@ -152,7 +153,25 @@ The behavior-bearing code was validated at PR #16 head `e1a50741580379f0f65c80e2
 
 The accepted boundary is the one recorded in [ADR 0008](decisions/0008-generated-bounded-uia-snapshot.md): foreground-HWND Control View only, cached Content membership, exactly 27 non-text values per node, immutable node/depth/time/property/string/result budgets, short-lived process RAM, aggregate-only diagnostics, and removal of the complete snapshot on stale or revoked publication.
 
-Verdict: **accepted and merged**. PR #16 and squash `be0a437ddbe09fc2a9830a9b10da56f83a8051d9` are the review/main records. M3.3 is the only approved next implementation gate.
+Verdict: **accepted and merged**. PR #16 and squash `be0a437ddbe09fc2a9830a9b10da56f83a8051d9` are the review/main records. M3.3 was the only approved next implementation gate and is accepted below.
+
+### M3.3 acceptance evidence
+
+The behavior-bearing code was validated at PR #18 functional head `3dccdbc24fc60093f46f903dec4f7ca04c08dc14`. Physical acceptance completed at clean descendant `1f2383a2224904e94062c23e44375d42fbe7e3bd`, whose later changes are limited to documentation, CI runner parsing, and the one-command acceptance wrapper; they do not replace the functional code evidence.
+
+- [CI run #43](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32894314154) passed all 124 deterministic tests on Ubuntu and Windows, parsed `run-debug.ps1` and `run-m3-3-acceptance.ps1` with Windows PowerShell, and built strict packaged `Debug/win-x64 --warnaserror`.
+- Ordinary session `3609ef96-0668-436c-8612-13f98288ac5c` denied semantic work as `Unavailable/CapabilityDenied` before queueing with text opt-in false. Explicit text-opt-in runs retained exact Notepad deny precedence.
+- Classic PowerShell, packaged UI, and Chrome returned bounded `Available/SnapshotCaptured` semantic aggregates across the provider matrix. The matrix exercised nonzero Name, advertised Value, and visible Text counts while every diagnostic result reported `content=redacted`.
+- Packaged UI reported nonzero off-screen exclusion. Chrome did not expose its visible password field as `IsPassword=true`; this provider-inapplicability is explicit, while deterministic selector/snapshot tests supply the exact password-exclusion proof.
+- Browser session `dfb73977-bfe6-4165-95ce-e158bbe3efb7` stayed inside all immutable defaults and proved tiny-budget truncation plus immediate normal recovery on the same MTA worker.
+- One-command session `b0af762a-6949-463f-98bf-aa1a0956ea87` recorded the exact branch/head, empty worktree, non-elevated runner, text opt-in true, and passing build/application/runner results. Semantic burst 1/2/3 superseded the middle request, rejected and cleared the stale first result, published only the newest aggregate, and cleared it after consumer completion.
+- The elevated fixture recorded current RID 8192 and target RID 12288 and returned `Unavailable/HigherIntegrity` before UIA with no snapshot. The same MTA worker then passed forced timeout/recovery, root latest-wins, structural normal/depth-zero/latest-wins, and all M3.1/M3.2 regression assertions.
+- Closing during held semantic burst 15/16/17 returned `WorkerStopped` for active/pending work, emitted exactly one `UIA.WORKER_STOP`, and reported `UIA.WORKER_DISPOSE started=True joined=True`; observer, sensing, input, epoch, subscription, and coordinator teardown completed cleanly.
+- The provider-matrix sentinel scan and the one-command randomized scan found no captured Name/Value/Text/password/off-screen sentinel, title value, input value, coordinate, clipboard, pixel payload, prompt/response, provider exception message, or stack in the three whitelisted sources or final bundle.
+
+The accepted boundary is recorded in [ADR 0009](decisions/0009-capability-gated-semantic-uia-snapshot.md): separate structure/text capabilities, selected content/on-screen/non-password nodes, bounded Name/advertised Value/visible Text reads, immutable string/range/byte/time/result/TTL budgets, clear-on-dispose ownership, aggregate-only diagnostics, and removal on every stale/revoked/expired path.
+
+Verdict: **accepted**. PR #18 is the review/merge record. M3.4 orchestration/isolation design is the only approved next implementation gate.
 
 ## Current implementation map
 
@@ -163,10 +182,10 @@ Verdict: **accepted and merged**. PR #16 and squash `be0a437ddbe09fc2a9830a9b10d
 | Language/runtime | C# on .NET 10 | `net10.0-windows10.0.26100.0` |
 | Desktop UI | Packaged WinUI 3 | `Microsoft.WindowsAppSDK` 2.4.0 |
 | Portable logic | `LocalCopilot.Core` class library | `net10.0`; no WinUI/Windows API dependency |
-| Characterization tests | MSTest 4.3.3 | Accepted M3.2 baseline: 108/108 deterministic tests |
-| Continuous integration | GitHub Actions | [PR #16 diagnostic-label-head run](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32648315641) passed 108 core tests on Ubuntu/Windows, Windows PowerShell parsing, and the strict `Debug/win-x64` app build |
+| Characterization tests | MSTest 4.3.3 | Accepted M3.3 baseline: 124 deterministic tests |
+| Continuous integration | GitHub Actions | Accepted M3.3 [run #43](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32894314154) passes 124 tests on Ubuntu/Windows, both PowerShell runner parses, and the strict `Debug/win-x64` app build |
 | Capture/image interop | Windows Graphics Capture + Win2D | `Microsoft.Graphics.Win2D` 1.4.0 |
-| UIA interop | Accepted private build-time CsWin32 0.3.321 generation inside `LocalCopilot.App` | M3.1 root and M3.2 cache/traversal passed CI and physical runtime evidence; no runtime interop package or extra process |
+| UIA interop | Accepted private build-time CsWin32 0.3.321 generation inside `LocalCopilot.App` | M3.1/M3.2/M3.3 are physically accepted; M3.3 generates bounded Value/Text/Range interfaces; no runtime package or extra process |
 | Packaging/trust | MSIX tooling, full-trust desktop app | Development package identity used by `dotnet run` |
 | Canonical validated target | `Debug`, `win-x64` | Physical Windows client acceptance |
 | Declared OS minimum | Windows build 17763 | Declaration only; it is not broad runtime-support evidence |
@@ -187,16 +206,17 @@ Qwen3-VL-2B appeared as an early candidate in the original product prompt. It is
 | `ChangeDetector` | Luminance frame comparison and region/classification | Pure CPU logic; Baseline/Insignificant/Meaningful/Large only, not semantic importance |
 | `ChangeDetectionProbeService` | Manual single-sample detector profiles | Diagnostic path retained separately from persistent path |
 | `PersistentChangeDetectionService` | Persistent WGC, capacity-one latest frame, resize/recreate, downscale/readback/luma/diff | 640 px / 500 ms is the accepted current profile |
-| `SensingOrchestrator` | Explicit arm, context settle, previous-session cleanup, start/stop/status | Defaults OFF; no semantic stages yet |
+| `SensingOrchestrator` | Explicit arm, context settle, previous-session cleanup, start/stop/status | Defaults OFF; no automatic semantic stage yet |
 | `InputActivityTracker` | Global low-level activity-kind hooks plus teardown health aggregation | Records kind/count/timing only; no key, scan code, text, coordinate, clipboard, or target data; synchronous path retained from physical measurements |
 | `DiagnosticTimeline` | Bounded epoch-scoped activity retention | Capacity 256, five-second retention |
 | `ChangeCorrelationService` | Two-second possible-trigger lookup for meaningful/large visual change | Diagnostic correlation, not causality or semantic event detection |
 | `DiagnosticLog` / `run-debug.ps1` | Expiring launch-scoped metadata sink, isolated session directory, activation handshake, and exact three-file bundle | No persistent enable flag; normal launch writes nothing; default root is ignored and custom roots are supported |
 | `ApplicationCompositionRoot` | Constructs the current service graph once for the desktop process | Concrete composition remains in the Windows app assembly |
 | `DesktopCopilotCoordinator` | Owns sensing integration, subscriptions, immutable view state, commands, start/stop, and teardown | One UI-thread-owned coordinator per application/window lifetime |
-| `UiAutomationProbeWorker` | Accepted M3.1 root probe plus M3.2 bounded structural capture on the same lazy COM MTA and latest-pending slot | Snapshots are foreground-HWND, Control View, cached, zero-string, and short-lived; no COM object or action crosses the worker |
+| `UiAutomationProbeWorker` | Accepted M3.1 root, M3.2 structure, and M3.3 semantic snapshot on the same lazy COM MTA and latest-pending slot | Semantic work requires structure+text before queue, remains foreground-HWND/Control View, and releases every COM object before crossing the worker |
 | `UiAutomationStructuralSnapshot` | Accepted immutable node/topology, pattern-availability flags, deterministic size model, and node/depth/elapsed/property/string/result budgets | No persistence/egress; stale or rejected publication strips the complete snapshot |
-| `UiAutomationNativeClient` | Accepted CsWin32-generated `IUIAutomation2` boundary, cache request, breadth-first Control View walker, and same-thread COM release | Exactly 27 non-text properties; no Name/Value/Text content, Raw View, action pattern, or descendant-wide query |
+| `UiAutomationSemanticSnapshot` | Accepted selected-node facts, provenance/sensitivity/TTL, independent content budgets, clearable buffers, and aggregate counts | 32 nodes / 64 strings / 1,024 chars / 32 visible ranges / 16 KiB UTF-8 / 800 ms / 24 KiB / 5 s |
+| `UiAutomationNativeClient` | Accepted structural cache/walker plus selected Name, advertised ValuePattern, and visible TextPattern reads with immediate BSTR/COM release | Structural cache remains exactly 27 non-text properties; no Raw View, DocumentRange, actions, elevation, persistence, or implicit egress |
 | `ApplicationLifecycleGate` | Thread-safe one-shot Created/Running/Stopped/Disposed transitions | Portable lifecycle state only; Windows resource teardown remains coordinator-owned |
 | `MainPage` | Diagnostic rendering and command forwarding through `IDesktopCopilotView` | Attaches/detaches as a view; it does not construct or own sensing resources |
 
@@ -219,13 +239,14 @@ Qwen3-VL-2B appeared as an early candidate in the original product prompt. It is
 - `App` owns one coordinator; page load/unload only attaches/detaches the view.
 - Service subscription, observer, capture/input session, epoch, and coordinator teardown paths were exercised without a resource leak.
 - Accepted UIA work starts only after `ReadUiStructure`, runs on one dedicated COM MTA worker, revalidates HWND/PID and integrity, releases COM pointers on that worker, and passes the epoch/capability/latest-request publication gate. M3.2 preserves each M3.1 gate and additionally strips the whole snapshot when publication is rejected.
+- Accepted M3.3 additionally requires `ReadUiText` before queue and publication, selects only content/on-screen/non-password nodes, keeps semantic strings in bounded clearable RAM, publishes only redacted aggregates, and disposes content on consumer completion or any stale/expired/revoked path.
 
 ## Not accepted or not implemented
 
 The following capabilities do not exist in `main` and must not be described as complete:
 
 - Product privacy settings UI, pause control, or persisted policy configuration
-- Semantic UIA Name/Value/Text extraction is not implemented; M3.2 authorizes structure only and cannot be interpreted as a text grant.
+- Automatic/orchestrated semantic UIA sensing is not implemented; accepted M3.3 remains an explicit bounded diagnostic path, and M3.2 structure alone is still no text grant.
 - Dialog/error/notification semantic detection
 - OCR or changed-region text extraction
 - Vision model or visual-description service
@@ -244,10 +265,10 @@ The `systemAIModels` manifest capability is present, but no Windows AI model API
 
 ### Must be resolved before M3 continuous semantic sensing
 
-M2.4.1 through M2.4.4 resolved the characterization/CI, ownership/lifecycle, capability-privacy, diagnostic-session, exception-redaction, and input-measurement findings. M3.1 accepted the minimal UIA execution boundary, and M3.2 accepted bounded non-text structure. The next unresolved slice is narrower than continuous semantic sensing:
+M2.4.1 through M2.4.4 resolved the characterization/CI, ownership/lifecycle, capability-privacy, diagnostic-session, exception-redaction, and input-measurement findings. M3.1 accepted the minimal UIA execution boundary, M3.2 accepted bounded non-text structure, and M3.3 accepted separately authorized bounded semantic snapshots. The next unresolved slice is M3.4 orchestration design:
 
-1. **M3.3 content authorization and bounds remain open.** Before any Name/Value/Text read, define a separate `ReadUiText` gate, selected-node rules, string-count/byte/time/result budgets, RAM-only expiry, aggregate-only diagnostics, and stale/capability-revocation disposal. M3.2 structure is not implicit permission to collect semantic content.
-2. **Process isolation remains evidence-gated.** M3.1 platform timeouts and physical recovery are sufficient for a manual root probe, not proof that every hostile provider is interruptible. M3.4 must decide whether continuous UIA needs a restartable helper process from measured M3.2/M3.3 behavior.
+1. **Process isolation and continuous recovery remain evidence-gated.** The accepted manual M3.3 path proves bounded results, same-worker recovery for deterministic deadline/integrity cases, and joined teardown; it does not prove that every hostile Name/Value/Text provider call is interruptible. M3.4 must decide whether continuous UIA needs a restartable helper process before automatic triggering is accepted.
+2. **Automatic trigger policy remains undefined.** M3.4 must bind meaningful-change/question triggers to explicit debounce, deduplication, capacity-one latest-wins behavior, stale disposal, capability revalidation, and measurable resource limits without widening the accepted M3.3 content contract.
 
 ### Important hardening debt
 
@@ -272,14 +293,14 @@ These are fixed design inputs, not upgrade suggestions:
 The next implementation branch is:
 
 ```text
-dev/m3-3-semantic-ui-snapshot
+dev/m3-4-orchestrated-ui-enrichment
 ```
 
-M3.2 runtime behavior is accepted at `e1a50741580379f0f65c80e212f04c449e5a8c9b` and merged through PR #16 as `be0a437ddbe09fc2a9830a9b10da56f83a8051d9`. Accepted [ADR 0008](decisions/0008-generated-bounded-uia-snapshot.md) fixes the structural boundary at foreground-HWND Control View breadth-first traversal, cached Content membership, 256 nodes, depth 8, 1,200 ms, exactly 27 non-text values per node, zero strings, and a 32 KiB estimated result.
+M3.3 is accepted at functional head `3dccdbc24fc60093f46f903dec4f7ca04c08dc14` with physical acceptance at clean head `1f2383a2224904e94062c23e44375d42fbe7e3bd`; PR #18 and accepted [ADR 0009](decisions/0009-capability-gated-semantic-uia-snapshot.md) are the review/evidence records.
 
-M3.3 may begin with privacy and content-budget design. It must add a separately authorized `ReadUiText` contract and prove selected-node, string-count, byte, time, result-size, expiry, stale-disposal, and diagnostic-redaction boundaries before any continuous semantic orchestration.
+M3.4 must begin with a measured orchestration and isolation decision: define trigger policy, debounce/deduplication, capacity-one latest-wins behavior, cancellation/stale disposal, capability revalidation, teardown, and whether restartable process isolation is required for continuous provider calls. Preserve every M3.3 content limit and privacy gate.
 
-Do not treat accepted M3.2 structure as permission for unbounded/live text collection. Do not add OCR, action patterns, elevation/`uiAccess`, continuous semantic orchestration, or a speculative helper process in M3.3.
+Do not add OCR, action patterns, elevation/`uiAccess`, persistence, implicit egress, or unbounded semantic collection in M3.4.
 
 ## How to update this file
 

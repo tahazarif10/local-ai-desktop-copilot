@@ -191,6 +191,30 @@ public sealed partial class MainPage :
             .CaptureUiAutomationStructuralSnapshotAsync();
     }
 
+    private async void UiAutomationSemanticSnapshotButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await _coordinator
+            .CaptureUiAutomationSemanticSnapshotAsync();
+    }
+
+    private async void UiAutomationSemanticBudgetButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await _coordinator
+            .ProbeUiAutomationSemanticBudgetAsync();
+    }
+
+    private async void UiAutomationSemanticLatestWinsBurstButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await _coordinator
+            .ProbeUiAutomationSemanticLatestWinsBurstAsync();
+    }
+
     private async void UiAutomationDepthBudgetButton_Click(
         object sender,
         RoutedEventArgs e)

@@ -1,6 +1,7 @@
 ﻿[CmdletBinding()]
 param(
-    [string]$DiagnosticRoot
+    [string]$DiagnosticRoot,
+    [switch]$EnableUiText
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,7 +22,7 @@ $buildResult = "NOT_RUN"
 $applicationResult = "NOT_RUN"
 $applicationExitCode = $null
 $runnerElevated = $null
-$milestone = "M3.2"
+$milestone = "M3.3"
 
 try {
     $repoRoot = $PSScriptRoot
@@ -190,6 +191,7 @@ PowerShell: $($PSVersionTable.PSVersion)
 OS: $([Environment]::OSVersion.VersionString)
 Runner elevated: $runnerElevated
 Diagnostic activation: launch-scoped, expiring token
+UI text opt-in: $([bool]$EnableUiText)
 Application argument source: process command line
 Application log: app.log
 
@@ -380,6 +382,7 @@ public static class LocalCopilotForegroundProbe
             SessionDirectory = $sessionDirectory
             CreatedUtc = $sessionStartUtc.ToString("o")
             ExpiresUtc = $sessionStartUtc.AddHours(4).ToString("o")
+            AllowUiText = [bool]$EnableUiText
         }
 
     $descriptorJson =

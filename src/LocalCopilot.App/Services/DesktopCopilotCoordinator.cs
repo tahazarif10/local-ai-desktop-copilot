@@ -649,6 +649,51 @@ public sealed class DesktopCopilotCoordinator :
                         TimeSpan.FromMilliseconds(2500)));
     }
 
+    public Task CaptureUiAutomationSemanticSnapshotAsync()
+    {
+        return RunUiAutomationRequestAsync(
+            "uia_semantic_snapshot",
+            "Capturing selected visible Name/Value/Text semantics...",
+            epoch =>
+                _uiAutomationProbeWorker
+                    .CaptureSemanticSnapshot(
+                        epoch,
+                        TimeSpan.FromMilliseconds(2500)),
+            PrivacyCapability.ReadUiStructure |
+            PrivacyCapability.ReadUiText);
+    }
+
+    public Task ProbeUiAutomationSemanticBudgetAsync()
+    {
+        UiAutomationSemanticBudgets budgets =
+            UiAutomationSemanticBudgets.M3_3Default with
+            {
+                MaxSelectedNodes = 1,
+                MaxStrings = 1,
+                MaxCharactersPerString = 4,
+                MaxVisibleTextRanges = 1,
+                MaxUtf8Bytes = 8,
+                MaxResultBytes =
+                    UiAutomationSemanticSizeEstimator
+                        .EstimateBytes(
+                            nodeCount: 1,
+                            stringCount: 1,
+                            utf8Bytes: 8)
+            };
+
+        return RunUiAutomationRequestAsync(
+            "uia_semantic_budget",
+            "Exercising tiny semantic node/string/range/byte budgets...",
+            epoch =>
+                _uiAutomationProbeWorker
+                    .CaptureSemanticSnapshot(
+                        epoch,
+                        TimeSpan.FromMilliseconds(2500),
+                        semanticBudgets: budgets),
+            PrivacyCapability.ReadUiStructure |
+            PrivacyCapability.ReadUiText);
+    }
+
     public Task ProbeUiAutomationForcedTimeoutAsync()
     {
         EnsureUiThread(
@@ -702,6 +747,26 @@ public sealed class DesktopCopilotCoordinator :
                         TimeSpan.FromSeconds(5)));
     }
 
+    public Task ProbeUiAutomationSemanticLatestWinsBurstAsync()
+    {
+        return RunUiAutomationBurstAsync(
+            "uia_semantic_latest_wins_burst",
+            "Exercising semantic latest-wins and clear-on-stale disposal...",
+            epoch =>
+                _uiAutomationProbeWorker
+                    .CaptureSemanticSnapshotForDiagnostics(
+                        epoch,
+                        TimeSpan.FromSeconds(8),
+                        TimeSpan.FromSeconds(2)),
+            epoch =>
+                _uiAutomationProbeWorker
+                    .CaptureSemanticSnapshot(
+                        epoch,
+                        TimeSpan.FromSeconds(5)),
+            PrivacyCapability.ReadUiStructure |
+            PrivacyCapability.ReadUiText);
+    }
+
     public Task ProbeUiAutomationDepthBudgetAsync()
     {
         EnsureUiThread(
@@ -745,7 +810,9 @@ public sealed class DesktopCopilotCoordinator :
         string operation,
         string pendingStatus,
         Func<ContextEpoch, UiAutomationProbeOperation> queueHeld,
-        Func<ContextEpoch, UiAutomationProbeOperation> queueNormal)
+        Func<ContextEpoch, UiAutomationProbeOperation> queueNormal,
+        PrivacyCapability requiredCapabilities =
+            PrivacyCapability.ReadUiStructure)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(
             operation);
@@ -770,7 +837,7 @@ public sealed class DesktopCopilotCoordinator :
         ContextEpoch? epoch =
             GetAllowedEpoch(
                 operation,
-                PrivacyCapability.ReadUiStructure);
+                requiredCapabilities);
 
         if (epoch is null)
         {
@@ -830,16 +897,24 @@ public sealed class DesktopCopilotCoordinator :
                 second.Completion,
                 third.Completion);
 
-        foreach (UiAutomationProbeResult result in results)
+        try
         {
-            UiAutomationProbeResult publishable =
-                UiAutomationProbePublicationGate.Apply(
-                    result,
-                    _currentEpoch,
-                    _latestUiAutomationProbeRequestId);
+            foreach (UiAutomationProbeResult result in results)
+            {
+                UiAutomationProbeResult publishable =
+                    ApplyUiAutomationPublicationGate(
+                        result);
 
-            PublishUiAutomationProbeResult(
-                publishable);
+                PublishUiAutomationProbeResult(
+                    publishable);
+            }
+        }
+        finally
+        {
+            foreach (UiAutomationProbeResult result in results)
+            {
+                result.SemanticSnapshot?.Dispose();
+            }
         }
     }
 
@@ -861,7 +936,9 @@ public sealed class DesktopCopilotCoordinator :
     private async Task RunUiAutomationRequestAsync(
         string operation,
         string pendingStatus,
-        Func<ContextEpoch, UiAutomationProbeOperation> queueRequest)
+        Func<ContextEpoch, UiAutomationProbeOperation> queueRequest,
+        PrivacyCapability requiredCapabilities =
+            PrivacyCapability.ReadUiStructure)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(
             operation);
@@ -876,7 +953,7 @@ public sealed class DesktopCopilotCoordinator :
         ContextEpoch? epoch =
             GetAllowedEpoch(
                 operation,
-                PrivacyCapability.ReadUiStructure);
+                requiredCapabilities);
 
         if (epoch is null)
         {
@@ -918,14 +995,45 @@ public sealed class DesktopCopilotCoordinator :
         UiAutomationProbeResult result =
             await probe.Completion;
 
+        try
+        {
+            UiAutomationProbeResult publishable =
+                ApplyUiAutomationPublicationGate(
+                    result);
+
+            PublishUiAutomationProbeResult(
+                publishable);
+        }
+        finally
+        {
+            result.SemanticSnapshot?.Dispose();
+        }
+    }
+
+    private UiAutomationProbeResult ApplyUiAutomationPublicationGate(
+        UiAutomationProbeResult result)
+    {
+        UiAutomationSemanticSnapshot? semanticSnapshot =
+            result.SemanticSnapshot;
+
         UiAutomationProbeResult publishable =
             UiAutomationProbePublicationGate.Apply(
                 result,
                 _currentEpoch,
                 _latestUiAutomationProbeRequestId);
 
-        PublishUiAutomationProbeResult(
-            publishable);
+        if (semanticSnapshot is not null &&
+            publishable.SemanticSnapshot is null)
+        {
+            DiagnosticLog.Write(
+                "UIA.SEMANTIC_DISPOSE",
+                $"request={result.RequestId} " +
+                $"epoch={result.EpochId} " +
+                $"reason=publication_{publishable.Reason} " +
+                $"disposed={semanticSnapshot.IsDisposed}");
+        }
+
+        return publishable;
     }
 
     public void Arm()
@@ -1827,45 +1935,69 @@ public sealed class DesktopCopilotCoordinator :
     private void PublishUiAutomationProbeResult(
         UiAutomationProbeResult result)
     {
-        string hresult =
-            result.HResult.HasValue
-                ? $"0x{result.HResult.Value:X8}"
-                : "none";
+        try
+        {
+            string hresult =
+                result.HResult.HasValue
+                    ? $"0x{result.HResult.Value:X8}"
+                    : "none";
 
-        string snapshotSummary =
-            GetUiAutomationSnapshotSummary(
-                result.Snapshot);
+            string snapshotSummary =
+                GetUiAutomationSnapshotSummary(
+                    result.Snapshot,
+                    result.SemanticSnapshot);
 
-        DiagnosticLog.Write(
-            "UIA.PROBE_RESULT",
-            $"request={result.RequestId} " +
-            $"epoch={result.EpochId} " +
-            $"outcome={result.Outcome} " +
-            $"reason={result.Reason} " +
-            $"elapsedMs={result.Elapsed.TotalMilliseconds:0.000} " +
-            $"hresult={hresult} " +
-            $"workerThread={result.WorkerThreadId} " +
-            $"identityRevalidated={result.IdentityRevalidated} " +
-            snapshotSummary);
+            DiagnosticLog.Write(
+                "UIA.PROBE_RESULT",
+                $"request={result.RequestId} " +
+                $"epoch={result.EpochId} " +
+                $"outcome={result.Outcome} " +
+                $"reason={result.Reason} " +
+                $"elapsedMs={result.Elapsed.TotalMilliseconds:0.000} " +
+                $"hresult={hresult} " +
+                $"workerThread={result.WorkerThreadId} " +
+                $"identityRevalidated={result.IdentityRevalidated} " +
+                snapshotSummary);
 
-        SetUiAutomationProbeStatus(
-            $"{result.Outcome} | {result.Reason} | " +
-            $"{result.Elapsed.TotalMilliseconds:0.0} ms | " +
-            $"HRESULT {hresult}" +
-            (result.Snapshot is null
-                ? string.Empty
-                : " | " + snapshotSummary));
+            SetUiAutomationProbeStatus(
+                $"{result.Outcome} | {result.Reason} | " +
+                $"{result.Elapsed.TotalMilliseconds:0.0} ms | " +
+                $"HRESULT {hresult}" +
+                (result.Snapshot is null &&
+                 result.SemanticSnapshot is null
+                    ? string.Empty
+                    : " | " + snapshotSummary));
+        }
+        finally
+        {
+            if (result.SemanticSnapshot is not null)
+            {
+                result.SemanticSnapshot.Dispose();
+
+                DiagnosticLog.Write(
+                    "UIA.SEMANTIC_DISPOSE",
+                    $"request={result.RequestId} " +
+                    $"epoch={result.EpochId} " +
+                    "reason=diagnostic_consumer_complete " +
+                    "disposed=True");
+            }
+        }
     }
 
     private static string GetUiAutomationSnapshotSummary(
-        UiAutomationStructuralSnapshot? snapshot)
+        UiAutomationStructuralSnapshot? snapshot,
+        UiAutomationSemanticSnapshot? semanticSnapshot)
     {
-        if (snapshot is null)
+        if (snapshot is null &&
+            semanticSnapshot is null)
         {
             return "snapshot=none";
         }
 
-        return
+        string structuralSummary =
+            snapshot is null
+                ? "structure=none"
+                :
             $"snapshot=structural " +
             $"view={snapshot.View} " +
             $"nodes={snapshot.Nodes.Count} " +
@@ -1877,6 +2009,38 @@ public sealed class DesktopCopilotCoordinator :
             $"stringBytes={snapshot.StringBytes} " +
             $"estimatedBytes={snapshot.EstimatedResultBytes} " +
             $"traversalMs={snapshot.TraversalElapsed.TotalMilliseconds:0.000}";
+
+        if (semanticSnapshot is null)
+        {
+            return structuralSummary;
+        }
+
+        return
+            structuralSummary + " " +
+            $"semantic=selected-visible " +
+            $"selectedNodes={semanticSnapshot.Nodes.Count} " +
+            $"candidateNodes={semanticSnapshot.Selection.EligibleCount} " +
+            $"excludedNonContent={semanticSnapshot.Selection.ExcludedNonContentCount} " +
+            $"excludedOffscreen={semanticSnapshot.Selection.ExcludedOffscreenCount} " +
+            $"excludedPassword={semanticSnapshot.Selection.ExcludedPasswordCount} " +
+            $"names={semanticSnapshot.NameCount} " +
+            $"values={semanticSnapshot.ValueCount} " +
+            $"visibleTexts={semanticSnapshot.VisibleTextCount} " +
+            $"visibleRanges={semanticSnapshot.VisibleTextRangeCount} " +
+            $"semanticStrings={semanticSnapshot.StringCount} " +
+            $"semanticUtf8Bytes={semanticSnapshot.Utf8Bytes} " +
+            $"semanticTruncation={semanticSnapshot.Truncation} " +
+            $"semanticEstimatedBytes={semanticSnapshot.EstimatedResultBytes} " +
+            $"semanticMs={semanticSnapshot.SemanticElapsed.TotalMilliseconds:0.000} " +
+            $"semanticBudgetNodes={semanticSnapshot.Budgets.MaxSelectedNodes} " +
+            $"semanticBudgetStrings={semanticSnapshot.Budgets.MaxStrings} " +
+            $"semanticBudgetChars={semanticSnapshot.Budgets.MaxCharactersPerString} " +
+            $"semanticBudgetRanges={semanticSnapshot.Budgets.MaxVisibleTextRanges} " +
+            $"semanticBudgetUtf8Bytes={semanticSnapshot.Budgets.MaxUtf8Bytes} " +
+            $"semanticBudgetElapsedMs={semanticSnapshot.Budgets.MaxElapsed.TotalMilliseconds:0} " +
+            $"semanticBudgetResultBytes={semanticSnapshot.Budgets.MaxResultBytes} " +
+            $"ttlMs={semanticSnapshot.Budgets.TimeToLive.TotalMilliseconds:0} " +
+            $"content=redacted";
     }
 
     private void UpdateViewState(

@@ -19,6 +19,7 @@ internal sealed class UiAutomationNativeClient : IDisposable
 
     private const int BoundingRectanglePropertyId = 30001;
     private const int ControlTypePropertyId = 30003;
+    private const int NamePropertyId = 30005;
     private const int HasKeyboardFocusPropertyId = 30008;
     private const int IsKeyboardFocusablePropertyId = 30009;
     private const int IsEnabledPropertyId = 30010;
@@ -26,6 +27,11 @@ internal sealed class UiAutomationNativeClient : IDisposable
     private const int IsContentElementPropertyId = 30017;
     private const int IsPasswordPropertyId = 30019;
     private const int IsOffscreenPropertyId = 30022;
+    private const int IsDialogPropertyId = 30174;
+
+    private const int ValuePatternId = 10002;
+    private const int TextPatternId = 10014;
+    private const int WindowControlTypeId = 50032;
 
     private static readonly Guid CUIAutomation8ClassId =
         new("E22AD333-B25F-460C-83D0-0581107395C9");
@@ -413,6 +419,262 @@ internal sealed class UiAutomationNativeClient : IDisposable
         }
     }
 
+    public UiAutomationNativeSnapshotResult CaptureSemanticSnapshot(
+        nint hwnd,
+        long epochId,
+        UiAutomationSnapshotBudgets structuralBudgets,
+        UiAutomationSemanticBudgets semanticBudgets,
+        Func<bool> cancellationRequested)
+    {
+        ArgumentNullException.ThrowIfNull(structuralBudgets);
+        ArgumentNullException.ThrowIfNull(semanticBudgets);
+        ArgumentNullException.ThrowIfNull(cancellationRequested);
+        structuralBudgets.ValidateForNonTextSnapshot();
+        semanticBudgets.Validate();
+
+        if (epochId <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(epochId));
+        }
+
+        if (_automation is null ||
+            _controlViewWalker is null ||
+            _cacheRequest is null)
+        {
+            return new UiAutomationNativeSnapshotResult(
+                GenericFailure,
+                Snapshot: null,
+                Cancelled: false,
+                SemanticSnapshot: null);
+        }
+
+        long traversalStarted = Stopwatch.GetTimestamp();
+
+        TimeSpan TraversalElapsed() =>
+            Stopwatch.GetElapsedTime(traversalStarted);
+
+        UiAutomationSnapshotBudgetTracker structuralTracker =
+            new(structuralBudgets);
+
+        List<UiAutomationStructuralNode> nodes =
+            new(capacity: Math.Min(64, structuralBudgets.MaxNodes));
+
+        List<IUIAutomationElement> elements =
+            new(capacity: Math.Min(64, structuralBudgets.MaxNodes));
+
+        Queue<NativeNodeFrame> pending = new();
+
+        IUIAutomationElement? unownedElement = null;
+        UiAutomationSemanticSnapshot? unownedSemanticSnapshot = null;
+        bool cancelled = false;
+        bool stopTraversal = false;
+
+        try
+        {
+            unownedElement =
+                _automation.ElementFromHandleBuildCache(
+                    new HWND(hwnd),
+                    _cacheRequest);
+
+            if (unownedElement is null)
+            {
+                return new UiAutomationNativeSnapshotResult(
+                    HResult: 0,
+                    Snapshot: null,
+                    Cancelled: false,
+                    SemanticSnapshot: null);
+            }
+
+            cancelled = cancellationRequested();
+
+            if (cancelled)
+            {
+                return new UiAutomationNativeSnapshotResult(
+                    HResult: 0,
+                    Snapshot: null,
+                    Cancelled: true,
+                    SemanticSnapshot: null);
+            }
+
+            if (structuralTracker.TryReserveNode(
+                    depth: 0,
+                    elapsed: TraversalElapsed()))
+            {
+                nodes.Add(
+                    ReadNode(
+                        unownedElement,
+                        index: 0,
+                        parentIndex: -1,
+                        depth: 0));
+
+                elements.Add(unownedElement);
+
+                pending.Enqueue(
+                    new NativeNodeFrame(
+                        unownedElement,
+                        NodeIndex: 0,
+                        Depth: 0));
+
+                unownedElement = null;
+            }
+            else
+            {
+                stopTraversal = true;
+            }
+
+            while (!stopTraversal &&
+                   pending.TryDequeue(out NativeNodeFrame frame))
+            {
+                cancelled = cancellationRequested();
+
+                if (cancelled ||
+                    !structuralTracker.MayContinue(
+                        TraversalElapsed()))
+                {
+                    stopTraversal = true;
+                    continue;
+                }
+
+                if (frame.Depth >= structuralBudgets.MaxDepth)
+                {
+                    structuralTracker.MarkDepthBoundary();
+                    continue;
+                }
+
+                unownedElement =
+                    _controlViewWalker
+                        .GetFirstChildElementBuildCache(
+                            frame.Element,
+                            _cacheRequest);
+
+                while (unownedElement is not null)
+                {
+                    cancelled = cancellationRequested();
+
+                    if (cancelled ||
+                        !structuralTracker.MayContinue(
+                            TraversalElapsed()))
+                    {
+                        stopTraversal = true;
+                        break;
+                    }
+
+                    int depth = checked(frame.Depth + 1);
+
+                    if (!structuralTracker.TryReserveNode(
+                            depth,
+                            TraversalElapsed()))
+                    {
+                        stopTraversal = true;
+                        break;
+                    }
+
+                    IUIAutomationElement current =
+                        unownedElement;
+                    unownedElement = null;
+
+                    int nodeIndex = nodes.Count;
+
+                    nodes.Add(
+                        ReadNode(
+                            current,
+                            nodeIndex,
+                            frame.NodeIndex,
+                            depth));
+
+                    elements.Add(current);
+
+                    pending.Enqueue(
+                        new NativeNodeFrame(
+                            current,
+                            nodeIndex,
+                            depth));
+
+                    unownedElement =
+                        _controlViewWalker
+                            .GetNextSiblingElementBuildCache(
+                                current,
+                                _cacheRequest);
+                }
+            }
+
+            if (cancelled)
+            {
+                return new UiAutomationNativeSnapshotResult(
+                    HResult: 0,
+                    Snapshot: null,
+                    Cancelled: true,
+                    SemanticSnapshot: null);
+            }
+
+            TimeSpan traversalElapsed = TraversalElapsed();
+            _ = structuralTracker.MayContinue(traversalElapsed);
+
+            UiAutomationStructuralSnapshot structuralSnapshot =
+                new(
+                    nodes,
+                    structuralBudgets,
+                    structuralTracker.Truncation,
+                    structuralTracker.PropertyValueCount,
+                    structuralTracker.EstimatedResultBytes,
+                    traversalElapsed);
+
+            unownedSemanticSnapshot =
+                CaptureSemanticContent(
+                    epochId,
+                    nodes,
+                    elements,
+                    semanticBudgets,
+                    cancellationRequested);
+
+            cancelled = cancellationRequested();
+
+            if (cancelled)
+            {
+                unownedSemanticSnapshot.Dispose();
+                unownedSemanticSnapshot = null;
+
+                return new UiAutomationNativeSnapshotResult(
+                    HResult: 0,
+                    Snapshot: null,
+                    Cancelled: true,
+                    SemanticSnapshot: null);
+            }
+
+            UiAutomationNativeSnapshotResult result =
+                new(
+                    HResult: 0,
+                    Snapshot: structuralSnapshot,
+                    Cancelled: false,
+                    SemanticSnapshot: unownedSemanticSnapshot);
+
+            unownedSemanticSnapshot = null;
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new UiAutomationNativeSnapshotResult(
+                ex.HResult == 0
+                    ? GenericFailure
+                    : ex.HResult,
+                Snapshot: null,
+                Cancelled: false,
+                SemanticSnapshot: null);
+        }
+        finally
+        {
+            unownedSemanticSnapshot?.Dispose();
+            ReleaseComObject(unownedElement);
+
+            foreach (IUIAutomationElement element in elements)
+            {
+                ReleaseComObject(element);
+            }
+
+            pending.Clear();
+        }
+    }
+
     public static void ReleaseElement(object? element)
     {
         ReleaseComObject(element);
@@ -460,6 +722,403 @@ internal sealed class UiAutomationNativeClient : IDisposable
             ReadBoolean(element, IsOffscreenPropertyId),
             ReadBoolean(element, IsPasswordPropertyId),
             patterns);
+    }
+
+    private static UiAutomationSemanticSnapshot CaptureSemanticContent(
+        long epochId,
+        IReadOnlyList<UiAutomationStructuralNode> structuralNodes,
+        IReadOnlyList<IUIAutomationElement> elements,
+        UiAutomationSemanticBudgets budgets,
+        Func<bool> cancellationRequested)
+    {
+        if (structuralNodes.Count != elements.Count)
+        {
+            throw new InvalidOperationException(
+                "Structural nodes and native elements are inconsistent.");
+        }
+
+        DateTimeOffset capturedUtc = DateTimeOffset.UtcNow;
+        long semanticStarted = Stopwatch.GetTimestamp();
+
+        TimeSpan Elapsed() =>
+            Stopwatch.GetElapsedTime(semanticStarted);
+
+        UiAutomationSemanticBudgetTracker tracker =
+            new(budgets);
+
+        UiAutomationSemanticCandidateSelection selection =
+            UiAutomationSemanticCandidateSelector
+                .Select(
+                    structuralNodes,
+                    budgets.MaxSelectedNodes);
+
+        IReadOnlyList<int> selectedIndexes =
+            selection.SelectedIndexes;
+
+        if (selection.Metrics.EligibleCount >
+            selectedIndexes.Count)
+        {
+            tracker.MarkSelectedNodeLimit();
+        }
+
+        List<UiAutomationSemanticNode> semanticNodes =
+            new(capacity: selectedIndexes.Count);
+
+        bool completed = false;
+
+        try
+        {
+            foreach (int index in selectedIndexes)
+            {
+                TimeSpan elapsed = Elapsed();
+
+                if (cancellationRequested() ||
+                    !tracker.MayContinue(elapsed) ||
+                    !tracker.TryReserveSelectedNode(elapsed))
+                {
+                    break;
+                }
+
+                UiAutomationStructuralNode structural =
+                    structuralNodes[index];
+
+                IUIAutomationElement element =
+                    elements[index];
+
+                List<UiAutomationSemanticValue> values = new(3);
+                bool nodeOwnsValues = false;
+
+                try
+                {
+                    TryReadName(
+                        element,
+                        tracker,
+                        values);
+
+                    bool? isReadOnly = null;
+
+                    if (structural.AvailablePatterns.HasFlag(
+                            UiAutomationPatternAvailability.Value))
+                    {
+                        isReadOnly =
+                            TryReadValue(
+                                element,
+                                tracker,
+                                values);
+                    }
+
+                    if (structural.AvailablePatterns.HasFlag(
+                            UiAutomationPatternAvailability.Text) &&
+                        tracker.CanReadAnotherString() &&
+                        tracker.MayContinue(Elapsed()) &&
+                        !cancellationRequested())
+                    {
+                        TryReadVisibleText(
+                            element,
+                            budgets,
+                            tracker,
+                            values,
+                            Elapsed,
+                            cancellationRequested);
+                    }
+
+                    bool isDialog = false;
+
+                    if (tracker.MayContinue(Elapsed()) &&
+                        !cancellationRequested())
+                    {
+                        isDialog =
+                            TryReadIsDialog(
+                                element,
+                                tracker);
+                    }
+
+                    UiAutomationSemanticNode semanticNode =
+                        new(
+                            structural.Index,
+                            structural.ParentIndex,
+                            structural.Depth,
+                            structural.ControlTypeId,
+                            structural.Bounds,
+                            structural.HasKeyboardFocus,
+                            structural.IsEnabled,
+                            structural.IsContentElement,
+                            structural.IsPassword,
+                            structural.IsOffscreen,
+                            isWindow:
+                                structural.ControlTypeId ==
+                                WindowControlTypeId,
+                            isDialog: isDialog,
+                            isReadOnly: isReadOnly,
+                            values: values);
+
+                    semanticNodes.Add(semanticNode);
+                    nodeOwnsValues = true;
+                }
+                finally
+                {
+                    if (!nodeOwnsValues)
+                    {
+                        foreach (UiAutomationSemanticValue value in values)
+                        {
+                            value.Dispose();
+                        }
+                    }
+                }
+            }
+
+            TimeSpan semanticElapsed = Elapsed();
+            _ = tracker.MayContinue(semanticElapsed);
+
+            UiAutomationSemanticSnapshot snapshot =
+                new(
+                    epochId,
+                    capturedUtc,
+                    capturedUtc + budgets.TimeToLive,
+                    semanticNodes,
+                    budgets,
+                    tracker.Truncation,
+                    tracker.VisibleTextRangeCount,
+                    tracker.EstimatedResultBytes,
+                    semanticElapsed,
+                    selection.Metrics with
+                    {
+                        SelectedCount = semanticNodes.Count
+                    });
+
+            completed = true;
+            return snapshot;
+        }
+        finally
+        {
+            if (!completed)
+            {
+                foreach (UiAutomationSemanticNode node in semanticNodes)
+                {
+                    node.Dispose();
+                }
+            }
+        }
+    }
+
+    private static void TryReadName(
+        IUIAutomationElement element,
+        UiAutomationSemanticBudgetTracker tracker,
+        ICollection<UiAutomationSemanticValue> values)
+    {
+        if (!tracker.CanReadAnotherString())
+        {
+            return;
+        }
+
+        try
+        {
+            string? name =
+                ReadCurrentString(
+                    element,
+                    NamePropertyId);
+
+            if (tracker.TryCreateValue(
+                    UiAutomationSemanticContentKind.Name,
+                    name,
+                    out UiAutomationSemanticValue? value))
+            {
+                values.Add(value!);
+            }
+        }
+        catch (COMException)
+        {
+            tracker.MarkProviderContentUnavailable();
+        }
+    }
+
+    private static bool? TryReadValue(
+        IUIAutomationElement element,
+        UiAutomationSemanticBudgetTracker tracker,
+        ICollection<UiAutomationSemanticValue> values)
+    {
+        object? patternObject = null;
+
+        try
+        {
+            patternObject =
+                element.GetCurrentPattern(
+                    (UIA_PATTERN_ID)ValuePatternId);
+
+            if (patternObject is not
+                IUIAutomationValuePattern valuePattern)
+            {
+                tracker.MarkProviderContentUnavailable();
+                return null;
+            }
+
+            bool isReadOnly = valuePattern.CurrentIsReadOnly;
+
+            if (tracker.CanReadAnotherString())
+            {
+                string? currentValue =
+                    ConvertAndFreeBstr(
+                        valuePattern.CurrentValue);
+
+                if (tracker.TryCreateValue(
+                        UiAutomationSemanticContentKind.Value,
+                        currentValue,
+                        out UiAutomationSemanticValue? value))
+                {
+                    values.Add(value!);
+                }
+            }
+
+            return isReadOnly;
+        }
+        catch (COMException)
+        {
+            tracker.MarkProviderContentUnavailable();
+            return null;
+        }
+        finally
+        {
+            ReleaseComObject(patternObject);
+        }
+    }
+
+    private static void TryReadVisibleText(
+        IUIAutomationElement element,
+        UiAutomationSemanticBudgets budgets,
+        UiAutomationSemanticBudgetTracker tracker,
+        ICollection<UiAutomationSemanticValue> values,
+        Func<TimeSpan> elapsed,
+        Func<bool> cancellationRequested)
+    {
+        object? patternObject = null;
+        IUIAutomationTextRangeArray? ranges = null;
+
+        try
+        {
+            patternObject =
+                element.GetCurrentPattern(
+                    (UIA_PATTERN_ID)TextPatternId);
+
+            if (patternObject is not
+                IUIAutomationTextPattern textPattern)
+            {
+                tracker.MarkProviderContentUnavailable();
+                return;
+            }
+
+            ranges = textPattern.GetVisibleRanges();
+
+            int rangeCount = ranges?.Length ?? 0;
+
+            for (int rangeIndex = 0;
+                 rangeIndex < rangeCount;
+                 rangeIndex++)
+            {
+                if (cancellationRequested() ||
+                    !tracker.MayContinue(elapsed()) ||
+                    !tracker.CanReadAnotherString() ||
+                    !tracker.TryReserveVisibleTextRange())
+                {
+                    break;
+                }
+
+                IUIAutomationTextRange? range = null;
+
+                try
+                {
+                    range = ranges!.GetElement(rangeIndex);
+
+                    string? visibleText =
+                        ConvertAndFreeBstr(
+                            range.GetText(
+                                budgets.MaxCharactersPerString));
+
+                    if (tracker.TryCreateValue(
+                            UiAutomationSemanticContentKind.VisibleText,
+                            visibleText,
+                            out UiAutomationSemanticValue? value))
+                    {
+                        values.Add(value!);
+                    }
+                }
+                finally
+                {
+                    ReleaseComObject(range);
+                }
+            }
+        }
+        catch (COMException)
+        {
+            tracker.MarkProviderContentUnavailable();
+        }
+        finally
+        {
+            ReleaseComObject(ranges);
+            ReleaseComObject(patternObject);
+        }
+    }
+
+    private static bool TryReadIsDialog(
+        IUIAutomationElement element,
+        UiAutomationSemanticBudgetTracker tracker)
+    {
+        try
+        {
+            return ReadCurrentBoolean(
+                element,
+                IsDialogPropertyId);
+        }
+        catch (COMException)
+        {
+            tracker.MarkProviderContentUnavailable();
+            return false;
+        }
+    }
+
+    private static string? ConvertAndFreeBstr(BSTR value)
+    {
+        try
+        {
+            return value.ToString();
+        }
+        finally
+        {
+            Marshal.FreeBSTR(value);
+        }
+    }
+
+    private static string? ReadCurrentString(
+        IUIAutomationElement element,
+        int propertyId)
+    {
+        object? value =
+            element.GetCurrentPropertyValue(
+                (UIA_PROPERTY_ID)propertyId);
+
+        if (value is string text)
+        {
+            return text;
+        }
+
+        ReleaseComObject(value);
+        return null;
+    }
+
+    private static bool ReadCurrentBoolean(
+        IUIAutomationElement element,
+        int propertyId)
+    {
+        object? value =
+            element.GetCurrentPropertyValue(
+                (UIA_PROPERTY_ID)propertyId);
+
+        if (value is bool boolean)
+        {
+            return boolean;
+        }
+
+        ReleaseComObject(value);
+        return false;
     }
 
     private static bool ReadBoolean(
@@ -560,4 +1219,5 @@ internal sealed class UiAutomationNativeClient : IDisposable
 internal readonly record struct UiAutomationNativeSnapshotResult(
     int HResult,
     UiAutomationStructuralSnapshot? Snapshot,
-    bool Cancelled);
+    bool Cancelled,
+    UiAutomationSemanticSnapshot? SemanticSnapshot = null);

@@ -69,20 +69,26 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Parse diagnostic runner with Windows PowerShell
+      - name: Parse diagnostic runners with Windows PowerShell
         shell: powershell
         run: |
-          $tokens = $null
-          $errors = $null
-          $path = (Resolve-Path .\run-debug.ps1).Path
-          $null = [System.Management.Automation.Language.Parser]::ParseFile(
-            $path,
-            [ref]$tokens,
-            [ref]$errors)
+          $paths = @(
+            (Resolve-Path .\run-debug.ps1).Path
+            (Resolve-Path .\run-m3-3-acceptance.ps1).Path
+          )
 
-          if ($errors.Count -ne 0) {
-            $errors | ForEach-Object { Write-Error $_.Message }
-            throw "run-debug.ps1 is not compatible with Windows PowerShell."
+          foreach ($path in $paths) {
+            $tokens = $null
+            $errors = $null
+            $null = [System.Management.Automation.Language.Parser]::ParseFile(
+              $path,
+              [ref]$tokens,
+              [ref]$errors)
+
+            if (@($errors).Count -ne 0) {
+              $errors | ForEach-Object { Write-Error "${path}: $($_.Message)" }
+              throw "A diagnostic entry point is not compatible with Windows PowerShell."
+            }
           }
 
       - name: Set up .NET 10
@@ -125,3 +131,4 @@ jobs:
           path: tests/LocalCopilot.Core.Tests/TestResults/*.trx
           if-no-files-found: warn
           retention-days: 7
+

@@ -8,7 +8,8 @@ namespace LocalCopilot_App.Diagnostics;
 internal sealed record DiagnosticSession(
     string SessionId,
     string DirectoryPath,
-    string LogFilePath);
+    string LogFilePath,
+    bool AllowUiText);
 
 internal sealed class DiagnosticLaunchDescriptor
 {
@@ -37,6 +38,12 @@ internal sealed class DiagnosticLaunchDescriptor
     }
 
     public DateTimeOffset ExpiresUtc
+    {
+        get;
+        init;
+    }
+
+    public bool AllowUiText
     {
         get;
         init;
@@ -152,7 +159,8 @@ internal static class DiagnosticSessionParser
                     sessionDirectory,
                     Path.Combine(
                         sessionDirectory,
-                        ApplicationLogFileName));
+                        ApplicationLogFileName),
+                    descriptor!.AllowUiText);
 
             return true;
         }

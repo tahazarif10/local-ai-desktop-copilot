@@ -40,6 +40,19 @@ public static class DiagnosticLog
         }
     }
 
+    public static bool IsUiTextEnabled
+    {
+        get
+        {
+            lock (Gate)
+            {
+                return
+                    _initialized &&
+                    _session?.AllowUiText == true;
+            }
+        }
+    }
+
     public static void Initialize(
         IReadOnlyList<string>? processArguments)
     {
@@ -67,7 +80,8 @@ public static class DiagnosticLog
                 "=== LocalCopilot diagnostic session ===" +
                 Environment.NewLine +
                 $"schema={DiagnosticSessionParser.SchemaVersion} " +
-                $"sessionId={session.SessionId}" +
+                $"sessionId={session.SessionId} " +
+                $"uiTextEnabled={session.AllowUiText}" +
                 Environment.NewLine;
 
             lock (Gate)

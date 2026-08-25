@@ -1,4 +1,8 @@
-// M3.2 uses the SDK-generated COM projection rather than extending manual
-// vtable slot declarations. Supporting UIA interfaces and types are generated
-// transitively from this authoritative interface.
+// M3.2/M3.3 use SDK-generated COM projections rather than manual vtable slot
+// declarations. Keep every content-bearing interface explicit so expansion of
+// the native semantic surface is visible in review.
 IUIAutomation2
+IUIAutomationValuePattern
+IUIAutomationTextPattern
+IUIAutomationTextRangeArray
+IUIAutomationTextRange

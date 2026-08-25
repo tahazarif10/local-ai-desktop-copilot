@@ -145,12 +145,12 @@
                 Margin="0,6,0,0" />
 
             <TextBlock
-                Text="M3.2 UI Automation structural snapshot"
+                Text="M3.3 UI Automation semantic snapshot"
                 FontWeight="SemiBold"
                 Margin="0,22,0,0" />
 
             <TextBlock
-                Text="Manual diagnostic only · bounded Control View · no Name, Value, Text, or actions"
+                Text="Manual diagnostic only · text needs -EnableUiText · selected visible content · aggregate output only · no actions"
                 TextWrapping="Wrap"
                 Opacity="0.7" />
 
@@ -159,6 +159,21 @@
                 Click="UiAutomationStructuralSnapshotButton_Click"
                 HorizontalAlignment="Left"
                 Margin="0,6,0,0" />
+
+            <Button
+                Content="Capture bounded semantic snapshot (explicit opt-in)"
+                Click="UiAutomationSemanticSnapshotButton_Click"
+                HorizontalAlignment="Left" />
+
+            <Button
+                Content="Exercise tiny semantic budgets"
+                Click="UiAutomationSemanticBudgetButton_Click"
+                HorizontalAlignment="Left" />
+
+            <Button
+                Content="Exercise semantic latest-wins/clear-on-stale burst"
+                Click="UiAutomationSemanticLatestWinsBurstButton_Click"
+                HorizontalAlignment="Left" />
 
             <Button
                 Content="Exercise depth-0 structural budget"

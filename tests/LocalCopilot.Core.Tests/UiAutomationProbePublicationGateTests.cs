@@ -204,6 +204,116 @@ public sealed class UiAutomationProbePublicationGateTests
             published.Reason);
     }
 
+    [TestMethod]
+    public void Apply_SemanticSnapshot_RequiresIndependentTextCapability()
+    {
+        using ContextEpochManager manager = new();
+
+        ContextEpoch epoch = manager.GetOrAdvance(
+            TestData.Snapshot(),
+            TestData.Allowed(
+                capabilities:
+                    PrivacyCapability.ObserveIdentity |
+                    PrivacyCapability.ReadUiStructure));
+
+        DateTimeOffset captured = DateTimeOffset.UtcNow;
+        UiAutomationSemanticSnapshot semantic =
+            EmptySemanticSnapshot(epoch.Id, captured);
+
+        UiAutomationProbeResult result =
+            Available(epoch.Id) with
+            {
+                Reason = UiAutomationProbeReason.SnapshotCaptured,
+                SemanticSnapshot = semantic
+            };
+
+        UiAutomationProbeResult published =
+            UiAutomationProbePublicationGate.Apply(
+                result,
+                epoch,
+                latestRequestId: result.RequestId,
+                utcNow: captured);
+
+        AssertStale(published);
+        Assert.IsNull(published.SemanticSnapshot);
+        Assert.IsTrue(semantic.IsDisposed);
+    }
+
+    [TestMethod]
+    public void Apply_CurrentSemanticSnapshotWithBothCapabilities_PreservesIt()
+    {
+        using ContextEpochManager manager = new();
+
+        ContextEpoch epoch = manager.GetOrAdvance(
+            TestData.Snapshot(),
+            TestData.Allowed(
+                capabilities:
+                    PrivacyCapability.ObserveIdentity |
+                    PrivacyCapability.ReadUiStructure |
+                    PrivacyCapability.ReadUiText));
+
+        DateTimeOffset captured = DateTimeOffset.UtcNow;
+        using UiAutomationSemanticSnapshot semantic =
+            EmptySemanticSnapshot(epoch.Id, captured);
+
+        UiAutomationProbeResult result =
+            Available(epoch.Id) with
+            {
+                Reason = UiAutomationProbeReason.SnapshotCaptured,
+                SemanticSnapshot = semantic
+            };
+
+        UiAutomationProbeResult published =
+            UiAutomationProbePublicationGate.Apply(
+                result,
+                epoch,
+                latestRequestId: result.RequestId,
+                utcNow: captured);
+
+        Assert.AreSame(result, published);
+        Assert.AreSame(semantic, published.SemanticSnapshot);
+        Assert.IsFalse(semantic.IsDisposed);
+    }
+
+    [TestMethod]
+    public void Apply_ExpiredSemanticSnapshot_DropsAndDisposesContent()
+    {
+        using ContextEpochManager manager = new();
+
+        ContextEpoch epoch = manager.GetOrAdvance(
+            TestData.Snapshot(),
+            TestData.Allowed(
+                capabilities:
+                    PrivacyCapability.ObserveIdentity |
+                    PrivacyCapability.ReadUiStructure |
+                    PrivacyCapability.ReadUiText));
+
+        DateTimeOffset captured = DateTimeOffset.UtcNow;
+        UiAutomationSemanticSnapshot semantic =
+            EmptySemanticSnapshot(epoch.Id, captured);
+
+        UiAutomationProbeResult result =
+            Available(epoch.Id) with
+            {
+                Reason = UiAutomationProbeReason.SnapshotCaptured,
+                SemanticSnapshot = semantic
+            };
+
+        UiAutomationProbeResult published =
+            UiAutomationProbePublicationGate.Apply(
+                result,
+                epoch,
+                latestRequestId: result.RequestId,
+                utcNow: semantic.ExpiresUtc);
+
+        Assert.AreEqual(UiAutomationProbeOutcome.Stale, published.Outcome);
+        Assert.AreEqual(
+            UiAutomationProbeReason.SemanticSnapshotExpired,
+            published.Reason);
+        Assert.IsNull(published.SemanticSnapshot);
+        Assert.IsTrue(semantic.IsDisposed);
+    }
+
     private static UiAutomationProbeResult Available(
         long epochId) =>
         new(
@@ -236,4 +346,24 @@ public sealed class UiAutomationProbePublicationGateTests
             estimatedResultBytes:
                 UiAutomationSnapshotSizeEstimator.HeaderBytes,
             traversalElapsed: TimeSpan.Zero);
+
+    private static UiAutomationSemanticSnapshot EmptySemanticSnapshot(
+        long epochId,
+        DateTimeOffset captured)
+    {
+        UiAutomationSemanticBudgets budgets =
+            UiAutomationSemanticBudgets.M3_3Default;
+
+        return new UiAutomationSemanticSnapshot(
+            epochId,
+            captured,
+            captured + budgets.TimeToLive,
+            Array.Empty<UiAutomationSemanticNode>(),
+            budgets,
+            UiAutomationSnapshotTruncation.None,
+            visibleTextRangeCount: 0,
+            estimatedResultBytes:
+                UiAutomationSemanticSizeEstimator.HeaderBytes,
+            semanticElapsed: TimeSpan.Zero);
+    }
 }
