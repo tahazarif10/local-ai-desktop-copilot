@@ -6,7 +6,7 @@ last_verified_date: 2026-08-26
 completed_through: M3.3
 active_milestone: M3.4
 active_branch: dev/m3-4-orchestrated-ui-enrichment
-active_status: M3.4 slice 1 adds an unconnected portable trigger policy; isolation evidence and runtime integration remain pending
+active_status: M3.4 slice 1 is under review in PR #19; isolation evidence and runtime integration remain pending
 next_milestone: M3.4
 next_milestone_name: Orchestrated UI enrichment and isolation decision
 ---
