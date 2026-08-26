@@ -254,5 +254,8 @@ Foundation hardening and read-only UIA advance in this order:
 5. ✅ validate the capability-gated, root-only MTA worker probe in M3.1; UIA text remains a later, separately authorized slice;
 6. ✅ validate bounded non-text structure behind the same gates in M3.2; ADR 0008 is accepted after CI and physical provider/privacy/budget/stale/teardown evidence passed;
 7. ✅ validate M3.3's separately authorized `ReadUiText` path on classic/packaged/browser providers, privacy denial, password/off-screen eligibility, stale disposal, higher-integrity denial, prior UIA regressions, held-work teardown, and prohibited-content scanning; PR #18 and accepted ADR 0009 record the boundary.
+8. ▶ define M3.4's content-free, capability/epoch-gated trigger policy without
+   runtime UIA wiring; then measure controlled provider hangs and decide the
+   isolation boundary before automatic semantic reads are eligible.
 
-See [ADR 0001](decisions/0001-privacy-before-content.md), [ADR 0005](decisions/0005-foundation-hardening-before-uia.md), accepted [ADR 0007](decisions/0007-root-only-uia-mta-probe.md), accepted [ADR 0008](decisions/0008-generated-bounded-uia-snapshot.md), and accepted [ADR 0009](decisions/0009-capability-gated-semantic-uia-snapshot.md).
+See [ADR 0001](decisions/0001-privacy-before-content.md), [ADR 0005](decisions/0005-foundation-hardening-before-uia.md), accepted [ADR 0007](decisions/0007-root-only-uia-mta-probe.md), accepted [ADR 0008](decisions/0008-generated-bounded-uia-snapshot.md), accepted [ADR 0009](decisions/0009-capability-gated-semantic-uia-snapshot.md), and proposed [ADR 0010](decisions/0010-bounded-priority-ui-enrichment-policy.md).

@@ -1,12 +1,12 @@
 ---
 state_schema: 2
 reference_code_commit: 3dccdbc24fc60093f46f903dec4f7ca04c08dc14
-accepted_main_commit: be0a437ddbe09fc2a9830a9b10da56f83a8051d9
-last_verified_date: 2026-08-25
+accepted_main_commit: f6a1f3866ab4e29a4c7f5323408275180a55b973
+last_verified_date: 2026-08-26
 completed_through: M3.3
 active_milestone: M3.4
 active_branch: dev/m3-4-orchestrated-ui-enrichment
-active_status: M3.3 accepted through PR #18; M3.4 orchestration/isolation design is next
+active_status: M3.4 slice 1 adds an unconnected portable trigger policy; isolation evidence and runtime integration remain pending
 next_milestone: M3.4
 next_milestone_name: Orchestrated UI enrichment and isolation decision
 ---
@@ -17,7 +17,7 @@ This document separates verified implementation from target architecture. Update
 
 ## Executive state
 
-The accepted M3.3 functional baseline is `3dccdbc24fc60093f46f903dec4f7ca04c08dc14`. [PR #18](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/18) adds a separately authorized, bounded, RAM-only Name/advertised-Value/visible-Text snapshot on the existing application-owned COM MTA worker. Acceptance-runner head `1f2383a2224904e94062c23e44375d42fbe7e3bd` preserves the product code while adding the one-command physical gate. CI #43 passed 124 deterministic tests on Ubuntu and Windows, both PowerShell runner parses, and the strict Windows build; the full provider/privacy/budget/stale/regression/teardown/redaction matrix passed on the physical client. The current documentation commit cannot embed its future squash SHA, so `accepted_main_commit` remains the last resolved merge record above; always resolve live Git/PR/main state.
+The accepted M3.3 functional baseline is `3dccdbc24fc60093f46f903dec4f7ca04c08dc14`. [PR #18](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/18) adds a separately authorized, bounded, RAM-only Name/advertised-Value/visible-Text snapshot on the existing application-owned COM MTA worker. Acceptance-runner head `1f2383a2224904e94062c23e44375d42fbe7e3bd` preserves the product code while adding the one-command physical gate. CI #43 passed 124 deterministic tests on Ubuntu and Windows, both PowerShell runner parses, and the strict Windows build; the full provider/privacy/budget/stale/regression/teardown/redaction matrix passed on the physical client. PR #18 is resolved on `main` as `f6a1f3866ab4e29a4c7f5323408275180a55b973`; `reference_code_commit` intentionally retains the exact accepted functional head.
 
 There is no known blocking defect in the accepted M2 sensing path, completed M2.4 foundation-hardening gate, or accepted M3.1 root, M3.2 structural, and M3.3 semantic UIA boundaries. No rework is required unless a reproducible regression appears.
 
@@ -268,7 +268,7 @@ The `systemAIModels` manifest capability is present, but no Windows AI model API
 M2.4.1 through M2.4.4 resolved the characterization/CI, ownership/lifecycle, capability-privacy, diagnostic-session, exception-redaction, and input-measurement findings. M3.1 accepted the minimal UIA execution boundary, M3.2 accepted bounded non-text structure, and M3.3 accepted separately authorized bounded semantic snapshots. The next unresolved slice is M3.4 orchestration design:
 
 1. **Process isolation and continuous recovery remain evidence-gated.** The accepted manual M3.3 path proves bounded results, same-worker recovery for deterministic deadline/integrity cases, and joined teardown; it does not prove that every hostile Name/Value/Text provider call is interruptible. M3.4 must decide whether continuous UIA needs a restartable helper process before automatic triggering is accepted.
-2. **Automatic trigger policy remains undefined.** M3.4 must bind meaningful-change/question triggers to explicit debounce, deduplication, capacity-one latest-wins behavior, stale disposal, capability revalidation, and measurable resource limits without widening the accepted M3.3 content contract.
+2. **Automatic trigger integration remains evidence-gated.** This branch begins with a portable metadata-only policy for meaningful/large-change and user-question admission, explicit debounce input, per-epoch deduplication, one-active/one-pending backpressure, question priority, and invalidation handles. It is not connected to the UIA worker. Runtime parameters, cancellation wiring, disposal verification, and resource measurements remain pending and must not widen the accepted M3.3 content contract.
 
 ### Important hardening debt
 
@@ -298,7 +298,9 @@ dev/m3-4-orchestrated-ui-enrichment
 
 M3.3 is accepted at functional head `3dccdbc24fc60093f46f903dec4f7ca04c08dc14` with physical acceptance at clean head `1f2383a2224904e94062c23e44375d42fbe7e3bd`; PR #18 and accepted [ADR 0009](decisions/0009-capability-gated-semantic-uia-snapshot.md) are the review/evidence records.
 
-M3.4 must begin with a measured orchestration and isolation decision: define trigger policy, debounce/deduplication, capacity-one latest-wins behavior, cancellation/stale disposal, capability revalidation, teardown, and whether restartable process isolation is required for continuous provider calls. Preserve every M3.3 content limit and privacy gate.
+The first M3.4 slice is the portable policy contract in proposed [ADR 0010](decisions/0010-bounded-priority-ui-enrichment-policy.md). It admits only current, uncancelled epochs with both UIA capabilities; accepts only Meaningful/Large background changes or explicit user questions; receives its debounce duration from a future runtime owner; deduplicates monotonic source IDs per epoch and trigger kind; and bounds work to one active plus one pending request. Newer background work may replace only pending background work, while user questions outrank pending background work and receive explicit retryable backpressure instead of silent replacement. Invalidation returns request handles; the accepted M3.3 publication gate remains responsible for rejecting and clearing content-bearing stale results.
+
+This slice is deliberately not wired into `DesktopCopilotCoordinator` or `UiAutomationProbeWorker`, chooses no runtime debounce value, starts no automatic UIA call, and makes no helper-process decision. Its verification is portable deterministic policy tests. The next gate is controlled physical provider-hang measurement and an explicit isolation decision; only then may runtime integration add cancellation/disposal wiring and a one-command Windows acceptance matrix.
 
 Do not add OCR, action patterns, elevation/`uiAccess`, persistence, implicit egress, or unbounded semantic collection in M3.4.
 
