@@ -10,6 +10,8 @@ public sealed class UiEnrichmentOrchestrationPolicyTests
     private const long TimestampFrequency =
         1000;
 
+    public TestContext TestContext { get; set; }
+
     [TestMethod]
     public void Trigger_InvalidIdentityOrShape_Throws()
     {
@@ -680,12 +682,22 @@ public sealed class UiEnrichmentOrchestrationPolicyTests
             sourceId,
             UiEnrichmentTriggerKind.UserQuestion);
 
-    private static ContextEpoch Epoch(
+    private ContextEpoch Epoch(
         long id = 7,
         PrivacyCapability capabilities =
             PrivacyCapability.ReadUiStructure |
-            PrivacyCapability.ReadUiText,
-        CancellationToken cancellationToken = default) =>
+            PrivacyCapability.ReadUiText) =>
+        Epoch(
+            TestContext.CancellationToken,
+            id,
+            capabilities);
+
+    private static ContextEpoch Epoch(
+        CancellationToken cancellationToken,
+        long id = 7,
+        PrivacyCapability capabilities =
+            PrivacyCapability.ReadUiStructure |
+            PrivacyCapability.ReadUiText) =>
         new(
             id,
             DateTimeOffset.UnixEpoch,
