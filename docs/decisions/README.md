@@ -21,7 +21,8 @@ ADRs preserve why a material decision exists so a new session does not undo it a
 | [0006](0006-launch-scoped-diagnostics.md) | Accepted | Use expiring launch-scoped diagnostic sessions and explicit bundle sources |
 | [0007](0007-root-only-uia-mta-probe.md) | Accepted | Validate a root-only probe on an application-owned COM MTA worker before broader UIA |
 | [0008](0008-generated-bounded-uia-snapshot.md) | Accepted | Use generated interop and explicit budgets for a non-text Control View snapshot |
-| [0009](0009-capability-gated-semantic-uia-snapshot.md) | Proposed | Read selected visible UI semantics behind a separate capability and lifetime budget |
+| [0009](0009-capability-gated-semantic-uia-snapshot.md) | Accepted | Read selected visible UI semantics behind a separate capability and lifetime budget |
+| [0010](0010-bounded-priority-ui-enrichment-policy.md) | Accepted | Admit UI enrichment through a bounded, priority-aware, per-epoch policy before runtime wiring |
 
 ## When to add an ADR
 

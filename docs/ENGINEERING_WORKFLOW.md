@@ -125,6 +125,8 @@ M3.2 added 17 portable tests for its immutable zero-string contract, exact budge
 
 Accepted M3.3 raises the suite to 124 tests covering capability separation, selected-node/exclusion policy, independent character/string/range/UTF-8/result/time/TTL limits, provenance/sensitivity, clear-on-dispose, and expired/revoked/stale publication. [CI run #43](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32894314154) passed all 124 tests on Ubuntu/Windows, parsed both PowerShell runners, and completed the strict app build. Its separate physical evidence is recorded below.
 
+Accepted M3.4 slice 1 raises the suite to 140 tests with content-free orchestration admission, debounce, per-kind deduplication, question priority/backpressure, bounded invalidation, and shutdown coverage. [CI run #49](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/33153232435) passed all 140 tests on Ubuntu/Windows, parsed both PowerShell runners, and completed the strict app build. The slice is not runtime-composed, so it adds no physical UIA claim; provider-isolation measurement remains the next gate.
+
 The CI workflow runs the core suite on both Ubuntu and Windows, then builds the packaged app as `Debug/win-x64` on Windows. Test-result artifacts are retained for failed as well as successful runs. Do not write “all tests passed” unless the relevant local/CI run is identified and actually passed; report build, test, CI, and physical runtime evidence as separate facts.
 
 Run a focused filter during diagnosis when useful, then the full suite before commit:
@@ -425,4 +427,3 @@ Stop and investigate when:
 - a dependency/model choice is being made without target-hardware validation.
 
 Correctness and a trustworthy handoff are more important than advancing the milestone label.
-

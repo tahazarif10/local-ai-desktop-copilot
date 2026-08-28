@@ -258,6 +258,15 @@ The worker also revalidates HWND/PID and fail-closes if the target token cannot 
 
 UIA properties are cross-process calls and providers vary in quality. `CancellationToken` alone cannot be assumed to interrupt a blocked COM call. M3.1 physically validated forced deadline/recovery on the same worker and joined teardown during active work; this is sufficient for the manual root probe but not a guarantee against every hostile provider. M3.4 must decide whether continuous UIA needs a restartable helper process from measured evidence; M3.1 does not create that process speculatively.
 
+The first M3.4 slice defines only a portable admission policy in Core. It
+accepts content-free Meaningful/Large-change or user-question metadata after
+epoch/capability checks, applies an explicitly supplied debounce and per-kind
+deduplication, and owns one active plus one pending request. Background work is
+latest-wins only within the pending background slot; a question outranks that
+slot and receives explicit retryable backpressure rather than silent
+replacement. The policy is not composed into the application or UIA worker,
+so it cannot start an automatic read before the provider-isolation decision.
+
 ### 6.8 OCR and visual fallback
 
 OCR operates on a relevant region after UIA is insufficient. Backend selection is deferred to an M4 benchmark.
@@ -343,7 +352,8 @@ LocalCopilot.App
 LocalCopilot.Core
   privacy policy, epochs, lifecycle gate, change classification,
   timeline/correlation models, UIA typed outcomes/classifier/publication gate,
-  immutable structural contract/budget tracker, latest-pending slot
+  immutable structural contract/budget tracker, latest-pending slot,
+  unconnected M3.4 enrichment admission policy
 
 LocalCopilot.Core.Tests -> LocalCopilot.Core
 ```
@@ -364,7 +374,7 @@ LocalCopilot.Inference.Server   local endpoint, resource manager, runtime adapte
 *.Tests                         pure, contract, and Windows integration suites
 ```
 
-M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, M2.4.4 hardened diagnostics/input evidence, M3.1 accepted the smallest UIA worker boundary through a root-only probe, M3.2 accepted the generated budgeted non-text snapshot under ADR 0008, and M3.3 accepted separately authorized bounded semantic text under ADR 0009. M3.4 orchestration/isolation design is next; later milestones must not create all future projects at once.
+M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, M2.4.4 hardened diagnostics/input evidence, M3.1 accepted the smallest UIA worker boundary through a root-only probe, M3.2 accepted the generated budgeted non-text snapshot under ADR 0008, and M3.3 accepted separately authorized bounded semantic text under ADR 0009. M3.4 begins with the accepted portable policy in ADR 0010; physical provider-hang evidence and the isolation decision still precede runtime wiring. Later milestones must not create all future projects at once.
 
 ## 8. Threading and lifecycle model
 
@@ -523,6 +533,7 @@ Prefer reversible adapters and typed contracts. Split a process only for a measu
 - [Caching UI Automation properties and patterns](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-cachingforclients)
 - [Microsoft CsWin32](https://github.com/microsoft/CsWin32)
 - [ADR 0008: generated bounded UIA snapshot](decisions/0008-generated-bounded-uia-snapshot.md)
+- [ADR 0010: bounded priority-aware UI enrichment admission](decisions/0010-bounded-priority-ui-enrichment-policy.md)
 - [UI Automation security overview](https://learn.microsoft.com/en-us/dotnet/framework/ui-automation/ui-automation-security-overview)
 - [Low-level mouse hook callback requirements](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelmouseproc)
 - [Windows App SDK desktop application lifecycle](https://learn.microsoft.com/en-us/windows/apps/develop/launch/app-lifecycle)

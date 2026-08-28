@@ -151,9 +151,34 @@ Accepted evidence: 124/124 tests on Ubuntu/Windows, both runner parses, and stri
 
 ### ▶ M3.4 Orchestrated UI enrichment
 
-- Trigger bounded snapshots after meaningful changes and on high-priority user questions.
-- Add deduplication, debounce, backpressure, and stale-result disposal.
-- Decide whether continuous UIA requires a restartable helper process based on measured provider-hang recovery.
+- **Slice 1 — portable admission policy (accepted):** define content-free
+  Meaningful/Large-change and user-question triggers, explicitly supplied
+  debounce, per-epoch/per-kind deduplication, one-active/one-pending bounds,
+  question priority with observable backpressure, and invalidation handles.
+  Keep it disconnected from UIA so this slice cannot start continuous reads.
+  PR #19 and CI #49 accepted the contract with 140/140 tests on Ubuntu and
+  Windows, both PowerShell runner parses, and the strict Windows build.
+- **Slice 2 — isolation evidence and decision:** measure controlled
+  same-integrity provider hangs on the physical Windows client, record recovery
+  and teardown evidence, and decide whether automatic UIA requires a
+  restartable helper process. Do not infer this decision from deterministic
+  timeouts alone.
+- **Slice 3 — runtime integration and acceptance:** only after the isolation
+  decision, bind approved triggers to the existing bounded M3.3 snapshot,
+  revalidate capability/epoch/latest identity at admission and publication,
+  cancel or clear every replaced/stale result, and prove the complete matrix
+  through one PowerShell 5.1 command.
+
+Exit criteria:
+
+- Automatic UIA remains off until slice 2 selects and verifies the recovery
+  boundary.
+- User questions are never silently dropped or replaced; overload is explicit
+  and retryable.
+- All queue capacities, replacement ownership, cancellation, stale disposal,
+  teardown, and content-free diagnostics are deterministic and observable.
+- M3.3 content selection, privacy capabilities, immutable budgets, RAM-only
+  lifetime, no-action boundary, and prohibited-content scan remain unchanged.
 
 ## ◻ M4 — Visual text and visual fallback
 
