@@ -1,7 +1,8 @@
 # ADR 0010: Bounded priority-aware UI enrichment admission
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-26
+- Accepted: 2026-08-28
 - Supersedes: none
 - Extends: ADR 0002, ADR 0003, and ADR 0009
 
@@ -87,6 +88,9 @@ Portable deterministic tests cover trigger validation, capability and epoch
 admission, Meaningful/Large filtering, debounce boundaries, per-kind
 deduplication, background replacement, question priority and retryable
 backpressure, pending promotion, epoch invalidation, Disarm, cancellation, and
-shutdown. CI and strict build evidence must be recorded after this branch is
-pushed and actually completes; this proposed ADR does not claim an unobserved
-pass.
+shutdown. [CI #49](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/33153232435)
+passed 140/140 tests on Ubuntu and Windows, parsed both PowerShell acceptance
+runners, and completed the strict `Debug/win-x64 --warnaserror` app build at
+functional head `c71a55060efb42774214cd4d5d230136162ee0d7`. This policy is
+not runtime-composed, so the next evidence gate remains controlled physical
+provider-hang measurement and the explicit isolation decision.

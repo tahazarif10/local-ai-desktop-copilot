@@ -258,4 +258,4 @@ Foundation hardening and read-only UIA advance in this order:
    runtime UIA wiring; then measure controlled provider hangs and decide the
    isolation boundary before automatic semantic reads are eligible.
 
-See [ADR 0001](decisions/0001-privacy-before-content.md), [ADR 0005](decisions/0005-foundation-hardening-before-uia.md), accepted [ADR 0007](decisions/0007-root-only-uia-mta-probe.md), accepted [ADR 0008](decisions/0008-generated-bounded-uia-snapshot.md), accepted [ADR 0009](decisions/0009-capability-gated-semantic-uia-snapshot.md), and proposed [ADR 0010](decisions/0010-bounded-priority-ui-enrichment-policy.md).
+See [ADR 0001](decisions/0001-privacy-before-content.md), [ADR 0005](decisions/0005-foundation-hardening-before-uia.md), accepted [ADR 0007](decisions/0007-root-only-uia-mta-probe.md), accepted [ADR 0008](decisions/0008-generated-bounded-uia-snapshot.md), accepted [ADR 0009](decisions/0009-capability-gated-semantic-uia-snapshot.md), and accepted [ADR 0010](decisions/0010-bounded-priority-ui-enrichment-policy.md).

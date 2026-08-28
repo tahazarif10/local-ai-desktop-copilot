@@ -374,7 +374,7 @@ LocalCopilot.Inference.Server   local endpoint, resource manager, runtime adapte
 *.Tests                         pure, contract, and Windows integration suites
 ```
 
-M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, M2.4.4 hardened diagnostics/input evidence, M3.1 accepted the smallest UIA worker boundary through a root-only probe, M3.2 accepted the generated budgeted non-text snapshot under ADR 0008, and M3.3 accepted separately authorized bounded semantic text under ADR 0009. M3.4 begins with the proposed portable policy in ADR 0010; physical provider-hang evidence and the isolation decision still precede runtime wiring. Later milestones must not create all future projects at once.
+M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, M2.4.4 hardened diagnostics/input evidence, M3.1 accepted the smallest UIA worker boundary through a root-only probe, M3.2 accepted the generated budgeted non-text snapshot under ADR 0008, and M3.3 accepted separately authorized bounded semantic text under ADR 0009. M3.4 begins with the accepted portable policy in ADR 0010; physical provider-hang evidence and the isolation decision still precede runtime wiring. Later milestones must not create all future projects at once.
 
 ## 8. Threading and lifecycle model
 

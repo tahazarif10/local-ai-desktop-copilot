@@ -151,11 +151,13 @@ Accepted evidence: 124/124 tests on Ubuntu/Windows, both runner parses, and stri
 
 ### ▶ M3.4 Orchestrated UI enrichment
 
-- **Slice 1 — portable admission policy (in review):** define content-free
+- **Slice 1 — portable admission policy (accepted):** define content-free
   Meaningful/Large-change and user-question triggers, explicitly supplied
   debounce, per-epoch/per-kind deduplication, one-active/one-pending bounds,
   question priority with observable backpressure, and invalidation handles.
   Keep it disconnected from UIA so this slice cannot start continuous reads.
+  PR #19 and CI #49 accepted the contract with 140/140 tests on Ubuntu and
+  Windows, both PowerShell runner parses, and the strict Windows build.
 - **Slice 2 — isolation evidence and decision:** measure controlled
   same-integrity provider hangs on the physical Windows client, record recovery
   and teardown evidence, and decide whether automatic UIA requires a
