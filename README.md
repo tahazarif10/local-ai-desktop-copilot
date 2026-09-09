@@ -13,7 +13,7 @@
   <img alt="Runtime: .NET 10" src="https://img.shields.io/badge/Runtime-.NET_10-512BD4?style=for-the-badge&amp;logo=dotnet&amp;logoColor=white" />
   <img alt="UI: WinUI 3" src="https://img.shields.io/badge/UI-WinUI_3-2563EB?style=for-the-badge" />
   <img alt="Privacy: local only" src="https://img.shields.io/badge/Privacy-Local_Only-15803D?style=for-the-badge" />
-  <img alt="Current gate: M3.3" src="https://img.shields.io/badge/Current_Gate-M3.3-F59E0B?style=for-the-badge" />
+  <img alt="Current gate: M3.4" src="https://img.shields.io/badge/Current_Gate-M3.4-F59E0B?style=for-the-badge" />
   <a href="https://github.com/tahazarif10/local-ai-desktop-copilot/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/tahazarif10/local-ai-desktop-copilot/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
 </p>
 
@@ -33,28 +33,28 @@
 This is a product-grade system, not a screenshot-to-LLM demo. It uses the smallest useful local context, escalates from cheap sensing to richer semantics only when required, and treats privacy as a control-plane boundary.
 
 > [!IMPORTANT]
-> The accepted `main` baseline includes the M3.1 metadata-only UI Automation root probe and M3.2 bounded, non-text structural snapshots. Draft [PR #18](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/18) contains an M3.3 semantic-snapshot candidate, but it is not accepted or merged until the physical Windows matrix passes. OCR, memory, model inference, voice, autonomous actions, and a production privacy-settings UI do not exist.
+> The accepted `main` baseline includes M3.1 root probing, M3.2 bounded non-text structure, the separately authorized M3.3 semantic snapshot, and the content-free M3.4 slice-1 admission policy. [PR #19](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/19) is accepted and merged, but the policy is intentionally not wired to runtime UIA. Controlled provider-isolation evidence and an explicit in-process versus restartable-helper decision remain the next gate. OCR, memory, model inference, voice, autonomous actions, and a production privacy-settings UI do not exist.
 
 ## Project status in 60 seconds
 
 | Item | Current truth |
 | --- | --- |
-| Last verified functional code baseline | `e1a50741580379f0f65c80e212f04c449e5a8c9b` (the later `2677025` descendant changes only the diagnostic milestone label) |
-| Accepted merge record | M3.2 [PR #16](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/16), squash merge `be0a437`; resolve live HEAD from GitHub/Git |
-| Active unaccepted candidate | M3.3 [Draft PR #18](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/18), functional head `3dccdbc`; automated gates pass, physical Windows acceptance remains open |
-| Baseline date | 2026-08-23 (Windows runtime acceptance) |
-| Completed | Foreground context, RAM-only capture, capability privacy/epochs, low-resolution change detection, persistent latest-wins sensing, diagnostic correlation, portable core/CI, application-owned lifecycle, launch-scoped diagnostics/input hardening, root-only UIA probing, and bounded non-text UIA structure |
+| Last verified functional code baseline | `c71a55060efb42774214cd4d5d230136162ee0d7` (accepted M3.4 slice 1 portable policy) |
+| Accepted merge record | M3.4 slice 1 [PR #19](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/19), resolved on `main` as `2fb9de0`; resolve live HEAD from GitHub/Git |
+| Next unaccepted gate | M3.4 slice 2 provider-isolation evidence and the explicit in-process versus restartable-helper decision; automatic UIA wiring remains blocked |
+| Baseline date | 2026-08-28 (M3.4 slice 1 acceptance; no runtime composition change) |
+| Completed | Foreground context, RAM-only capture, capability privacy/epochs, low-resolution change detection, persistent latest-wins sensing, diagnostic correlation, portable core/CI, application-owned lifecycle, launch-scoped diagnostics/input hardening, root-only UIA probing, bounded non-text UIA structure, bounded semantic UI snapshots, and the unconnected M3.4 admission policy |
 | Current implementation shape | Existing packaged WinUI process with one application-owned COM MTA, one active plus one newest pending request, generated UIA interop, and short-lived bounded Control View results; there is no separate UIA process |
-| Active milestone | `M3.3 Semantic UI Snapshot`; branch `dev/m3-3-semantic-ui-snapshot`; implementation candidate complete, physical acceptance next |
-| Accepted M3.2 contract | Foreground HWND only; breadth-first Control View; Content subset marker; 256 nodes / depth 8 / 1,200 ms / 27 properties per node / zero strings / 32 KiB estimated result |
-| Automated tests / CI | Accepted M3.2: 108/108 in [CI #28](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32648315641). Active M3.3 candidate: 124/124 on Ubuntu/Windows, PowerShell parse, and strict `Debug/win-x64 --warnaserror` build in [CI #40](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32652845504) |
+| Active milestone | `M3.4 Orchestrated UI Enrichment`; next branch `dev/m3-4-2-provider-isolation`; provider-isolation evidence is next and runtime integration remains blocked |
+| Accepted UIA contracts | M3.2: foreground-HWND bounded non-text structure. M3.3: separately authorized bounded Name/advertised-Value/visible-Text snapshot with short-lived RAM ownership. M3.4.1: content-free trigger admission only; no automatic UIA wiring |
+| Automated tests / CI | Accepted M3.4 slice 1: 140/140 on Ubuntu/Windows, both PowerShell runners parsed, and strict `Debug/win-x64 --warnaserror` build passed in [CI #49](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/33153232435) |
 | Cloud use | Forbidden by the product architecture |
 | Autonomous input/actions | Out of scope |
 
 The detailed, evidence-backed state is in [Project State](docs/PROJECT_STATE.md). Do not infer implementation status from the target architecture or roadmap.
 
 <p align="center">
-  <img src="docs/assets/milestone-strip.svg" width="100%" alt="M1 through M3.2 accepted, M3.3 semantic UI snapshot next, later milestones planned" />
+  <img src="docs/assets/milestone-strip.svg" width="100%" alt="M1 through M3.3 accepted, M3.4 admission policy accepted, provider isolation next" />
 </p>
 
 ## Start here in a new AI or engineering session
@@ -154,7 +154,7 @@ explicit diagnostic launch + Arm
 
 The M3.1 probe never requests UIA Name, Value, Text, tree children, patterns, or actions. Product-default launches do not grant `ReadUiStructure`; the grant exists only inside an explicit launch-scoped diagnostic session.
 
-Accepted M3.2 extends that same gated request path with a breadth-first Control View snapshot. It uses an Element-scope UIA cache request and generated `IUIAutomation2` interop, records only structural Boolean/numeric facts and pattern availability, and exposes `IsContentElement` for selective downstream use. The hard defaults are 256 nodes, depth 8, 1,200 ms traversal, 27 values per node, 6,912 total values, zero strings/bytes, and a 32 KiB estimated result. UI and diagnostics receive only aggregate counts/timing/truncation; no bounds, control IDs, per-node facts, or text are logged.
+Accepted M3.2 extends that same gated request path with a breadth-first Control View snapshot. It uses an Element-scope UIA cache request and generated `IUIAutomation2` interop, records only structural Boolean/numeric facts and pattern availability, and exposes `IsContentElement` for selective downstream use. The hard defaults are 256 nodes, depth 8, 1,200 ms traversal, 27 values per node, 6,912 total values, zero strings/bytes, and a 32 KiB estimated result. UI and diagnostics receive only aggregate counts/timing/truncation; no bounds, control IDs, per-node facts, or text are logged.\n\nAccepted M3.3 adds a separately authorized, bounded semantic snapshot for selected on-screen non-password content nodes. It may read Name, advertised ValuePattern values, and bounded visible TextPattern ranges under immutable node/string/range/byte/time/result/TTL budgets; captured content remains short-lived in RAM and diagnostics stay aggregate-only.\n\nAccepted M3.4 slice 1 adds only a portable, content-free admission policy for Meaningful/Large background changes and explicit user questions. It enforces epoch/capability checks, explicit debounce, per-kind deduplication, one-active/one-pending bounds, question priority, retryable backpressure, and invalidation handles. It is not composed into the runtime or UIA worker, so it cannot start automatic reads before the provider-isolation decision.
 
 The activity tracker records only `MouseClick`, `MouseWheel`, or `KeyboardActivity` plus an epoch and monotonic timestamp. It does not record keys, text, mouse coordinates, clipboard data, or target controls. M2.4.4 measured 1,965 callbacks across four physical hook lifetimes with zero callback/subscriber errors, zero installing-thread mismatches, successful keyboard/mouse unhook, a weighted mean of 92.8 microseconds, and a maximum of 929.8 microseconds; the current synchronous diagnostic-only hook path therefore remains accepted.
 
