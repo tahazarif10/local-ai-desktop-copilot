@@ -5,7 +5,7 @@
 <h1 align="center">Local AI Desktop Copilot</h1>
 
 <p align="center">
-  <strong>A privacy-first, fully local Windows copilot that observes, understands, remembers, listens, and answers.</strong>
+  <strong>A privacy-first Windows desktop copilot in development, built around bounded context sensing, strict privacy gates, deterministic tests, and a local-first architecture.</strong>
 </p>
 
 <p align="center">
