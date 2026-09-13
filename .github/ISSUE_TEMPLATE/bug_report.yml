@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible defect without exposing sensitive content.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing, check `docs/PROJECT_STATE.md` for the current accepted scope. Do not attach screenshots, raw titles, UIA/OCR text, keys, coordinates, clipboard data, audio, prompts, responses, credentials, or private diagnostic bundles.
+  - type: input
+    id: version
+    attributes:
+      label: Commit / branch
+      description: Exact commit SHA or branch where the issue reproduces.
+      placeholder: main @ <sha>
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Minimal deterministic steps, using non-sensitive fixtures where possible.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: privacy
+    attributes:
+      label: Privacy or security impact?
+      options:
+        - No known privacy/security impact
+        - Possibly — details withheld from public issue
+        - Yes — I will use the private security process
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed sensitive content and credentials from this report.
+          required: true
+        - label: I checked the current Project State and this behavior is within implemented scope.
+          required: true
