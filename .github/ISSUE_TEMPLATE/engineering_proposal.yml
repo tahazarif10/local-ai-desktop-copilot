@@ -1,0 +1,43 @@
+name: Engineering proposal
+description: Propose a scoped architecture, reliability, privacy, or milestone improvement.
+title: "proposal: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Proposals must respect the accepted source-of-truth order, current milestone gates, privacy capabilities, bounded-resource rules, and evidence requirements.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What concrete problem or missing engineering signal does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Proposed scope
+      description: Keep the change small enough to review and verify independently.
+    validations:
+      required: true
+  - type: textarea
+    id: contracts
+    attributes:
+      label: Contracts and boundaries
+      description: Note capability, privacy, queue/budget, cancellation, stale-result, process/thread, and failure-handling implications.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification plan
+      description: List deterministic tests, CI, physical/provider evidence, and acceptance criteria.
+    validations:
+      required: true
+  - type: textarea
+    id: nonscope
+    attributes:
+      label: Explicit non-goals
+      description: What will this proposal intentionally not claim or implement?
+    validations:
+      required: true
