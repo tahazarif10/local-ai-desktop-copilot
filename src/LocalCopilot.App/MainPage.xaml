@@ -13,7 +13,7 @@
                 FontWeight="SemiBold" />
 
             <TextBlock
-                Text="M3.2  Bounded non-text UI Automation structure"
+                Text="M3.4  Bounded orchestrated UI enrichment"
                 FontSize="18"
                 Opacity="0.7"
                 Margin="0,0,0,18" />
@@ -178,6 +178,11 @@
             <Button
                 Content="Measure M3.4 controlled provider isolation"
                 Click="UiAutomationProviderIsolationButton_Click"
+                HorizontalAlignment="Left" />
+
+            <Button
+                Content="Request M3.4 user-question enrichment (diagnostic)"
+                Click="UiEnrichmentQuestionButton_Click"
                 HorizontalAlignment="Left" />
 
             <Button

@@ -76,6 +76,7 @@ jobs:
             (Resolve-Path .\run-debug.ps1).Path
             (Resolve-Path .\run-m3-3-acceptance.ps1).Path
             (Resolve-Path .\run-m3-4-provider-isolation.ps1).Path
+            (Resolve-Path .\run-m3-4-acceptance.ps1).Path
             (Resolve-Path .\scripts\run-m3-4-provider-isolation-core.ps1).Path
             (Resolve-Path .\tests\fixtures\Test-RawUiAutomationProvider.ps1).Path
           )
@@ -93,6 +94,10 @@ jobs:
               throw "A diagnostic entry point is not compatible with Windows PowerShell."
             }
           }
+
+      - name: Validate M3.4 runtime acceptance wrapper
+        shell: powershell
+        run: .\run-m3-4-acceptance.ps1 -ValidateOnly
 
       - name: Validate physical raw-provider runner patch
         shell: powershell

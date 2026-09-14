@@ -223,6 +223,26 @@ public sealed partial class MainPage :
             .ProbeUiAutomationProviderIsolationAsync();
     }
 
+    private void UiEnrichmentQuestionButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        UiEnrichmentAdmissionDecision decision =
+            ((App)Application.Current)
+                .UiEnrichmentRuntimeService
+                .RequestUserQuestion();
+
+        UiAutomationProbeStatusText.Text =
+            $"M3.4 question | {decision.Outcome} | " +
+            $"{decision.RejectionReason}";
+
+        DiagnosticLog.Write(
+            "PAGE.UIENRICH_QUESTION",
+            $"outcome={decision.Outcome} " +
+            $"reason={decision.RejectionReason} " +
+            $"request={decision.Request?.RequestId ?? 0}");
+    }
+
     private async void UiAutomationDepthBudgetButton_Click(
         object sender,
         RoutedEventArgs e)
