@@ -75,6 +75,9 @@ jobs:
           $paths = @(
             (Resolve-Path .\run-debug.ps1).Path
             (Resolve-Path .\run-m3-3-acceptance.ps1).Path
+            (Resolve-Path .\run-m3-4-provider-isolation.ps1).Path
+            (Resolve-Path .\scripts\run-m3-4-provider-isolation-core.ps1).Path
+            (Resolve-Path .\tests\fixtures\Test-RawUiAutomationProvider.ps1).Path
           )
 
           foreach ($path in $paths) {
@@ -90,6 +93,34 @@ jobs:
               throw "A diagnostic entry point is not compatible with Windows PowerShell."
             }
           }
+
+      - name: Validate physical raw-provider runner patch
+        shell: powershell
+        run: .\run-m3-4-provider-isolation.ps1 -ValidateOnly
+
+      - name: Compile controlled UI Automation provider fixture
+        shell: powershell
+        run: |
+          Add-Type -AssemblyName UIAutomationProvider
+          Add-Type -AssemblyName UIAutomationTypes
+
+          $providerAssembly =
+            [System.Windows.Automation.Provider.AutomationInteropProvider].Assembly.Location
+          $typesAssembly =
+            [System.Windows.Automation.AutomationElementIdentifiers].Assembly.Location
+
+          Add-Type -Path .\tests\fixtures\BlockingUiAutomationProvider.cs `
+            -ReferencedAssemblies @(
+              "System.Windows.Forms.dll",
+              "System.Drawing.dll",
+              "Accessibility.dll",
+              $providerAssembly,
+              $typesAssembly
+            )
+
+      - name: Smoke-test controlled raw provider across processes
+        shell: powershell
+        run: .\tests\fixtures\Test-RawUiAutomationProvider.ps1
 
       - name: Set up .NET 10
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -131,4 +162,3 @@ jobs:
           path: tests/LocalCopilot.Core.Tests/TestResults/*.trx
           if-no-files-found: warn
           retention-days: 7
-

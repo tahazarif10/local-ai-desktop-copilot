@@ -215,6 +215,14 @@ public sealed partial class MainPage :
             .ProbeUiAutomationSemanticLatestWinsBurstAsync();
     }
 
+    private async void UiAutomationProviderIsolationButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await _coordinator
+            .ProbeUiAutomationProviderIsolationAsync();
+    }
+
     private async void UiAutomationDepthBudgetButton_Click(
         object sender,
         RoutedEventArgs e)

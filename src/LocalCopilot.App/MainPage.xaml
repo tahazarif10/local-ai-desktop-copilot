@@ -176,6 +176,11 @@
                 HorizontalAlignment="Left" />
 
             <Button
+                Content="Measure M3.4 controlled provider isolation"
+                Click="UiAutomationProviderIsolationButton_Click"
+                HorizontalAlignment="Left" />
+
+            <Button
                 Content="Exercise depth-0 structural budget"
                 Click="UiAutomationDepthBudgetButton_Click"
                 HorizontalAlignment="Left" />

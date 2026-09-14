@@ -767,6 +767,32 @@ public sealed class DesktopCopilotCoordinator :
             PrivacyCapability.ReadUiText);
     }
 
+    public Task ProbeUiAutomationProviderIsolationAsync()
+    {
+        EnsureUiThread(
+            "uia_provider_isolation");
+
+        if (!DiagnosticLog.IsEnabled)
+        {
+            SetUiAutomationProbeStatus(
+                "A launch-scoped diagnostic session is required.");
+
+            return Task.CompletedTask;
+        }
+
+        return RunUiAutomationRequestAsync(
+            "uia_provider_isolation",
+            "Measuring a controlled blocking provider on the MTA worker...",
+            epoch =>
+                _uiAutomationProbeWorker
+                    .CaptureSemanticSnapshotForDiagnostics(
+                        epoch,
+                        TimeSpan.FromSeconds(10),
+                        TimeSpan.FromSeconds(2)),
+            PrivacyCapability.ReadUiStructure |
+            PrivacyCapability.ReadUiText);
+    }
+
     public Task ProbeUiAutomationDepthBudgetAsync()
     {
         EnsureUiThread(
