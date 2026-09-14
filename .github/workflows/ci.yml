@@ -95,6 +95,10 @@ jobs:
             }
           }
 
+      - name: Validate M3.4 runtime acceptance wrapper
+        shell: powershell
+        run: .\run-m3-4-acceptance.ps1 -ValidateOnly
+
       - name: Validate physical raw-provider runner patch
         shell: powershell
         run: .\run-m3-4-provider-isolation.ps1 -ValidateOnly
