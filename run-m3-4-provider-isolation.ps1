@@ -313,11 +313,11 @@ if (-not $patchedSource.Contains(
 }
 
 if (-not $patchedSource.Contains(
-        'FindWindowForProcess')) {
+        'Wait-M34FixtureWindow')) {
     throw "PID-scoped real WinForms fixture-window resolution was not injected."
 }
 
-if (-not $patchedSource.Contains(
+if (-not $fixtureHandleBlock.Contains(
         'Stop-Process')) {
     throw "Fixture startup cleanup was not injected."
 }
