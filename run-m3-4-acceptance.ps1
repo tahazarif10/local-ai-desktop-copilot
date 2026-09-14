@@ -4,7 +4,8 @@ param(
     [ValidateRange(30, 900)]
     [int]$StartupTimeoutSeconds = 300,
     [ValidateRange(5, 120)]
-    [int]$StepTimeoutSeconds = 30
+    [int]$StepTimeoutSeconds = 30,
+    [switch]$ValidateOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -44,14 +45,15 @@ $source = $source.Replace($oldTick, $newTick)
 # Start-Process launches powershell.exe, whose MainWindowHandle is not a safe
 # locator for the WinForms fixture hosted inside that process. Resolve the exact
 # controlled form by title AND process ID, matching the provider-isolation
-# runner's already-accepted PID-scoped approach.
-if ($null -eq ("LocalCopilotM34AcceptanceFixtureWindowV2.WindowLookup" -as [type])) {
+# runner's already-accepted PID-scoped approach. Keep this helper compatible
+# with Windows PowerShell 5.1's legacy CodeDom C# compiler.
+if ($null -eq ("LocalCopilotM34AcceptanceFixtureWindowV3.WindowLookup" -as [type])) {
     Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace LocalCopilotM34AcceptanceFixtureWindowV2
+namespace LocalCopilotM34AcceptanceFixtureWindowV3
 {
     public static class WindowLookup
     {
@@ -73,10 +75,10 @@ namespace LocalCopilotM34AcceptanceFixtureWindowV2
         public static IntPtr FindWindowForProcess(int processId, string exactTitle)
         {
             if (processId <= 0)
-                throw new ArgumentOutOfRangeException(nameof(processId));
+                throw new ArgumentOutOfRangeException("processId");
 
             if (string.IsNullOrEmpty(exactTitle))
-                throw new ArgumentException("A non-empty exact window title is required.", nameof(exactTitle));
+                throw new ArgumentException("A non-empty exact window title is required.", "exactTitle");
 
             IntPtr found = IntPtr.Zero;
 
@@ -131,7 +133,7 @@ function Wait-M34FixtureWindow {
             throw "M3.4 runtime target exited before its real WinForms window became ready."
         }
 
-        $handle = [LocalCopilotM34AcceptanceFixtureWindowV2.WindowLookup]::FindWindowForProcess(
+        $handle = [LocalCopilotM34AcceptanceFixtureWindowV3.WindowLookup]::FindWindowForProcess(
             [int]$Process.Id,
             $WindowTitle)
 
@@ -185,17 +187,34 @@ $source = $source.Replace($oldWindowLookup, $newWindowLookup)
 
 # Validate the native helper itself without depending on any live fixture.
 $impossibleTitle = "LocalCopilot-M3.4-validation-" + [Guid]::NewGuid().ToString("N")
-$validationHandle = [LocalCopilotM34AcceptanceFixtureWindowV2.WindowLookup]::FindWindowForProcess(
-    [Environment]::ProcessId,
+$validationHandle = [LocalCopilotM34AcceptanceFixtureWindowV3.WindowLookup]::FindWindowForProcess(
+    [int]$PID,
     $impossibleTitle)
 if ($validationHandle -ne [IntPtr]::Zero) {
     throw "M3.4 acceptance PID-scoped fixture resolver validation returned an unexpected HWND."
 }
 
+# Parse the fully patched core now, so validation covers the wrapper's actual
+# generated script rather than only the wrapper file itself.
+$runner = [ScriptBlock]::Create($source)
+
+if ($ValidateOnly) {
+    Write-Host "M3.4 acceptance fixture state patch validation: PASS"
+    Write-Host "M3.4 acceptance PID-scoped fixture resolver validation: PASS"
+    Write-Host "M3.4 acceptance patched core parse validation: PASS"
+    return
+}
+
+$runnerParameters = @{}
+foreach ($entry in $PSBoundParameters.GetEnumerator()) {
+    if ($entry.Key -ne "ValidateOnly") {
+        $runnerParameters[$entry.Key] = $entry.Value
+    }
+}
+
 Push-Location $PSScriptRoot
 try {
-    $runner = [ScriptBlock]::Create($source)
-    & $runner @PSBoundParameters
+    & $runner @runnerParameters
 }
 finally {
     Pop-Location
