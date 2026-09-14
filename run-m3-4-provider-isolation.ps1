@@ -33,20 +33,70 @@ if ($null -eq ("LocalCopilotM34Wrapper.WindowLookup" -as [type])) {
     Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace LocalCopilotM34Wrapper
 {
     public static class WindowLookup
     {
-        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern IntPtr FindWindow(
-            string lpClassName,
-            string lpWindowName);
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumWindows(
+            EnumWindowsProc lpEnumFunc,
+            IntPtr lParam);
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern uint GetWindowThreadProcessId(
             IntPtr hWnd,
             out uint lpdwProcessId);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern int GetWindowTextLength(IntPtr hWnd);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern int GetWindowText(
+            IntPtr hWnd,
+            StringBuilder lpString,
+            int nMaxCount);
+
+        public static IntPtr FindWindowForProcess(
+            uint processId,
+            string windowTitle)
+        {
+            IntPtr found = IntPtr.Zero;
+
+            EnumWindows(
+                delegate(IntPtr hWnd, IntPtr lParam)
+                {
+                    uint windowProcessId;
+                    GetWindowThreadProcessId(hWnd, out windowProcessId);
+
+                    if (windowProcessId != processId)
+                    {
+                        return true;
+                    }
+
+                    int length = GetWindowTextLength(hWnd);
+                    StringBuilder title = new StringBuilder(length + 1);
+                    GetWindowText(hWnd, title, title.Capacity);
+
+                    if (String.Equals(
+                            title.ToString(),
+                            windowTitle,
+                            StringComparison.Ordinal))
+                    {
+                        found = hWnd;
+                        return false;
+                    }
+
+                    return true;
+                },
+                IntPtr.Zero);
+
+            return found;
+        }
     }
 }
 '@
@@ -73,20 +123,12 @@ function Wait-M34FixtureWindow {
         }
 
         $handle =
-            [LocalCopilotM34Wrapper.WindowLookup]::FindWindow(
-                $null,
+            [LocalCopilotM34Wrapper.WindowLookup]::FindWindowForProcess(
+                [uint32]$Process.Id,
                 $WindowTitle)
 
         if ($handle -ne [IntPtr]::Zero) {
-            [uint32]$windowPid = 0
-
-            [void][LocalCopilotM34Wrapper.WindowLookup]::GetWindowThreadProcessId(
-                $handle,
-                [ref]$windowPid)
-
-            if ($windowPid -eq [uint32]$Process.Id) {
-                return $handle
-            }
+            return $handle
         }
 
         Start-Sleep -Milliseconds 100
@@ -101,8 +143,8 @@ $coreSource =
 # Normalize line endings before applying the audited physical-fixture
 # substitutions. The core runner remains the accepted measurement logic;
 # this wrapper upgrades its controlled fixture to the raw UIA provider proven
-# independently in Windows CI and resolves the real WinForms HWND rather than
-# PowerShell's console MainWindowHandle.
+# independently in Windows CI, resolves the real WinForms HWND by exact PID and
+# title, and guarantees that a target process is cleaned up if startup fails.
 $coreSource = $coreSource.Replace("`r`n", "`n")
 
 $legacyFixtureBlock = @'
@@ -166,11 +208,34 @@ $legacyHandleBlock = @'
 '@
 
 $fixtureHandleBlock = @'
-    $handle =
-        Wait-M34FixtureWindow `
-            -Process $process `
-            -WindowTitle $WindowTitle `
-            -TimeoutSeconds $StepTimeoutSeconds
+    try {
+        $handle =
+            Wait-M34FixtureWindow `
+                -Process $process `
+                -WindowTitle $WindowTitle `
+                -TimeoutSeconds $StepTimeoutSeconds
+    }
+    catch {
+        try {
+            $process.Refresh()
+
+            if (-not $process.HasExited) {
+                Stop-Process `
+                    -Id $process.Id `
+                    -Force `
+                    -ErrorAction SilentlyContinue
+            }
+        }
+        catch {
+        }
+
+        Remove-Item `
+            -LiteralPath $StopPath `
+            -Force `
+            -ErrorAction SilentlyContinue
+
+        throw
+    }
 '@
 
 $legacyFixtureBlock =
@@ -248,8 +313,13 @@ if (-not $patchedSource.Contains(
 }
 
 if (-not $patchedSource.Contains(
-        'Wait-M34FixtureWindow')) {
-    throw "Real WinForms fixture-window resolution was not injected."
+        'FindWindowForProcess')) {
+    throw "PID-scoped real WinForms fixture-window resolution was not injected."
+}
+
+if (-not $patchedSource.Contains(
+        'Stop-Process')) {
+    throw "Fixture startup cleanup was not injected."
 }
 
 $tokens = $null
@@ -270,12 +340,18 @@ if (@($parseErrors).Count -ne 0) {
 }
 
 if ($ValidateOnly) {
-    [void][LocalCopilotM34Wrapper.WindowLookup]::FindWindow(
-        $null,
-        "LocalCopilot M3.4 validation window that must not exist")
+    $validationHandle =
+        [LocalCopilotM34Wrapper.WindowLookup]::FindWindowForProcess(
+            [uint32][Diagnostics.Process]::GetCurrentProcess().Id,
+            "LocalCopilot M3.4 validation window that must not exist")
+
+    if ($validationHandle -ne [IntPtr]::Zero) {
+        throw "Fixture HWND resolver returned an unexpected validation window."
+    }
 
     Write-Host "M3.4 raw-provider runner patch validation: PASS"
-    Write-Host "M3.4 real fixture HWND resolver validation: PASS"
+    Write-Host "M3.4 PID-scoped fixture HWND resolver validation: PASS"
+    Write-Host "M3.4 fixture startup cleanup validation: PASS"
     return
 }
 
