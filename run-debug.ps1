@@ -1,7 +1,9 @@
 ﻿[CmdletBinding()]
 param(
     [string]$DiagnosticRoot,
-    [switch]$EnableUiText
+    [switch]$EnableUiText,
+    [ValidateSet("M3.3", "M3.4")]
+    [string]$Milestone = "M3.3"
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,7 +24,6 @@ $buildResult = "NOT_RUN"
 $applicationResult = "NOT_RUN"
 $applicationExitCode = $null
 $runnerElevated = $null
-$milestone = "M3.3"
 
 try {
     $repoRoot = $PSScriptRoot
