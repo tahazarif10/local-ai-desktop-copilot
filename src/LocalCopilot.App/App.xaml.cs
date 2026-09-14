@@ -20,10 +20,18 @@ public partial class App : Application
     private DesktopCopilotCoordinator?
         _coordinator;
 
+    private UiEnrichmentRuntimeService?
+        _uiEnrichmentRuntimeService;
+
     internal DesktopCopilotCoordinator Coordinator =>
         _coordinator ??
         throw new InvalidOperationException(
             "Application coordinator is not initialized.");
+
+    internal UiEnrichmentRuntimeService UiEnrichmentRuntimeService =>
+        _uiEnrichmentRuntimeService ??
+        throw new InvalidOperationException(
+            "UI enrichment runtime is not initialized.");
     
     /// <summary>
     /// Initializes the singleton application object.  This is the first line of authored code
@@ -50,12 +58,18 @@ public partial class App : Application
             ?? throw new InvalidOperationException(
                 "UI DispatcherQueue unavailable.");
 
-        DesktopCopilotCoordinator coordinator =
+        ApplicationComposition composition =
             ApplicationCompositionRoot.Create(
                 uiDispatcher);
 
+        DesktopCopilotCoordinator coordinator =
+            composition.Coordinator;
+
         _coordinator =
             coordinator;
+
+        _uiEnrichmentRuntimeService =
+            composition.UiEnrichmentRuntimeService;
 
         MainWindow window =
             new MainWindow(
@@ -81,6 +95,12 @@ public partial class App : Application
             _window.Closed -=
                 MainWindow_Closed;
         }
+
+        // Stop automatic enrichment before the coordinator tears down the
+        // shared UIA worker and epoch owner.
+        _uiEnrichmentRuntimeService?.Dispose();
+        _uiEnrichmentRuntimeService =
+            null;
 
         _coordinator?.Dispose();
 
