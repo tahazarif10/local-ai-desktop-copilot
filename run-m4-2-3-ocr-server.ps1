@@ -2,6 +2,7 @@
 param(
     [switch]$ValidateOnly,
     [switch]$Provision,
+    [switch]$AcceptanceMode,
     [string]$BenchmarkRoot = "D:\LocalAI-Prerequisites",
     [string]$ExpectedBranch = "dev/m4-2-3b-ocr-transport",
     [string]$BindAddress = "0.0.0.0",
@@ -63,9 +64,10 @@ $authPath = Join-Path $transportRoot "server-auth-key.hex"
 $clientBundle = Join-Path $transportRoot "client-bundle"
 $clientConfig = Join-Path $clientBundle "ocr-client-config.json"
 $serverScript = Join-Path $repoRoot "scripts\m4_2_ocr_server.py"
+$transportProbe = Join-Path $repoRoot "scripts\m4_2_ocr_transport_probe.py"
 $provisioner = Join-Path $repoRoot "tools\LocalCopilot.OcrProvisioner\LocalCopilot.OcrProvisioner.csproj"
 
-foreach ($required in @($python,$detector,$recognizer,$serverScript,$provisioner)) {
+foreach ($required in @($python,$detector,$recognizer,$serverScript,$transportProbe,$provisioner)) {
     if (-not (Test-Path -LiteralPath $required)) { throw ("Required OCR server dependency is missing: " + $required) }
 }
 
@@ -111,5 +113,93 @@ Write-Host ""
 Write-Host "Keep this PowerShell window open while client acceptance runs."
 Write-Host ""
 
-& $python $serverScript --bind $BindAddress --port $Port --cert-file $certPath --key-file $keyPath --auth-key-file $authPath --model-root $modelRoot --device "gpu:0" --diagnostic-delay-ms $DiagnosticDelayMs
-if ($LASTEXITCODE -ne 0) { throw ("OCR server exited with code " + $LASTEXITCODE) }
+if (-not $AcceptanceMode) {
+    & $python $serverScript --bind $BindAddress --port $Port --cert-file $certPath --key-file $keyPath --auth-key-file $authPath --model-root $modelRoot --device "gpu:0" --diagnostic-delay-ms $DiagnosticDelayMs
+    if ($LASTEXITCODE -ne 0) { throw ("OCR server exited with code " + $LASTEXITCODE) }
+    return
+}
+
+if ($DiagnosticDelayMs -lt 1000) {
+    throw "AcceptanceMode requires DiagnosticDelayMs of at least 1000 ms so Busy/latest-wins behavior is measurable."
+}
+
+$stdoutPath = Join-Path $transportRoot "acceptance-server.stdout.log"
+$stderrPath = Join-Path $transportRoot "acceptance-server.stderr.log"
+Remove-Item -LiteralPath $stdoutPath,$stderrPath -Force -ErrorAction SilentlyContinue
+
+$serverArguments = @(
+    $serverScript,
+    "--bind", $BindAddress,
+    "--port", [string]$Port,
+    "--cert-file", $certPath,
+    "--key-file", $keyPath,
+    "--auth-key-file", $authPath,
+    "--model-root", $modelRoot,
+    "--device", "gpu:0",
+    "--diagnostic-delay-ms", [string]$DiagnosticDelayMs
+)
+
+$serverProcess = Start-Process -FilePath $python -ArgumentList $serverArguments -PassThru -NoNewWindow -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+
+try {
+    $readyDeadline = [DateTimeOffset]::UtcNow.AddSeconds(120)
+    $ready = $false
+
+    while ([DateTimeOffset]::UtcNow -lt $readyDeadline) {
+        $serverProcess.Refresh()
+        if ($serverProcess.HasExited) {
+            $stderrText = if (Test-Path -LiteralPath $stderrPath) { Get-Content -LiteralPath $stderrPath -Raw } else { "" }
+            throw ("OCR server exited before READY. stderr_length=" + $stderrText.Length)
+        }
+
+        if (Test-Path -LiteralPath $stdoutPath) {
+            $stdoutText = Get-Content -LiteralPath $stdoutPath -Raw
+            if ($stdoutText -match "M4\.2\.3 OCR SERVER: READY") {
+                $ready = $true
+                break
+            }
+        }
+
+        Start-Sleep -Milliseconds 250
+    }
+
+    if (-not $ready) {
+        throw "OCR server did not report READY within 120 seconds."
+    }
+
+    & $python $transportProbe --client-bundle $clientBundle --server-host "127.0.0.1" --expect-busy
+    if ($LASTEXITCODE -ne 0) {
+        throw "Authenticated OCR transport probe failed."
+    }
+
+    Write-Host ""
+    Write-Host "M4.2.3 OCR SERVER ACCEPTANCE PRECHECK: PASS"
+    Write-Host "tls_pin_negative=PASS"
+    Write-Host "wrong_key_negative=PASS"
+    Write-Host "replay_negative=PASS"
+    Write-Host "deadline_negative=PASS"
+    Write-Host "single_active_busy=PASS"
+    Write-Host ""
+    Write-Host "Server remains running for the fixed-client product acceptance."
+    Write-Host "Press Ctrl+C only after the client acceptance has finished."
+    Write-Host ""
+
+    [void]$serverProcess.WaitForExit()
+}
+finally {
+    try {
+        $serverProcess.Refresh()
+        if (-not $serverProcess.HasExited) {
+            Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch {
+    }
+
+    if (Test-Path -LiteralPath $stderrPath) {
+        $stderrText = Get-Content -LiteralPath $stderrPath -Raw
+        if ($stderrText -match "(?i)(rec_texts|ocr text|pixel payload)") {
+            throw "Server acceptance stderr contains prohibited content markers."
+        }
+    }
+}
