@@ -379,29 +379,28 @@ and raw OCR output must not be copied into PRs, diagnostics, or committed files.
 
 ### M4.2.2 controlled OCR benchmark
 
-After the accepted environment gate, use the runner branch and fixed D: benchmark root.
+After the accepted environment gate, use the runner branch and fixed D: benchmark root. The normal physical path is the zero-touch controlled OS-rendered fixture; do not ask the user to manually create screenshots or ground-truth files.
 
-First prepare the model cache without reading screenshots:
-
-```powershell
-.\run-m4-2-ocr-benchmark.ps1 -PrepareModels -BenchmarkRoot D:\LocalAI-Prerequisites
-```
-
-Then create the local corpus scaffold:
+Run the controlled Paddle baseline:
 
 ```powershell
-.\run-m4-2-ocr-benchmark.ps1 -InitializeCorpus -BenchmarkRoot D:\LocalAI-Prerequisites
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-controlled-ui.ps1 -BenchmarkRoot D:\LocalAI-Prerequisites
 ```
 
-Populate only the local `corpus\images` and `corpus\ground-truth` files. Do not commit or paste their contents. Use bounded ROI screenshots, not full-screen captures.
+The harness creates seven visible WinForms client-area fixtures covering Persian UI, English UI, mixed Persian-English, terminal/console style, dialog, browser style, and desktop-app UI. It captures only each form's client area, writes images and ground truth below the local benchmark root, records local provenance, and immediately invokes the aggregate-only Paddle benchmark. Raw OCR text, screenshots, and ground truth must never be copied into PRs, diagnostics, or chat.
 
-Once all seven categories have non-empty local images and exact ground truth:
+Candidate comparison then reuses that exact local corpus:
 
 ```powershell
-.\run-m4-2-ocr-benchmark.ps1 -Run -BenchmarkRoot D:\LocalAI-Prerequisites
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-tesseract.ps1 -BenchmarkRoot D:\LocalAI-Prerequisites
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-windows-media.ps1 -BenchmarkRoot D:\LocalAI-Prerequisites
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-english-comparison.ps1 -BenchmarkRoot D:\LocalAI-Prerequisites
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-paddle-variants.ps1 -BenchmarkRoot D:\LocalAI-Prerequisites
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-tesseract.ps1 -BenchmarkRoot D:\LocalAI-Prerequisites -TessdataVariant best
 ```
 
-The command may print and persist aggregate metrics only. Raw OCR text must remain in memory and must not appear in GitHub evidence.
+Every comparison runner requires a clean non-elevated working tree on the expected branch and emits aggregate-only evidence. The corpus is not recaptured between candidate runs. The accepted M4.2.2 evidence carries `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` forward as the M4.2.3 selection candidate; M4.2.2 itself does not integrate a backend.
+
 
 ## 8. Performance evidence
 
