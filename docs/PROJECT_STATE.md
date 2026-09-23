@@ -6,7 +6,7 @@ last_verified_date: 2026-09-23
 completed_through: M3.4
 active_milestone: M4.1
 active_branch: dev/m4-1-roi-planner
-active_status: M4.1 portable bounded ROI planner is implemented on the feature branch under proposed ADR 0012; automated regression/build verification and review remain before acceptance
+active_status: M4.1 behavior head 03f719a1bb4a98a3834348d1f0d53fa50828c92e passed CI #126 with 160/160 Core tests on Ubuntu/Windows and the strict Windows build; ADR 0012 is accepted on PR #29 and review/merge remain before main advances
 next_milestone: M4.1
 next_milestone_name: Region-of-interest planner
 ---
@@ -311,7 +311,7 @@ The planner never synthesizes a full-frame fallback and is not wired to WGC crop
 
 Proposed default bounds are 16 px padding, 24 px association margin, 4 regions, 25% maximum area per region, and 40% maximum total planned area, with stricter hard ceilings that prevent a full-frame plan. These are privacy/resource bounds, not OCR performance claims; M4.2 benchmarking may tune normal operating values after M4.1 is accepted.
 
-Acceptance requires the new deterministic ROI test matrix plus all existing portable/Windows regressions and the strict Windows build. Because this slice adds no Windows interop, pixel acquisition, OCR, or runtime composition, separate physical Windows acceptance is not required unless scope expands. Do not begin OCR backend selection or runtime pixel cropping before this planner contract is reviewed and accepted.
+The acceptance candidate is behavior head `03f719a1bb4a98a3834348d1f0d53fa50828c92e`. [CI #126](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35847291181) passed 160/160 Core tests on Ubuntu and Windows, all existing M3.4 runner/provider regressions, and the strict Windows build. Accepted [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md) records the geometry/privacy boundary. Because the slice adds no Windows interop, pixel acquisition, OCR, or runtime composition, separate physical Windows acceptance is not required. PR #29 review/merge is the remaining repository-state gate; do not begin M4.2 OCR backend selection or runtime pixel cropping before that merge.
 
 ## How to update this file
 
