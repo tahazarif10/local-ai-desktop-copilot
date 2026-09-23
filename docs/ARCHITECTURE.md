@@ -328,7 +328,7 @@ The client should know contracts and capabilities, not model-library details. Th
 - streamed text/audio response;
 - no internet fallback.
 
-The concrete transport and runtime remain undecided until M6. An architecture invariant is not a premature library choice.
+The broader inference gateway transport/runtime remains an M6 decision. ADR 0015 deliberately pulls forward only the narrow OCR dependency selected by M4.2.3: pinned mutual-TLS HTTPS plus a bounded versioned binary ROI protocol. That exception does not authorize text/VLM/audio endpoint expansion or change the later M6 gateway selection.
 
 ### 6.12 Resource manager
 
