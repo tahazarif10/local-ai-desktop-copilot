@@ -3,11 +3,13 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import sys
 
 
 SCRIPT_PATH = Path(__file__).with_name("m4_2_ocr_benchmark.py")
 SPEC = importlib.util.spec_from_file_location("m4_2_ocr_benchmark", SCRIPT_PATH)
 BENCH = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = BENCH
 assert SPEC.loader is not None
 SPEC.loader.exec_module(BENCH)
 
