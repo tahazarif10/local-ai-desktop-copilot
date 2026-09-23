@@ -16,29 +16,43 @@ public enum OcrDispatchRejectionReason
     EpochMismatch,
     EpochCancelled,
     CapabilityDenied,
-    EmptyRegion
+    EmptyRegion,
+    Superseded
 }
 
-public sealed record OcrDispatchRequest(
-    long RequestId,
-    long EpochId,
-    PlannedCaptureRegion Region,
-    OcrExecutionTopology Topology)
+public sealed record OcrDispatchRequest
 {
-    public OcrDispatchRequest
+    public OcrDispatchRequest(
+        long requestId,
+        long epochId,
+        PlannedCaptureRegion region,
+        OcrExecutionTopology topology)
     {
-        if (RequestId <= 0)
+        if (requestId <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(RequestId));
+            throw new ArgumentOutOfRangeException(nameof(requestId));
         }
 
-        if (EpochId <= 0)
+        if (epochId <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(EpochId));
+            throw new ArgumentOutOfRangeException(nameof(epochId));
         }
 
-        ArgumentNullException.ThrowIfNull(Region);
+        ArgumentNullException.ThrowIfNull(region);
+
+        RequestId = requestId;
+        EpochId = epochId;
+        Region = region;
+        Topology = topology;
     }
+
+    public long RequestId { get; }
+
+    public long EpochId { get; }
+
+    public PlannedCaptureRegion Region { get; }
+
+    public OcrExecutionTopology Topology { get; }
 }
 
 public sealed record OcrDispatchDecision(
