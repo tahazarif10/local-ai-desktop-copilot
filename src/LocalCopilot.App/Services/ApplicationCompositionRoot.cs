@@ -3,9 +3,13 @@ using System;
 
 namespace LocalCopilot_App.Services;
 
+internal sealed record ApplicationComposition(
+    DesktopCopilotCoordinator Coordinator,
+    UiEnrichmentRuntimeService UiEnrichmentRuntimeService);
+
 public static class ApplicationCompositionRoot
 {
-    public static DesktopCopilotCoordinator Create(
+    internal static ApplicationComposition Create(
         DispatcherQueue uiDispatcher)
     {
         ArgumentNullException.ThrowIfNull(
@@ -22,25 +26,47 @@ public static class ApplicationCompositionRoot
         DiagnosticTimeline diagnosticTimeline =
             new();
 
-        return new DesktopCopilotCoordinator(
-            unchecked(
-                (uint)Environment.ProcessId),
-            uiDispatcher,
-            foregroundWindowService,
-            new ForegroundWindowObserver(),
-            PrivacyPolicy.CreateDefault(),
-            new ContextEpochManager(),
-            new ChangeDetectionProbeService(
-                foregroundWindowService),
-            persistentChangeDetectionService,
-            new SensingOrchestrator(
+        ContextEpochManager contextEpochManager =
+            new();
+
+        SensingOrchestrator sensingOrchestrator =
+            new(
                 persistentChangeDetectionService,
-                uiDispatcher),
-            diagnosticTimeline,
-            new InputActivityTracker(),
-            new ChangeCorrelationService(
-                diagnosticTimeline),
-            new UiAutomationProbeWorker(
-                foregroundWindowService));
+                uiDispatcher);
+
+        UiAutomationProbeWorker uiAutomationProbeWorker =
+            new(
+                foregroundWindowService);
+
+        DesktopCopilotCoordinator coordinator =
+            new(
+                unchecked(
+                    (uint)Environment.ProcessId),
+                uiDispatcher,
+                foregroundWindowService,
+                new ForegroundWindowObserver(),
+                PrivacyPolicy.CreateDefault(),
+                contextEpochManager,
+                new ChangeDetectionProbeService(
+                    foregroundWindowService),
+                persistentChangeDetectionService,
+                sensingOrchestrator,
+                diagnosticTimeline,
+                new InputActivityTracker(),
+                new ChangeCorrelationService(
+                    diagnosticTimeline),
+                uiAutomationProbeWorker);
+
+        UiEnrichmentRuntimeService uiEnrichmentRuntimeService =
+            new(
+                uiDispatcher,
+                contextEpochManager,
+                sensingOrchestrator,
+                persistentChangeDetectionService,
+                uiAutomationProbeWorker);
+
+        return new ApplicationComposition(
+            coordinator,
+            uiEnrichmentRuntimeService);
     }
 }

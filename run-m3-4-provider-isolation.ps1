@@ -7,6 +7,7 @@ param(
     [int]$StepTimeoutSeconds = 30,
     [ValidateRange(11, 60)]
     [int]$ProviderObservationSeconds = 12,
+    [string]$ExpectedBranch = "dev/m3-4-2-provider-isolation",
     [switch]$ValidateOnly
 )
 
@@ -146,6 +147,28 @@ $coreSource =
 # independently in Windows CI, resolves the real WinForms HWND by exact PID and
 # title, and guarantees that a target process is cleaned up if startup fails.
 $coreSource = $coreSource.Replace("`r`n", "`n")
+
+# Keep the standalone measurement locked to its original Slice 2 branch by
+# default. A higher-level acceptance harness may override only the expected
+# branch provenance so the exact same measurement logic can be rerun on the
+# clean Slice 3 candidate.
+$legacyExpectedBranch = "dev/m3-4-2-provider-isolation"
+$expectedBranchMatches =
+    [Regex]::Matches(
+        $coreSource,
+        [Regex]::Escape($legacyExpectedBranch)).Count
+
+if ($expectedBranchMatches -ne 2) {
+    throw (
+        "Expected exactly two Slice 2 branch provenance literals in the core runner; found " +
+        $expectedBranchMatches +
+        ".")
+}
+
+$coreSource =
+    $coreSource.Replace(
+        $legacyExpectedBranch,
+        $ExpectedBranch)
 
 $legacyFixtureBlock = @'
 Add-Type -AssemblyName System.Drawing
@@ -349,9 +372,17 @@ if ($ValidateOnly) {
         throw "Fixture HWND resolver returned an unexpected validation window."
     }
 
+    $branchGuard =
+        'if ($branch -ne "' + $ExpectedBranch + '")'
+
+    if (-not $patchedSource.Contains($branchGuard)) {
+        throw "Expected-branch provenance override was not injected."
+    }
+
     Write-Host "M3.4 raw-provider runner patch validation: PASS"
     Write-Host "M3.4 PID-scoped fixture HWND resolver validation: PASS"
     Write-Host "M3.4 fixture startup cleanup validation: PASS"
+    Write-Host "M3.4 expected-branch provenance validation: PASS"
     return
 }
 

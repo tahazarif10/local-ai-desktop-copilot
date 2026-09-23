@@ -34,6 +34,11 @@ $acceptanceError = $null
 $acceptancePassed = $false
 $classification = "Inconclusive"
 $recoveryState = "Inconclusive"
+$recoveryOutcome = "NotObserved"
+$recoveryReason = "NotObserved"
+$recoveryEvidenceRequestId = $null
+$recoveryEvidenceKind = $null
+$failureSummaryPath = $null
 
 function Test-M34Elevated {
     $identity =
@@ -565,7 +570,7 @@ function Invoke-M34QueuedRequest {
     [void](Wait-M34LogMatch @beginParameters)
 
     $queuePattern =
-        '(?m)^.*\| UIA\.QUEUE \| request=(\d+) epoch=\d+ kind={0} .*$' -f
+        '(?m)^.*\| UIA\.QUEUE \| request=(\d+) epoch=(\d+) kind={0} .*$' -f
             [Regex]::Escape($Kind)
 
     $queueParameters = @{
@@ -597,6 +602,7 @@ function Invoke-M34QueuedRequest {
 
     return [pscustomobject]@{
         RequestId = $requestId
+        Epoch = $queueMatch.Groups[2].Value
         Offset = $offset
     }
 }
@@ -1099,13 +1105,18 @@ namespace LocalCopilotM34Acceptance
     $recoveryRequest =
         Invoke-M34QueuedRequest @recoveryRequestParameters
 
-    $recoveryPattern =
-        '(?m)^.*\| UIA\.PROBE_RESULT \| request={0} epoch=\d+ outcome=(\w+) reason=(\w+) .*$' -f
-            [Regex]::Escape($recoveryRequest.RequestId)
+    # Slice 3 automatic enrichment may supersede the explicit RootProbe with
+    # a same-epoch SemanticSnapshot. The architecture invariant is worker
+    # recovery on the healthy provider, so accept either request kind only
+    # when it completes Available on the recovery epoch, on a real worker,
+    # with target identity revalidated.
+    $recoveryCompletionPattern =
+        '(?m)^.*\| UIA\.REQUEST_COMPLETE \| request=(\d+) epoch={0} kind=(RootProbe|SemanticSnapshot) outcome=Available reason=(RootResolved|SnapshotCaptured) .*workerThread=([1-9]\d*) identityRevalidated=True .*$' -f
+            [Regex]::Escape($recoveryRequest.Epoch)
 
     $recoveryWaitParameters = @{
         Path = $appLogPath
-        Pattern = $recoveryPattern
+        Pattern = $recoveryCompletionPattern
         AfterOffset = $recoveryRequest.Offset
         TimeoutSeconds = $ProviderObservationSeconds
         RunnerProcess = $runnerProcess
@@ -1119,10 +1130,10 @@ namespace LocalCopilotM34Acceptance
         $providerClock.ElapsedMilliseconds
 
     if ($recoveryObserved) {
-        if ($recoveryMatch.Groups[1].Value -ne "Available" -or
-            $recoveryMatch.Groups[2].Value -ne "RootResolved") {
-            throw "The healthy-provider recovery returned a non-available result."
-        }
+        $recoveryOutcome = "Available"
+        $recoveryReason = $recoveryMatch.Groups[3].Value
+        $recoveryEvidenceRequestId = $recoveryMatch.Groups[1].Value
+        $recoveryEvidenceKind = $recoveryMatch.Groups[2].Value
 
         $blockingCompletionPattern =
             '(?m)^.*\| UIA\.REQUEST_COMPLETE \| request={0} .*workerThread=\d+ .*$' -f
@@ -1141,7 +1152,13 @@ namespace LocalCopilotM34Acceptance
         if ($recoveryElapsedMilliseconds -le 10000) {
             $recoveryState = "RecoveredWithinDeadline"
             $classification = "InProcessCandidate"
-            Write-Host "[PASS] Same-worker recovery completed within the request deadline"
+            Write-Host (
+                "[PASS] Same-worker recovery completed within the request deadline " +
+                "(request=" +
+                $recoveryEvidenceRequestId +
+                " kind=" +
+                $recoveryEvidenceKind +
+                ")")
         }
         else {
             $recoveryState = "RecoveredAfterDeadline"
@@ -1151,6 +1168,26 @@ namespace LocalCopilotM34Acceptance
     }
     else {
         $currentLog = Get-M34FileContent -Path $appLogPath
+        $recoveryTail =
+            if ($currentLog.Length -ge $recoveryRequest.Offset) {
+                $currentLog.Substring($recoveryRequest.Offset)
+            }
+            else {
+                ""
+            }
+
+        $probeResultPattern =
+            '(?m)^.*\| UIA\.PROBE_RESULT \| request={0} epoch={1} outcome=(\w+) reason=(\w+) .*$' -f
+                [Regex]::Escape($recoveryRequest.RequestId),
+                [Regex]::Escape($recoveryRequest.Epoch)
+
+        $probeResultMatch =
+            [Regex]::Match($recoveryTail, $probeResultPattern)
+
+        if ($probeResultMatch.Success) {
+            $recoveryOutcome = $probeResultMatch.Groups[1].Value
+            $recoveryReason = $probeResultMatch.Groups[2].Value
+        }
 
         $blockingCompleted =
             [Regex]::IsMatch(
@@ -1159,14 +1196,20 @@ namespace LocalCopilotM34Acceptance
                     [Regex]::Escape($blockingRequest.RequestId)))
 
         if ($blockingCompleted) {
-            throw "The blocking request returned, but the healthy provider did not recover."
+            throw (
+                "The blocking request returned, but no same-epoch healthy-provider " +
+                "request completed Available within the observation bound. " +
+                "Explicit probe outcome=" +
+                $recoveryOutcome +
+                " reason=" +
+                $recoveryReason +
+                ".")
         }
 
         $recoveryState = "WorkerWedgedBeyondObservation"
         $classification = "RestartableHelperRequired"
         Write-Host "[PASS] Epoch cancellation and the request deadline could not free the worker"
     }
-
     Write-Host "[RUN] Closing LocalCopilot while the provider remains blocked"
 
     $shutdownClock =
@@ -1366,6 +1409,92 @@ namespace LocalCopilotM34Acceptance
 }
 catch {
     $acceptanceError = $_.Exception
+
+    if (-not [string]::IsNullOrWhiteSpace($sessionDirectory)) {
+        try {
+            $failureSummaryPath =
+                Join-Path $sessionDirectory "provider-failure-summary.txt"
+
+            $failureBuilder =
+                New-Object System.Text.StringBuilder
+
+            [void]$failureBuilder.AppendLine(
+                "=================================================")
+            [void]$failureBuilder.AppendLine(
+                "M3.4 PROVIDER-ISOLATION FAILURE SUMMARY")
+            [void]$failureBuilder.AppendLine(
+                "=================================================")
+            [void]$failureBuilder.AppendLine("Schema: 1")
+            [void]$failureBuilder.AppendLine(
+                "Failure UTC: " + [DateTimeOffset]::UtcNow.ToString("o"))
+            [void]$failureBuilder.AppendLine(
+                "Exception type: " + $acceptanceError.GetType().Name)
+            [void]$failureBuilder.AppendLine(
+                ("Exception HRESULT: 0x{0:X8}" -f $acceptanceError.HResult))
+            [void]$failureBuilder.AppendLine(
+                "Exception message: " + $acceptanceError.Message)
+            [void]$failureBuilder.AppendLine(
+                "Recovery state: " + $recoveryState)
+            [void]$failureBuilder.AppendLine(
+                "Recovery outcome: " + $recoveryOutcome)
+            [void]$failureBuilder.AppendLine(
+                "Recovery reason: " + $recoveryReason)
+
+            if ($null -ne $blockingRequest) {
+                [void]$failureBuilder.AppendLine(
+                    "Blocking request ID: " + $blockingRequest.RequestId)
+            }
+
+            if ($null -ne $recoveryRequest) {
+                [void]$failureBuilder.AppendLine(
+                    "Recovery request ID: " + $recoveryRequest.RequestId)
+                [void]$failureBuilder.AppendLine(
+                    "Recovery epoch: " + $recoveryRequest.Epoch)
+            }
+
+            if (-not [string]::IsNullOrWhiteSpace($recoveryEvidenceRequestId)) {
+                [void]$failureBuilder.AppendLine(
+                    "Recovery evidence request ID: " + $recoveryEvidenceRequestId)
+                [void]$failureBuilder.AppendLine(
+                    "Recovery evidence kind: " + $recoveryEvidenceKind)
+            }
+
+            [void]$failureBuilder.AppendLine("")
+            [void]$failureBuilder.AppendLine(
+                "Filtered metadata tail (content-free diagnostic events only):")
+
+            $failureLog = Get-M34FileContent -Path $appLogPath
+            if (-not [string]::IsNullOrWhiteSpace($failureLog)) {
+                $metadataPattern =
+                    '\| (CONTEXT\.APPLY|COORD\.|UIA\.(PROBE_BEGIN|QUEUE|DIAGNOSTIC_HOLD|INTEGRITY_CHECK|REQUEST_START|REQUEST_COMPLETE|PROBE_RESULT|WORKER_START|WORKER_STOP|WORKER_DISPOSE|REQUEST_CANCELLED|QUEUE_REJECT))'
+
+                $metadataLines =
+                    @(
+                        $failureLog -split "\r?\n" |
+                        Where-Object {
+                            $_ -match $metadataPattern
+                        } |
+                        Select-Object -Last 120
+                    )
+
+                foreach ($metadataLine in $metadataLines) {
+                    [void]$failureBuilder.AppendLine($metadataLine)
+                }
+            }
+            else {
+                [void]$failureBuilder.AppendLine(
+                    "app.log was unavailable or empty.")
+            }
+
+            [System.IO.File]::WriteAllText(
+                $failureSummaryPath,
+                $failureBuilder.ToString(),
+                (New-Object System.Text.UTF8Encoding($true)))
+        }
+        catch {
+            $failureSummaryPath = $null
+        }
+    }
 }
 finally {
     if ($null -ne $releaseEvent) {
@@ -1440,6 +1569,14 @@ else {
                 $acceptanceError.GetType().Name,
                 $acceptanceError.HResult)
         Write-Host ("Reason: " + $acceptanceError.Message)
+        Write-Host ("Recovery outcome: " + $recoveryOutcome)
+        Write-Host ("Recovery reason: " + $recoveryReason)
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($failureSummaryPath)) {
+        Write-Host ""
+        Write-Host "Failure summary:"
+        Write-Host $failureSummaryPath
     }
 
     if (-not [string]::IsNullOrWhiteSpace($sessionDirectory)) {
