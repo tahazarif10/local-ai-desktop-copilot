@@ -86,6 +86,7 @@ jobs:
             (Resolve-Path .\run-m4-2-ocr-benchmark-setup.ps1).Path
             (Resolve-Path .\run-m4-2-ocr-benchmark.ps1).Path
             (Resolve-Path .\run-m4-2-ocr-auto-smoke.ps1).Path
+            (Resolve-Path .\run-m4-2-ocr-controlled-ui.ps1).Path
             (Resolve-Path .\scripts\run-m3-4-provider-isolation-core.ps1).Path
             (Resolve-Path .\tests\fixtures\Test-RawUiAutomationProvider.ps1).Path
           )
@@ -123,6 +124,10 @@ jobs:
       - name: Validate M4.2.2 zero-touch synthetic smoke wrapper
         shell: powershell
         run: .\run-m4-2-ocr-auto-smoke.ps1 -ValidateOnly
+
+      - name: Validate M4.2.2 controlled OS-rendered UI wrapper
+        shell: powershell
+        run: .\run-m4-2-ocr-controlled-ui.ps1 -ValidateOnly
 
       - name: Validate physical raw-provider runner patch
         shell: powershell
