@@ -219,15 +219,16 @@ Environment preparation is accepted and merged through PR #32 at `1486fb673a623b
 
 ADR 0014 selects the measured server-local PaddleOCR configuration as the integration target while keeping Core model-agnostic.
 
-##### ▶ M4.2.3a Portable OCR integration gate
+##### ✅ M4.2.3a Portable OCR integration gate
 
 - Revalidate Armed state, same current uncancelled epoch, and `CapturePixels + RunOcr`.
 - For the selected local-AI-server topology, additionally require `SendPixelsToLocalServer`.
 - Feed only accepted M4.1 bounded ROI plans; an empty plan is a safe rejection and never widens to a full frame.
 - Recheck capabilities/current epoch/latest request before publication.
 - Keep this slice transport-free and content-free so the gate is deterministic in Core.
+- Merged through PR #34 at main `56f8aa946981c46f51bf506eba784f1b1c9bf54a`; functional head `62a64f60a09924c8007ccc2f4dd1560211ab55ea` passed CI #216. No physical runtime was required because the slice introduced no interop, content acquisition, or transport.
 
-##### ◻ M4.2.3b Authenticated bounded OCR transport/runtime
+##### ▶ M4.2.3b Authenticated bounded OCR transport/runtime
 
 - Define the narrow authenticated/encrypted client-to-server OCR transport before any product ROI pixel crosses the LAN.
 - Bind request ID, epoch, deadline, cancellation and byte/count limits on both sides.
