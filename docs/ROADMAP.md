@@ -100,7 +100,7 @@ Accepted evidence: [PR #14](https://github.com/tahazarif10/local-ai-desktop-copi
 
 Decision: keep the measured synchronous diagnostic-only hooks. Reconsider a dedicated hook thread or Raw Input only after a reproducible target-hardware regression.
 
-## ▶ M3 — Read-only UI understanding
+## ✅ M3 — Read-only UI understanding
 
 UI Automation is a semantic source, not an automation/action feature.
 
@@ -149,40 +149,25 @@ Accepted evidence: [CI run #28](https://github.com/tahazarif10/local-ai-desktop-
 
 Accepted evidence: 124/124 tests on Ubuntu/Windows, both runner parses, and strict win-x64 build passed through [CI #43](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32894314154). Physical provider sessions proved ordinary denial, explicit opt-in/Notepad precedence, classic/packaged/browser sources, budgets, tiny truncation/recovery, and redaction. Clean one-command session `b0af762a-6949-463f-98bf-aa1a0956ea87` at acceptance head `1f2383a2224904e94062c23e44375d42fbe7e3bd` passed semantic stale clearing, higher-integrity denial, M3.1/M3.2 regressions, held-work joined teardown, and the randomized prohibited-content scan.
 
-### ▶ M3.4 Orchestrated UI enrichment
+### ✅ M3.4 Orchestrated UI enrichment
 
-- **Slice 1 — portable admission policy (accepted):** define content-free
-  Meaningful/Large-change and user-question triggers, explicitly supplied
-  debounce, per-epoch/per-kind deduplication, one-active/one-pending bounds,
-  question priority with observable backpressure, and invalidation handles.
-  Keep it disconnected from UIA so this slice cannot start continuous reads.
-  PR #19 and CI #49 accepted the contract with 140/140 tests on Ubuntu and
-  Windows, both PowerShell runner parses, and the strict Windows build.
-- **Slice 2 — isolation evidence and decision:** measure controlled
-  same-integrity provider hangs on the physical Windows client, record recovery
-  and teardown evidence, and decide whether automatic UIA requires a
-  restartable helper process. Do not infer this decision from deterministic
-  timeouts alone.
-- **Slice 3 — runtime integration and acceptance:** only after the isolation
-  decision, bind approved triggers to the existing bounded M3.3 snapshot,
-  revalidate capability/epoch/latest identity at admission and publication,
-  cancel or clear every replaced/stale result, and prove the complete matrix
-  through one PowerShell 5.1 command.
+- **Slice 1 — portable admission policy (accepted):** [PR #19](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/19) and [ADR 0010](decisions/0010-bounded-priority-ui-enrichment-policy.md) define content-free Meaningful/Large-change and user-question triggers, explicit debounce input, per-epoch/per-kind deduplication, one-active/one-pending bounds, question priority with observable retryable backpressure, and invalidation handles.
+- **Slice 2 — measured provider isolation (accepted):** [ADR 0011](decisions/0011-measured-uia-provider-isolation.md) selected the existing in-process COM MTA worker from a real same-integrity blocking-provider measurement. Behavior head `44d4752864372116a911de2ae3acf611ef033c1e`, session `2a7d17af-4d9b-4ddc-80ac-c727ddd60dc7`, recovered the healthy target before the 10-second deadline, shut down in 118 ms with `joined=True`, classified `InProcessCandidate`, and passed the randomized sentinel scan.
+- **Slice 3 — runtime integration and acceptance (accepted):** product runtime behavior was introduced at `979ed5a2318d32ff151d2950f7ace77ec274d601`. It composes an application-owned enrichment runtime with persistent Meaningful/Large samples and the existing bounded M3.3 semantic snapshot, uses a five-second background debounce, gives explicit user-question work priority/backpressure, revalidates Armed/current epoch/cancellation/`ReadUiStructure | ReadUiText` before dispatch and publication, clears results immediately after aggregate observation, and stops before coordinator/UIA teardown.
+- The clean physical candidate `26c3290bf196701473b558da657d5c39c8c97e8a` passed the full one-command Windows acceptance on 2026-09-23: denial-before-dispatch, automatic dispatch/debounce, user-question routing, Disarm no-post-dispatch, redaction, teardown ordering, joined worker, and the provider-isolation regression. [CI #115](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35844099601) passed the portable/Windows suites, PowerShell parsing, M3.4 wrapper validation, raw-provider smoke gate, and strict WinUI build.
 
-Exit criteria:
+Accepted invariants:
 
-- Automatic UIA remains off until slice 2 selects and verifies the recovery
-  boundary.
-- User questions are never silently dropped or replaced; overload is explicit
-  and retryable.
-- All queue capacities, replacement ownership, cancellation, stale disposal,
-  teardown, and content-free diagnostics are deterministic and observable.
-- M3.3 content selection, privacy capabilities, immutable budgets, RAM-only
-  lifetime, no-action boundary, and prohibited-content scan remain unchanged.
+- Product defaults still deny `ReadUiText`; automatic semantic UIA cannot run merely because M3.4 exists.
+- Sensing must be explicitly Armed, the current epoch must remain uncancelled, and both UIA capabilities must pass at admission and publication.
+- User questions are never silently dropped or replaced; overload remains explicit and retryable.
+- Queue capacity, replacement ownership, cancellation, stale disposal, teardown, and diagnostics remain bounded and observable.
+- M3.3 content selection, immutable budgets, RAM-only lifetime, no-action boundary, and prohibited-content rules are unchanged.
+- ADR 0011's measured in-process recovery invariant remains a regression gate; a helper-process split is not required unless new physical evidence invalidates that decision.
 
-## ◻ M4 — Visual text and visual fallback
+## ▶ M4 — Visual text and visual fallback
 
-### M4.1 Region-of-interest planner
+### ▶ M4.1 Region-of-interest planner
 
 - Convert changed regions and UIA bounding rectangles into bounded capture ROIs.
 - Avoid full-screen OCR/VLM unless a user query explicitly requires it.
