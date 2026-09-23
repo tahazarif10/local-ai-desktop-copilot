@@ -110,8 +110,10 @@ public sealed class OcrIntegrationGateTests
             new(
                 requestId: 5,
                 epochId: 7,
-                OcrExecutionTopology.ClientProcess,
-                EmptyPlan());
+                topology: OcrExecutionTopology.ClientProcess,
+                sourceWidth: 1000,
+                sourceHeight: 800,
+                regionPlan: EmptyPlan());
 
         OcrIntegrationGateDecision decision =
             OcrIntegrationGate.EvaluateDispatch(
@@ -122,6 +124,99 @@ public sealed class OcrIntegrationGateTests
         AssertDecision(
             OcrIntegrationRejectionReason.EmptyRegionPlan,
             decision);
+    }
+
+    [TestMethod]
+    public void Dispatch_RejectsForgedPlanThatExceedsHardAreaCeiling()
+    {
+        RegionOfInterestPlan oversized =
+            new(
+                new[]
+                {
+                    new PlannedCaptureRegion(
+                        new CaptureRegion(0, 0, 900, 800),
+                        RegionOfInterestSource.ChangedRegion)
+                },
+                uiAutomationInputCount: 0,
+                rejectedInvalid: 0,
+                rejectedOutsideCapture: 0,
+                rejectedUnassociated: 0,
+                rejectedBudget: 0,
+                deduplicated: 0,
+                projectionUnavailable: false,
+                usedChangeFallback: true);
+
+        OcrIntegrationRequest request =
+            new(
+                requestId: 5,
+                epochId: 7,
+                topology: OcrExecutionTopology.ClientProcess,
+                sourceWidth: 1000,
+                sourceHeight: 800,
+                regionPlan: oversized);
+
+        OcrIntegrationGateDecision decision =
+            OcrIntegrationGate.EvaluateDispatch(
+                request,
+                isArmed: true,
+                Epoch(AllClientCapabilities));
+
+        AssertDecision(
+            OcrIntegrationRejectionReason.InvalidRegionPlan,
+            decision);
+    }
+
+    [TestMethod]
+    public void Dispatch_RejectsForgedPlanOutsideCaptureBounds()
+    {
+        RegionOfInterestPlan outside =
+            new(
+                new[]
+                {
+                    new PlannedCaptureRegion(
+                        new CaptureRegion(950, 700, 100, 80),
+                        RegionOfInterestSource.ChangedRegion)
+                },
+                uiAutomationInputCount: 0,
+                rejectedInvalid: 0,
+                rejectedOutsideCapture: 0,
+                rejectedUnassociated: 0,
+                rejectedBudget: 0,
+                deduplicated: 0,
+                projectionUnavailable: false,
+                usedChangeFallback: true);
+
+        OcrIntegrationRequest request =
+            new(
+                requestId: 5,
+                epochId: 7,
+                topology: OcrExecutionTopology.ClientProcess,
+                sourceWidth: 1000,
+                sourceHeight: 800,
+                regionPlan: outside);
+
+        OcrIntegrationGateDecision decision =
+            OcrIntegrationGate.EvaluateDispatch(
+                request,
+                isArmed: true,
+                Epoch(AllClientCapabilities));
+
+        AssertDecision(
+            OcrIntegrationRejectionReason.InvalidRegionPlan,
+            decision);
+    }
+
+    [TestMethod]
+    public void Request_RejectsUnknownTopology()
+    {
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(
+            () => new OcrIntegrationRequest(
+                requestId: 5,
+                epochId: 7,
+                topology: (OcrExecutionTopology)12345,
+                sourceWidth: 1000,
+                sourceHeight: 800,
+                regionPlan: NonEmptyPlan()));
     }
 
     [TestMethod]
@@ -197,8 +292,10 @@ public sealed class OcrIntegrationGateTests
         new(
             requestId: 5,
             epochId: 7,
-            topology,
-            NonEmptyPlan());
+            topology: topology,
+            sourceWidth: 1000,
+            sourceHeight: 800,
+            regionPlan: NonEmptyPlan());
 
     private static RegionOfInterestPlan NonEmptyPlan() =>
         new(
