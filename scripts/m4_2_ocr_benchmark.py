@@ -260,6 +260,30 @@ def load_manifest(
 
     return validated
 
+def select_samples(
+    samples: Sequence[dict[str, Any]],
+    include_categories: Sequence[str] | None,
+) -> list[dict[str, Any]]:
+    if not include_categories:
+        return list(samples)
+
+    requested = list(dict.fromkeys(include_categories))
+    unexpected = [c for c in requested if c not in REQUIRED_CATEGORIES]
+    if unexpected:
+        raise ValueError(
+            "Unexpected included categories: " + ", ".join(unexpected)
+        )
+
+    selected = [s for s in samples if s["category"] in requested]
+    present = {s["category"] for s in selected}
+    missing = [c for c in requested if c not in present]
+    if missing:
+        raise ValueError(
+            "Included categories have no corpus samples: " + ", ".join(missing)
+        )
+    return selected
+
+
 
 def _distribution_version(metadata_module: Any, name: str) -> str:
     try:
@@ -609,6 +633,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     benchmark_root = Path(args.benchmark_root).resolve()
     manifest_path = Path(args.manifest).resolve()
     samples = load_manifest(manifest_path, require_files=True)
+    samples = select_samples(samples, args.include_category)
     config = _config_from_args(args)
 
     timeout_guard_passed = _timeout_guard_self_test()
@@ -631,8 +656,11 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     timeouts = 0
     latencies: list[float] = []
     rss_peak_mib: float | None = None
+    included_categories = list(
+        dict.fromkeys(args.include_category or REQUIRED_CATEGORIES)
+    )
     category_counts: dict[str, int] = {
-        category: 0 for category in REQUIRED_CATEGORIES
+        category: 0 for category in included_categories
     }
 
     try:
@@ -720,7 +748,14 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "schema": SCHEMA_VERSION,
         "mode": "controlled-benchmark",
+        "candidate": "paddleocr-ppocrv5-fa-en",
+        "scope": (
+            "matched-category-subset"
+            if args.include_category
+            else "full-seven-category"
+        ),
         "sample_count": len(samples),
+        "included_categories": included_categories,
         "category_counts": category_counts,
         "raw_content_persisted": False,
         "raw_ocr_logged": False,
@@ -799,6 +834,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--benchmark-root", required=True)
     parser.add_argument("--manifest")
+    parser.add_argument(
+        "--include-category",
+        action="append",
+        choices=REQUIRED_CATEGORIES,
+        default=[],
+    )
     parser.add_argument("--device", default=DEFAULT_DEVICE)
     parser.add_argument("--engine", default=DEFAULT_ENGINE)
     parser.add_argument(
