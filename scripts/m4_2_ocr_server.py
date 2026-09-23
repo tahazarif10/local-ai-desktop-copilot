@@ -297,7 +297,7 @@ def build_response(
     request_id: int,
     epoch_id: int,
     texts: Iterable[tuple[int, str]] = (),
-) -> bytes:
+) -> bytearray:
     if request_id <= 0 or epoch_id <= 0:
         raise ValueError("Response identity must be positive.")
     if status not in {
@@ -343,7 +343,7 @@ def build_response(
 
     if len(body) > MAX_RESPONSE_BYTES:
         raise ValueError("Response exceeds byte limit.")
-    return bytes(body)
+    return body
 
 
 def _extract_text(result_items) -> str:
@@ -449,7 +449,7 @@ class OcrRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "close")
         self.end_headers()
 
-    def _binary_response(self, body: bytes) -> None:
+    def _binary_response(self, body) -> None:
         self.send_response(200)
         self.send_header("Content-Type", "application/octet-stream")
         self.send_header("Content-Length", str(len(body)))
@@ -506,13 +506,16 @@ class OcrRequestHandler(BaseHTTPRequestHandler):
                 return
 
             if not state.inference_lock.acquire(blocking=False):
-                self._binary_response(
-                    build_response(
-                        STATUS_BUSY,
-                        request.request_id,
-                        request.epoch_id,
-                    )
+                busy_response = build_response(
+                    STATUS_BUSY,
+                    request.request_id,
+                    request.epoch_id,
                 )
+                try:
+                    self._binary_response(busy_response)
+                finally:
+                    for index in range(len(busy_response)):
+                        busy_response[index] = 0
                 return
 
             try:
@@ -549,7 +552,11 @@ class OcrRequestHandler(BaseHTTPRequestHandler):
                             request.epoch_id,
                         )
 
-                self._binary_response(response)
+                try:
+                    self._binary_response(response)
+                finally:
+                    for index in range(len(response)):
+                        response[index] = 0
             finally:
                 state.inference_lock.release()
         finally:
