@@ -350,6 +350,35 @@ ground truth, and OCR output remain local. PR evidence may contain only aggregat
 CER/WER/exact-match, latency, resource, footprint, failure, and cancellation
 measurements with sample/category identifiers.
 
+### M4.2.2 isolated OCR benchmark environment
+
+After M4.2.1 is merged, prepare the first server GPU candidate from a clean,
+non-elevated PowerShell on `dev/m4-2-2-controlled-benchmark`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-benchmark-setup.ps1 -MachineRole Server -PreparePaddleGpu
+```
+
+The setup is allowed to download benchmark-only dependencies. It must not
+replace or modify the existing Python 3.14 installation. Python 3.12 is extracted
+below ignored `.localcopilot/ocr-benchmark` using Python Install Manager
+`py install --target`. The pinned first candidate is PaddlePaddle GPU 3.2.0
+from the CUDA 12.6 wheel index plus PaddleOCR 3.7.0.
+
+CI validates only the static/setup contract:
+
+```powershell
+.\run-m4-2-ocr-benchmark-setup.ps1 -ValidateOnly
+```
+
+Physical setup evidence must report isolated Python 3.12, pinned package
+versions, `paddle_compiled_with_cuda=True`, a GPU device, and the negative
+content flags `ocr_executed=False`, `benchmark_content_created=False`, and
+`backend_selected=False`.
+
+The later content-bearing OCR benchmark remains local. Screenshots, ground truth,
+and raw OCR output must not be copied into PRs, diagnostics, or committed files.
+
 ## 8. Performance evidence
 
 Performance measurements must name:
