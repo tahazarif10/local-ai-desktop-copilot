@@ -70,8 +70,10 @@ Protocol version 1 uses a deterministic binary body:
 - epoch ID;
 - absolute deadline;
 - region count;
-- one descriptor per ROI;
+- one descriptor per ROI containing only width, height, stride, pixel format, and byte length;
 - concatenated raw BGRA8 ROI bytes.
+
+Source-frame X/Y coordinates are intentionally omitted from the wire format because the OCR server does not need them. M4.1 geometry remains client-local.
 
 Hard transport defaults:
 
