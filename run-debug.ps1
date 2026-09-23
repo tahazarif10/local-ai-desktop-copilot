@@ -2,7 +2,8 @@
 param(
     [string]$DiagnosticRoot,
     [switch]$EnableUiText,
-    [ValidateSet("M3.3", "M3.4")]
+    [switch]$EnableOcr,
+    [ValidateSet("M3.3", "M3.4", "M4.2.3")]
     [string]$Milestone = "M3.3"
 )
 
@@ -193,6 +194,7 @@ OS: $([Environment]::OSVersion.VersionString)
 Runner elevated: $runnerElevated
 Diagnostic activation: launch-scoped, expiring token
 UI text opt-in: $([bool]$EnableUiText)
+OCR opt-in: $([bool]$EnableOcr)
 Application argument source: process command line
 Application log: app.log
 
@@ -384,6 +386,7 @@ public static class LocalCopilotForegroundProbe
             CreatedUtc = $sessionStartUtc.ToString("o")
             ExpiresUtc = $sessionStartUtc.AddHours(4).ToString("o")
             AllowUiText = [bool]$EnableUiText
+            AllowOcr = [bool]$EnableOcr
         }
 
     $descriptorJson =
