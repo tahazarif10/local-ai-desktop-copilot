@@ -4,7 +4,8 @@ param(
     [string]$MachineRole = "Server",
     [switch]$PreparePaddleGpu,
     [switch]$ValidateOnly,
-    [string]$ExpectedBranch = "dev/m4-2-2-controlled-benchmark"
+    [string]$ExpectedBranch = "dev/m4-2-2-controlled-benchmark",
+    [string]$BenchmarkRoot = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -180,7 +181,13 @@ if (-not [string]::IsNullOrWhiteSpace($ExpectedBranch) -and $branch -ne $Expecte
     throw ("Run M4.2.2 setup only from branch '" + $ExpectedBranch + "'. Current branch='" + $branch + "'.")
 }
 
-$root = Join-Path $repoRoot ".localcopilot\ocr-benchmark"
+if ([string]::IsNullOrWhiteSpace($BenchmarkRoot)) {
+    $root = Join-Path $repoRoot ".localcopilot\ocr-benchmark"
+}
+else {
+    $root = [System.IO.Path]::GetFullPath($BenchmarkRoot)
+}
+
 $pythonPackageRoot = Join-Path $root "python312-nuget"
 $runtimeRoot = Join-Path $pythonPackageRoot "python\tools"
 $cacheRoot = Join-Path $root "cache"
@@ -250,6 +257,7 @@ machine_role=$MachineRole
 branch=$branch
 head=$head
 working_tree=clean
+benchmark_root=$root
 runner_elevated=False
 python_install_manager_available=$installManagerAvailable
 python_project_local_package=nuget-python
