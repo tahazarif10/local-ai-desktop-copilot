@@ -5,8 +5,8 @@ accepted_main_commit: 5ad17ee5276dccefbe5ac4d3e6f7ab845061fdaa
 last_verified_date: 2026-09-23
 completed_through: M4.1
 active_milestone: M4.2
-active_branch: main
-active_status: M4.1 bounded ROI planning is accepted and merged through PR #29 at main commit 5ad17ee5276dccefbe5ac4d3e6f7ab845061fdaa; M4.2 OCR benchmark and integration is the next approved implementation gate and has not started yet
+active_branch: dev/m4-2-ocr-benchmark
+active_status: M4.2.1 benchmark contract/preflight is implemented on the feature branch under proposed ADR 0013; CI validation and physical client/server preflight evidence remain before controlled OCR benchmarking
 next_milestone: M4.2
 next_milestone_name: OCR benchmark and integration
 ---
@@ -300,18 +300,26 @@ These are fixed design inputs, not upgrade suggestions:
 
 ## Immediate acceptance gate
 
-M4.1 is accepted and merged to `main` through [PR #29](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/29).
+M4.1 is accepted and merged. M4.2 work is isolated on:
 
-- behavior-bearing accepted head: `03f719a1bb4a98a3834348d1f0d53fa50828c92e`;
-- merge commit: `5ad17ee5276dccefbe5ac4d3e6f7ab845061fdaa`;
-- accepted [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md);
-- [CI #126](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35847291181): 160/160 Core tests on Ubuntu and Windows, existing M3.4 runner/provider regressions, controlled raw-provider smoke, and strict WinUI build all PASS;
-- documentation-only closeout head also passed CI #131;
-- no separate physical Windows acceptance was required because M4.1 adds only portable geometry/policy logic and no Windows interop, pixel acquisition, OCR, or runtime composition.
+```text
+dev/m4-2-ocr-benchmark
+```
 
-The accepted planner maps downscaled `ChangeRegion` geometry and explicitly projected UIA screen rectangles into bounded source-frame ROI candidates with outward scaling/clamping, bounded padding, background association filtering, change fallback, deterministic ordering, nested-candidate deduplication, count/per-region/total-area budgets, and no synthesized full-frame fallback. Product privacy capabilities and content-retention rules remain unchanged.
+The first M4.2 slice is **M4.2.1 — benchmark contract and target-machine preflight** under proposed [ADR 0013](decisions/0013-evidence-gated-ocr-benchmark.md). It intentionally does not run OCR or install dependencies. It adds:
 
-The next implementation gate is **M4.2 — OCR benchmark and integration**. Start it from merged `main`. Backend selection must be evidence-driven on the fixed client/server hardware and must preserve M4.1 ROI bounds, `CapturePixels + RunOcr` gating, cancellation, local-only data handling, and no implicit whole-frame escalation.
+- portable strict OCR scoring (NFC-normalized Unicode-code-point CER, WER, exact normalized match);
+- a one-command non-elevated Windows preflight;
+- CI parsing and `-ValidateOnly` coverage for that preflight;
+- candidate availability/language/runtime metadata only.
+
+The initial candidate groups are legacy `Windows.Media.Ocr`, Tesseract 5 with Persian+English data, and PaddleOCR PP-OCRv5 Persian/English. The newer Windows AI Text Recognition API is not a candidate on the fixed machines because Microsoft's current documentation requires an NPU. Legacy Windows OCR remains device-language-pack dependent, so no Persian capability is assumed until the target preflight reports it. Tesseract and PaddleOCR are benchmark candidates only; neither is an accepted product dependency.
+
+M4.2.1 acceptance requires CI PASS and a content-free physical preflight from the fixed client. A server preflight is required before server/GPU OCR is benchmarked. Preflight alone cannot select a backend.
+
+The controlled M4.2.2 benchmark must measure Persian, English, mixed Persian-English, terminal/dialog/browser/application UI, strict CER/WER/exact-match, cold/warm latency, p50/p95, memory/VRAM where measurable, package/model footprint, failure behavior, and cancellation. Benchmark text/screenshots stay local and must not enter PR evidence or normal diagnostics.
+
+Do not integrate OCR into the product, change `CapturePixels + RunOcr` policy, add LAN pixel egress, or begin M4.3 VLM fallback until the controlled OCR benchmark is complete and reviewed.
 
 ## How to update this file
 
