@@ -293,21 +293,6 @@ internal sealed class OcrEnrichmentRuntimeService :
                     cancellation.Token)
                 .ConfigureAwait(false);
 
-        OcrIntegrationGateDecision beforeTransport =
-            OcrIntegrationGate.EvaluateDispatch(
-                request,
-                _sensingOrchestrator.IsArmed,
-                _contextEpochManager.Current);
-
-        if (!beforeTransport.Allowed)
-        {
-            LogDrop(
-                request,
-                "before_transport",
-                beforeTransport.Reason);
-            return;
-        }
-
         if (!_foregroundWindowService.IsCurrent(
                 epoch.Snapshot))
         {
@@ -324,6 +309,23 @@ internal sealed class OcrEnrichmentRuntimeService :
                 request.EpochId,
                 DateTimeOffset.UtcNow + RequestDeadline,
                 capture.Regions);
+
+        // Revalidate the complete OCR + pixel-egress capability set directly
+        // before the transport serializes any ROI bytes.
+        OcrIntegrationGateDecision beforeTransport =
+            OcrIntegrationGate.EvaluateDispatch(
+                request,
+                _sensingOrchestrator.IsArmed,
+                _contextEpochManager.Current);
+
+        if (!beforeTransport.Allowed)
+        {
+            LogDrop(
+                request,
+                "before_transport",
+                beforeTransport.Reason);
+            return;
+        }
 
         using OcrTransportResponsePayload response =
             await _transport.SendAsync(
