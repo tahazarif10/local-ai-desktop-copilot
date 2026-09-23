@@ -321,9 +321,35 @@ if ($PreparePaddleGpu) {
     Invoke-M422Checked -FilePath $python -Arguments @("-m", "pip", "install", "--disable-pip-version-check", "paddleocr==$paddleOcrVersion") -Description "PaddleOCR install"
 
     $probeCode = "import importlib.metadata as m,json,platform,paddle; print(json.dumps({'python_version':platform.python_version(),'paddle_version':str(paddle.__version__),'paddleocr_version':m.version('paddleocr'),'device':str(paddle.device.get_device()),'compiled_with_cuda':bool(paddle.device.is_compiled_with_cuda())}, separators=(',',':')))"
-    $probe = @(& $python "-c" $probeCode 2>&1)
-    if ($LASTEXITCODE -ne 0) { throw "Installed Paddle/PaddleOCR environment probe failed." }
-    $probeLine = @($probe | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }) | Select-Object -Last 1
+
+    # Paddle may emit benign native diagnostics to stderr during import on Windows.
+    # PowerShell 5.1 can promote redirected native stderr to NativeCommandError when
+    # the script-wide ErrorActionPreference is Stop. Capture it without letting a
+    # stderr information line abort an otherwise successful probe.
+    $savedErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        $probe = @(& $python "-c" $probeCode 2>&1)
+        $probeExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $savedErrorActionPreference
+    }
+
+    if ($probeExitCode -ne 0) {
+        throw "Installed Paddle/PaddleOCR environment probe failed with exit code $probeExitCode."
+    }
+
+    $probeLine = @(
+        $probe |
+        ForEach-Object { [string]$_ } |
+        Where-Object { $_ -match "^\s*\{.*\}\s*$" }
+    ) | Select-Object -Last 1
+
+    if ([string]::IsNullOrWhiteSpace([string]$probeLine)) {
+        throw "Installed Paddle/PaddleOCR environment probe produced no JSON result."
+    }
+
     $parsed = ([string]$probeLine) | ConvertFrom-Json
     $pythonVersion = [string]$parsed.python_version
     $paddleRuntimeVersion = [string]$parsed.paddle_version
