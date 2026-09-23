@@ -3,10 +3,10 @@ state_schema: 2
 reference_code_commit: d780a0bbeb963b0b491caeddaacc42166dd02fd1
 accepted_main_commit: d780a0bbeb963b0b491caeddaacc42166dd02fd1
 last_verified_date: 2026-09-23
-completed_through: M4.2.2
+completed_through: M4.2.3a
 active_milestone: M4.2.3
 active_branch: dev/m4-2-3-ocr-integration
-active_status: M4.2.3a portable OCR integration gate is active; ADR 0014 carries the measured server-local PaddleOCR configuration forward but no product OCR transport/runtime is integrated yet
+active_status: M4.2.3a portable OCR integration gate is accepted on PR #35; M4.2.3b authenticated bounded OCR transport/runtime is active and no product ROI pixels may cross the LAN before that gate passes
 next_milestone: M4.2.3b
 next_milestone_name: Authenticated bounded OCR transport/runtime
 ---
@@ -49,6 +49,7 @@ The repository is not yet a complete copilot. The accepted product state is a ha
 | M3.4.3 Runtime integration and acceptance | Complete | [PR #24](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/24), runtime head `979ed5a`, physical candidate `26c3290` | [CI #115](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35844099601) PASS; denied session `0cc6c55e-9141-4c32-bfab-3951c808b702`, allowed session `330a2f52-d8f2-4d5c-843d-7149caf9894a`, provider regression session `c3cfd465-849e-4e27-984d-f16d4ee6c0b1`; overall physical acceptance PASS |
 | M4.1 Bounded region-of-interest planner | Complete | [PR #29](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/29), behavior head `03f719a`, merge `5ad17ee`, [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md) | [CI #126](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35847291181) passed 160/160 Core tests on Ubuntu/Windows plus strict WinUI build; documentation-only head CI #131 also passed; no separate physical run required because the accepted slice is pure Core geometry/policy |
 | M4.2.2 Controlled OCR benchmark | Complete | [PR #33](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/33), merge `d780a0b`, [ADR 0013](decisions/0013-evidence-gated-ocr-benchmark.md) | [CI #213](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35899194600) PASS; fixed-server seven-category physical evidence selected `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` as the M4.2.3 integration target with CER/WER 0.23004695/0.22388060, warm p50 91.392 ms, 562 MiB VRAM delta, zero failures/timeouts; Tesseract fast/best materially trailed and Windows Media OCR remained English-only |
+| M4.2.3a Portable OCR integration gate | Complete | [PR #35](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/35), functional head `62a64f6`, [ADR 0014](decisions/0014-server-paddle-ocr-integration.md) | [CI #216](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35900957623) PASS; pure Core gate only, so no new physical runtime claim; requires Armed/current uncancelled epoch, `CapturePixels + RunOcr`, adds `SendPixelsToLocalServer` for server topology, rejects empty/forged ROI plans, and rejects non-latest publication |
 
 PR #7 was squash-merged as `c29099a`. Its feature-branch head (`abcbf08`) is not the `main` baseline.
 
