@@ -473,79 +473,89 @@ class OcrRequestHandler(BaseHTTPRequestHandler):
             self._empty_http_error(413)
             return
 
-        body = self.rfile.read(length)
-        if len(body) != length:
-            self._empty_http_error(400)
-            return
-
-        state: ServerState = self.server.state  # type: ignore[attr-defined]
+        body = bytearray(length)
+        body_view = memoryview(body)
 
         try:
-            validate_authentication(
-                self.headers,
-                body,
-                state.authentication_key,
-                state.replay_cache,
-                int(time.time()),
-            )
-        except AuthenticationError:
-            self._empty_http_error(401)
-            return
+            offset = 0
+            while offset < length:
+                read = self.rfile.readinto(body_view[offset:])
+                if read is None or read <= 0:
+                    self._empty_http_error(400)
+                    return
+                offset += read
 
-        try:
-            request = parse_request(body, int(time.time() * 1000))
-        except ProtocolError:
-            self._empty_http_error(400)
-            return
+            state: ServerState = self.server.state  # type: ignore[attr-defined]
 
-        if not state.inference_lock.acquire(blocking=False):
-            self._binary_response(
-                build_response(
-                    STATUS_BUSY,
-                    request.request_id,
-                    request.epoch_id,
+            try:
+                validate_authentication(
+                    self.headers,
+                    body,
+                    state.authentication_key,
+                    state.replay_cache,
+                    int(time.time()),
                 )
-            )
-            return
+            except AuthenticationError:
+                self._empty_http_error(401)
+                return
 
-        try:
-            if int(time.time() * 1000) >= request.deadline_unix_ms:
-                response = build_response(
-                    STATUS_DEADLINE_EXCEEDED,
-                    request.request_id,
-                    request.epoch_id,
-                )
-            else:
-                try:
-                    if state.diagnostic_delay_ms > 0:
-                        time.sleep(state.diagnostic_delay_ms / 1000.0)
-                        if int(time.time() * 1000) >= request.deadline_unix_ms:
-                            raise TimeoutError("OCR request deadline expired.")
+            try:
+                request = parse_request(body, int(time.time() * 1000))
+            except ProtocolError:
+                self._empty_http_error(400)
+                return
 
-                    texts = state.runtime.predict(request)
-                    response = build_response(
-                        STATUS_OK,
+            if not state.inference_lock.acquire(blocking=False):
+                self._binary_response(
+                    build_response(
+                        STATUS_BUSY,
                         request.request_id,
                         request.epoch_id,
-                        texts,
                     )
-                except TimeoutError:
+                )
+                return
+
+            try:
+                if int(time.time() * 1000) >= request.deadline_unix_ms:
                     response = build_response(
                         STATUS_DEADLINE_EXCEEDED,
                         request.request_id,
                         request.epoch_id,
                     )
-                except Exception:
-                    response = build_response(
-                        STATUS_INFERENCE_UNAVAILABLE,
-                        request.request_id,
-                        request.epoch_id,
-                    )
+                else:
+                    try:
+                        if state.diagnostic_delay_ms > 0:
+                            time.sleep(state.diagnostic_delay_ms / 1000.0)
+                            if int(time.time() * 1000) >= request.deadline_unix_ms:
+                                raise TimeoutError("OCR request deadline expired.")
 
-            self._binary_response(response)
+                        texts = state.runtime.predict(request)
+                        response = build_response(
+                            STATUS_OK,
+                            request.request_id,
+                            request.epoch_id,
+                            texts,
+                        )
+                    except TimeoutError:
+                        response = build_response(
+                            STATUS_DEADLINE_EXCEEDED,
+                            request.request_id,
+                            request.epoch_id,
+                        )
+                    except Exception:
+                        response = build_response(
+                            STATUS_INFERENCE_UNAVAILABLE,
+                            request.request_id,
+                            request.epoch_id,
+                        )
+
+                self._binary_response(response)
+            finally:
+                state.inference_lock.release()
         finally:
-            state.inference_lock.release()
-            del body
+            body_view.release()
+            for index in range(len(body)):
+                body[index] = 0
 
 
 class BoundedHttpServer(ThreadingHTTPServer):
