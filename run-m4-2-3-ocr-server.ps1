@@ -6,6 +6,8 @@ param(
     [string]$ExpectedBranch = "dev/m4-2-3b-ocr-transport",
     [string]$BindAddress = "0.0.0.0",
     [int]$Port = 49321,
+    [ValidateRange(0,5000)]
+    [int]$DiagnosticDelayMs = 0,
     [string]$ServerName = $env:COMPUTERNAME
 )
 
@@ -99,6 +101,7 @@ Write-Host ("head=" + $head)
 Write-Host ("server_name=" + $ServerName)
 Write-Host ("port=" + $Port)
 Write-Host ("certificate_sha256=" + $certificateSha256)
+Write-Host ("diagnostic_delay_ms=" + $DiagnosticDelayMs)
 Write-Host ("client_bundle=" + $clientBundle)
 Write-Host "authentication_key_printed=False"
 Write-Host "private_key_printed=False"
@@ -108,5 +111,5 @@ Write-Host ""
 Write-Host "Keep this PowerShell window open while client acceptance runs."
 Write-Host ""
 
-& $python $serverScript --bind $BindAddress --port $Port --cert-file $certPath --key-file $keyPath --auth-key-file $authPath --model-root $modelRoot --device "gpu:0"
+& $python $serverScript --bind $BindAddress --port $Port --cert-file $certPath --key-file $keyPath --auth-key-file $authPath --model-root $modelRoot --device "gpu:0" --diagnostic-delay-ms $DiagnosticDelayMs
 if ($LASTEXITCODE -ne 0) { throw ("OCR server exited with code " + $LASTEXITCODE) }
