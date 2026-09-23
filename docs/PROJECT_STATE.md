@@ -1,14 +1,14 @@
 ---
 state_schema: 2
-reference_code_commit: d780a0bbeb963b0b491caeddaacc42166dd02fd1
-accepted_main_commit: d780a0bbeb963b0b491caeddaacc42166dd02fd1
+reference_code_commit: 56f8aa946981c46f51bf506eba784f1b1c9bf54a
+accepted_main_commit: 56f8aa946981c46f51bf506eba784f1b1c9bf54a
 last_verified_date: 2026-09-23
-completed_through: M4.2.2
-active_milestone: M4.2.3
-active_branch: dev/m4-2-3-ocr-integration
-active_status: M4.2.3a portable OCR integration gate is active; ADR 0014 carries the measured server-local PaddleOCR configuration forward but no product OCR transport/runtime is integrated yet
-next_milestone: M4.2.3b
-next_milestone_name: Authenticated bounded OCR transport/runtime
+completed_through: M4.2.3a
+active_milestone: M4.2.3b
+active_branch: dev/m4-2-3-ocr-transport
+active_status: M4.2.3b.1 portable bounded OCR transport framing is active under ADR 0015; no product socket, TLS session, ROI network transfer, or Paddle runtime wiring exists yet
+next_milestone: M4.2.3b.2
+next_milestone_name: Pinned mTLS host/client and Paddle worker
 ---
 
 # Project state
@@ -49,6 +49,7 @@ The repository is not yet a complete copilot. The accepted product state is a ha
 | M3.4.3 Runtime integration and acceptance | Complete | [PR #24](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/24), runtime head `979ed5a`, physical candidate `26c3290` | [CI #115](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35844099601) PASS; denied session `0cc6c55e-9141-4c32-bfab-3951c808b702`, allowed session `330a2f52-d8f2-4d5c-843d-7149caf9894a`, provider regression session `c3cfd465-849e-4e27-984d-f16d4ee6c0b1`; overall physical acceptance PASS |
 | M4.1 Bounded region-of-interest planner | Complete | [PR #29](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/29), behavior head `03f719a`, merge `5ad17ee`, [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md) | [CI #126](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35847291181) passed 160/160 Core tests on Ubuntu/Windows plus strict WinUI build; documentation-only head CI #131 also passed; no separate physical run required because the accepted slice is pure Core geometry/policy |
 | M4.2.2 Controlled OCR benchmark | Complete | [PR #33](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/33), merge `d780a0b`, [ADR 0013](decisions/0013-evidence-gated-ocr-benchmark.md) | [CI #213](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35899194600) PASS; fixed-server seven-category physical evidence selected `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` as the M4.2.3 integration target with CER/WER 0.23004695/0.22388060, warm p50 91.392 ms, 562 MiB VRAM delta, zero failures/timeouts; Tesseract fast/best materially trailed and Windows Media OCR remained English-only |
+| M4.2.3a Portable OCR integration gate | Complete | [PR #34](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/34), merge `56f8aa9`, [ADR 0014](decisions/0014-server-paddle-ocr-integration.md) | [CI #216](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35900957623) PASS; portable/Windows Core tests and strict win-x64 build passed; pure Core gate requires Armed/current epoch, OCR capabilities, server pixel-egress capability, non-empty/hard-bounded M4.1 ROI and latest publication; no physical run required because no content/network runtime was added |
 
 PR #7 was squash-merged as `c29099a`. Its feature-branch head (`abcbf08`) is not the `main` baseline.
 
@@ -301,28 +302,21 @@ These are fixed design inputs, not upgrade suggestions:
 
 ## Immediate acceptance gate
 
-M4.2.2 controlled benchmarking is accepted and merged through [PR #33](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/33) at main commit `d780a0bbeb963b0b491caeddaacc42166dd02fd1`. Final CI #213 passed on the documentation-complete head before merge.
+M4.2.3a is accepted and merged through [PR #34](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/34) at main commit `56f8aa946981c46f51bf506eba784f1b1c9bf54a`. CI #216 passed the portable and Windows Core suites, prior runner/provider regressions, and strict win-x64 build.
 
 The active branch is:
 
 ```text
-dev/m4-2-3-ocr-integration
+dev/m4-2-3-ocr-transport
 ```
 
-ADR 0014 carries the measured `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` configuration forward as the product OCR integration target on the fixed local AI server. This is a selection/integration target, not evidence that product OCR already exists.
+M4.2.3b.1 is the current slice. ADR 0015 selects pinned mutual-TLS HTTPS for the later network hop, but this slice implements only the portable bounded binary protocol and sensitive-memory ownership.
 
-M4.2.3a is the current implementation slice. It adds only a portable Core gate that requires:
+Initial v1 ceilings are four regions, 4,194,304 pixels per region, 8,192 pixels per dimension, 16 MiB PNG bytes per region, 32 MiB total request PNG bytes, a maximum 15-second request deadline, 16 KiB OCR UTF-8 per region and 64 KiB total response text. The frame carries request ID, epoch ID, deadline, region dimensions and PNG bytes; it deliberately carries no ROI screen coordinates, title, process name, path, UIA text or diagnostic strings.
 
-- explicit Armed state;
-- the same current uncancelled epoch;
-- `CapturePixels + RunOcr` for any OCR request;
-- `SendPixelsToLocalServer` additionally for the selected server topology;
-- a non-empty accepted M4.1 `RegionOfInterestPlan`;
-- capability/current-epoch/latest-request revalidation before publication.
+M4.2.3b.1 still does not create a socket, TLS connection, crop product pixels, invoke PaddleOCR, or grant `RunOcr` / `SendPixelsToLocalServer`. Its exit gate is deterministic protocol round-trip/limit/malformed/cancellation/disposal tests plus the normal strict CI build.
 
-The product default still denies `RunOcr` and `SendPixelsToLocalServer`. M4.2.3a does not capture/crop pixels, invoke PaddleOCR, create a socket, serialize ROI pixels, retain OCR text, or begin M4.3.
-
-The next dependent slice is M4.2.3b: a narrow authenticated/encrypted bounded OCR transport/runtime path for the fixed client/server pair. No product ROI pixel may cross the LAN before that transport gate is reviewed and accepted.
+The next slice, M4.2.3b.2, will add the pinned-mTLS host/client, server worker boundary, client ROI crop/PNG encoding and one-command fixed client/server physical acceptance.
 ## How to update this file
 
 For every milestone merge:
