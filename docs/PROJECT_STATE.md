@@ -6,7 +6,7 @@ last_verified_date: 2026-09-23
 completed_through: M4.2.2
 active_milestone: M4.2.3
 active_branch: dev/m4-2-3-ocr-integration
-active_status: M4.2.3a portable OCR integration gate is active; ADR 0014 carries the measured server-local PaddleOCR configuration forward but no product OCR transport/runtime is integrated yet
+active_status: M4.2.3a portable OCR integration gate is merged through PR #34; M4.2.3b authenticated bounded OCR transport/runtime is active in draft PR #36 and awaits CI plus fixed client/server physical acceptance
 next_milestone: M4.2.3b
 next_milestone_name: Authenticated bounded OCR transport/runtime
 ---
@@ -311,7 +311,7 @@ dev/m4-2-3-ocr-integration
 
 ADR 0014 carries the measured `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` configuration forward as the product OCR integration target on the fixed local AI server. This is a selection/integration target, not evidence that product OCR already exists.
 
-M4.2.3a is the current implementation slice. It adds only a portable Core gate that requires:
+M4.2.3a is merged through PR #34 at main `56f8aa946981c46f51bf506eba784f1b1c9bf54a`. Its portable Core gate requires:
 
 - explicit Armed state;
 - the same current uncancelled epoch;
@@ -320,9 +320,9 @@ M4.2.3a is the current implementation slice. It adds only a portable Core gate t
 - a non-empty accepted M4.1 `RegionOfInterestPlan`;
 - capability/current-epoch/latest-request revalidation before publication.
 
-The product default still denies `RunOcr` and `SendPixelsToLocalServer`. M4.2.3a does not capture/crop pixels, invoke PaddleOCR, create a socket, serialize ROI pixels, retain OCR text, or begin M4.3.
+The product default still denies `RunOcr` and `SendPixelsToLocalServer`.
 
-The next dependent slice is M4.2.3b: a narrow authenticated/encrypted bounded OCR transport/runtime path for the fixed client/server pair. No product ROI pixel may cross the LAN before that transport gate is reviewed and accepted.
+M4.2.3b is active on `dev/m4-2-3b-ocr-transport` in draft PR #36. The branch now contains a pinned-TLS/HMAC bounded binary OCR protocol, clear-on-dispose client pixel/text ownership, a pre-provisioned server-local Paddle runtime, explicit diagnostic OCR opt-in, bounded RAM-only ROI capture from the accepted M4.1 plan, latest-wins/stale publication rejection, server/client physical acceptance wrappers, and a proposed ADR 0015. This is not accepted product state until CI is green and the fixed client/server physical matrix passes. No M4.3 work is allowed before that acceptance.
 ## How to update this file
 
 For every milestone merge:
