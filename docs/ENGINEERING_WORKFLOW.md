@@ -356,11 +356,11 @@ After M4.2.1 is merged, prepare the first server GPU candidate from a clean,
 non-elevated PowerShell on `dev/m4-2-2-controlled-benchmark`:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-benchmark-setup.ps1 -MachineRole Server -PreparePaddleGpu
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-benchmark-setup.ps1 -MachineRole Server -PreparePaddleGpu -BenchmarkRoot D:\LocalAI-Prerequisites
 ```
 
 The setup is allowed to download benchmark-only dependencies. It must not
-replace or modify the existing Python 3.14 installation. Python 3.12 is placed below ignored `.localcopilot/ocr-benchmark`. Prefer Python Install Manager `py install --target`; when only the legacy launcher is present, use the script's project-local CPython NuGet package fallback (`python` 3.12.10). The NuGet client and extracted runtime stay inside the repository-local benchmark directory and do not install a runtime under `%LocalAppData%` or `Program Files`. The pinned first candidate is PaddlePaddle GPU 3.2.0
+replace or modify the existing Python 3.14 installation. Python 3.12 may be placed below ignored `.localcopilot/ocr-benchmark`, or outside the repository through `-BenchmarkRoot`. On the fixed server use `D:\LocalAI-Prerequisites`. Prefer Python Install Manager `py install --target`; when only the legacy launcher is present, use the script's project-local CPython NuGet package fallback (`python` 3.12.10). The NuGet client and extracted runtime stay inside the repository-local benchmark directory and do not install a runtime under `%LocalAppData%` or `Program Files`. The pinned first candidate is PaddlePaddle GPU 3.2.0
 from the CUDA 12.6 wheel index plus PaddleOCR 3.7.0.
 
 CI validates only the static/setup contract:
