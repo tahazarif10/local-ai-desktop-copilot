@@ -8,15 +8,20 @@ param(
     [string]$ExpectedBranch = "dev/m4-2-2-benchmark-runner",
     [int]$WarmRuns = 3,
     [double]$InferenceTimeoutSeconds = 15.0,
-    [string[]]$IncludeCategory = @()
+    [string[]]$IncludeCategory = @(),
+    [ValidateSet("PP-OCRv5_mobile_det","PP-OCRv5_server_det")]
+    [string]$DetectionModel = "PP-OCRv5_mobile_det",
+    [ValidateSet("arabic_PP-OCRv5_mobile_rec","en_PP-OCRv5_mobile_rec")]
+    [string]$RecognitionModel = "arabic_PP-OCRv5_mobile_rec"
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 2.0
 
 $schemaVersion = 1
-$expectedRecognitionModel = "arabic_PP-OCRv5_mobile_rec"
-$expectedDetectionModel = "PP-OCRv5_mobile_det"
+$defaultRecognitionModel = "arabic_PP-OCRv5_mobile_rec"
+$defaultDetectionModel = "PP-OCRv5_mobile_det"
+$englishOnlyCategories = @("english-ui","terminal-console","browser-ui")
 
 function Test-M422Elevated {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -101,8 +106,8 @@ function Write-M422CorpusScaffold {
 
 if ($ValidateOnly) {
     if ($schemaVersion -ne 1) { throw "Unexpected M4.2.2 benchmark wrapper schema." }
-    if ($expectedRecognitionModel -ne "arabic_PP-OCRv5_mobile_rec") { throw "Persian recognition model pin changed." }
-    if ($expectedDetectionModel -ne "PP-OCRv5_mobile_det") { throw "Detection model pin changed." }
+    if ($defaultRecognitionModel -ne "arabic_PP-OCRv5_mobile_rec") { throw "Default Persian recognition model pin changed." }
+    if ($defaultDetectionModel -ne "PP-OCRv5_mobile_det") { throw "Default detection model pin changed." }
     if ($WarmRuns -lt 1 -or $WarmRuns -gt 20) { throw "WarmRuns must be between 1 and 20." }
     if ($InferenceTimeoutSeconds -le 0) { throw "InferenceTimeoutSeconds must be positive." }
     $runnerPath = Join-Path $PSScriptRoot "scripts\m4_2_ocr_benchmark.py"
@@ -112,6 +117,18 @@ if ($ValidateOnly) {
 }
 
 if ($env:OS -ne "Windows_NT") { throw "M4.2.2 controlled benchmark requires Windows." }
+
+if ($RecognitionModel -eq "en_PP-OCRv5_mobile_rec") {
+    $requested = @($IncludeCategory | Sort-Object -Unique)
+    if ($requested.Count -ne $englishOnlyCategories.Count) {
+        throw "English-specific recognition requires exactly the three English-only benchmark categories."
+    }
+    foreach ($category in $englishOnlyCategories) {
+        if ($requested -notcontains $category) {
+            throw "English-specific recognition requires english-ui, terminal-console, and browser-ui."
+        }
+    }
+}
 if (Test-M422Elevated) { throw "Run the M4.2.2 benchmark from a normal, non-Administrator PowerShell." }
 
 $modeCount = @([bool]$InitializeCorpus, [bool]$PrepareModels, [bool]$Run) | Where-Object { $_ } | Measure-Object | Select-Object -ExpandProperty Count
@@ -158,8 +175,8 @@ $commonArguments = @(
     "--benchmark-root", $root,
     "--device", "gpu:0",
     "--engine", "paddle_static",
-    "--detection-model", $expectedDetectionModel,
-    "--recognition-model", $expectedRecognitionModel,
+    "--detection-model", $DetectionModel,
+    "--recognition-model", $RecognitionModel,
     "--warm-runs", [string]$WarmRuns,
     "--inference-timeout-seconds", [string]$InferenceTimeoutSeconds
 )
