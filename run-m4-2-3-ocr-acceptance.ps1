@@ -291,13 +291,11 @@ $timer.Add_Tick({
     }
 
     if (([int]$panel.Tag % 2) -eq 0) {
-        $panel.BackColor = [Drawing.Color]::Black
         $label.BackColor = [Drawing.Color]::Black
         $label.ForeColor = [Drawing.Color]::White
         $label.Text = '__SENTINEL_A__'
     }
     else {
-        $panel.BackColor = [Drawing.Color]::White
         $label.BackColor = [Drawing.Color]::White
         $label.ForeColor = [Drawing.Color]::Black
         $label.Text = '__SENTINEL_B__'
