@@ -42,7 +42,7 @@ public sealed class OcrTransportProtocolTests
             Assert.AreEqual(11L, BinaryPrimitives.ReadInt64BigEndian(body.AsSpan(12, 8)));
             Assert.AreEqual(22L, BinaryPrimitives.ReadInt64BigEndian(body.AsSpan(20, 8)));
             Assert.AreEqual(1, BinaryPrimitives.ReadInt32BigEndian(body.AsSpan(36, 4)));
-            CollectionAssert.AreEqual(
+            Assert.AreSequenceEqual(
                 pixels,
                 body.AsSpan(body.Length - pixels.Length).ToArray());
         }
@@ -129,7 +129,7 @@ public sealed class OcrTransportProtocolTests
         Assert.AreEqual(OcrTransportResponseStatus.Ok, response.Status);
         Assert.AreEqual(5L, response.RequestId);
         Assert.AreEqual(7L, response.EpochId);
-        Assert.AreEqual(1, response.Texts.Count);
+        Assert.HasCount(1, response.Texts);
         Assert.AreEqual(
             "خطا Error",
             new string(response.Texts[0].Text.Characters.Span));
