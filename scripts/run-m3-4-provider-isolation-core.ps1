@@ -34,6 +34,9 @@ $acceptanceError = $null
 $acceptancePassed = $false
 $classification = "Inconclusive"
 $recoveryState = "Inconclusive"
+$recoveryOutcome = "NotObserved"
+$recoveryReason = "NotObserved"
+$failureSummaryPath = $null
 
 function Test-M34Elevated {
     $identity =
@@ -1119,9 +1122,17 @@ namespace LocalCopilotM34Acceptance
         $providerClock.ElapsedMilliseconds
 
     if ($recoveryObserved) {
-        if ($recoveryMatch.Groups[1].Value -ne "Available" -or
-            $recoveryMatch.Groups[2].Value -ne "RootResolved") {
-            throw "The healthy-provider recovery returned a non-available result."
+        $recoveryOutcome = $recoveryMatch.Groups[1].Value
+        $recoveryReason = $recoveryMatch.Groups[2].Value
+
+        if ($recoveryOutcome -ne "Available" -or
+            $recoveryReason -ne "RootResolved") {
+            throw (
+                "The healthy-provider recovery returned outcome=" +
+                $recoveryOutcome +
+                " reason=" +
+                $recoveryReason +
+                " instead of Available/RootResolved.")
         }
 
         $blockingCompletionPattern =
@@ -1366,6 +1377,83 @@ namespace LocalCopilotM34Acceptance
 }
 catch {
     $acceptanceError = $_.Exception
+
+    if (-not [string]::IsNullOrWhiteSpace($sessionDirectory)) {
+        try {
+            $failureSummaryPath =
+                Join-Path $sessionDirectory "provider-failure-summary.txt"
+
+            $failureBuilder =
+                New-Object System.Text.StringBuilder
+
+            [void]$failureBuilder.AppendLine(
+                "=================================================")
+            [void]$failureBuilder.AppendLine(
+                "M3.4 PROVIDER-ISOLATION FAILURE SUMMARY")
+            [void]$failureBuilder.AppendLine(
+                "=================================================")
+            [void]$failureBuilder.AppendLine("Schema: 1")
+            [void]$failureBuilder.AppendLine(
+                "Failure UTC: " + [DateTimeOffset]::UtcNow.ToString("o"))
+            [void]$failureBuilder.AppendLine(
+                "Exception type: " + $acceptanceError.GetType().Name)
+            [void]$failureBuilder.AppendLine(
+                ("Exception HRESULT: 0x{0:X8}" -f $acceptanceError.HResult))
+            [void]$failureBuilder.AppendLine(
+                "Exception message: " + $acceptanceError.Message)
+            [void]$failureBuilder.AppendLine(
+                "Recovery state: " + $recoveryState)
+            [void]$failureBuilder.AppendLine(
+                "Recovery outcome: " + $recoveryOutcome)
+            [void]$failureBuilder.AppendLine(
+                "Recovery reason: " + $recoveryReason)
+
+            if ($null -ne $blockingRequest) {
+                [void]$failureBuilder.AppendLine(
+                    "Blocking request ID: " + $blockingRequest.RequestId)
+            }
+
+            if ($null -ne $recoveryRequest) {
+                [void]$failureBuilder.AppendLine(
+                    "Recovery request ID: " + $recoveryRequest.RequestId)
+            }
+
+            [void]$failureBuilder.AppendLine("")
+            [void]$failureBuilder.AppendLine(
+                "Filtered metadata tail (content-free diagnostic events only):")
+
+            $failureLog = Get-M34FileContent -Path $appLogPath
+            if (-not [string]::IsNullOrWhiteSpace($failureLog)) {
+                $metadataPattern =
+                    '\| (CONTEXT\.APPLY|COORD\.|UIA\.(PROBE_BEGIN|QUEUE|DIAGNOSTIC_HOLD|INTEGRITY_CHECK|REQUEST_START|REQUEST_COMPLETE|PROBE_RESULT|WORKER_START|WORKER_STOP|WORKER_DISPOSE|REQUEST_CANCELLED|QUEUE_REJECT))'
+
+                $metadataLines =
+                    @(
+                        $failureLog -split "\r?\n" |
+                        Where-Object {
+                            $_ -match $metadataPattern
+                        } |
+                        Select-Object -Last 120
+                    )
+
+                foreach ($metadataLine in $metadataLines) {
+                    [void]$failureBuilder.AppendLine($metadataLine)
+                }
+            }
+            else {
+                [void]$failureBuilder.AppendLine(
+                    "app.log was unavailable or empty.")
+            }
+
+            [System.IO.File]::WriteAllText(
+                $failureSummaryPath,
+                $failureBuilder.ToString(),
+                (New-Object System.Text.UTF8Encoding($true)))
+        }
+        catch {
+            $failureSummaryPath = $null
+        }
+    }
 }
 finally {
     if ($null -ne $releaseEvent) {
@@ -1440,6 +1528,14 @@ else {
                 $acceptanceError.GetType().Name,
                 $acceptanceError.HResult)
         Write-Host ("Reason: " + $acceptanceError.Message)
+        Write-Host ("Recovery outcome: " + $recoveryOutcome)
+        Write-Host ("Recovery reason: " + $recoveryReason)
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($failureSummaryPath)) {
+        Write-Host ""
+        Write-Host "Failure summary:"
+        Write-Host $failureSummaryPath
     }
 
     if (-not [string]::IsNullOrWhiteSpace($sessionDirectory)) {
