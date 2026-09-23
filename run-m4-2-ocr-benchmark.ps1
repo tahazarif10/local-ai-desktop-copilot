@@ -7,7 +7,8 @@ param(
     [string]$BenchmarkRoot = "D:\LocalAI-Prerequisites",
     [string]$ExpectedBranch = "dev/m4-2-2-benchmark-runner",
     [int]$WarmRuns = 3,
-    [double]$InferenceTimeoutSeconds = 15.0
+    [double]$InferenceTimeoutSeconds = 15.0,
+    [string[]]$IncludeCategory = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -180,5 +181,9 @@ Write-Host "Running local-only controlled OCR benchmark..."
 Write-Host "Raw OCR text will not be printed or persisted."
 Write-Host "Only aggregate metrics are written below the benchmark root."
 
-& $python @commonArguments --manifest $manifest --run
+$runArguments = @($commonArguments) + @("--manifest", $manifest, "--run")
+foreach ($category in $IncludeCategory) {
+    $runArguments += @("--include-category", $category)
+}
+& $python @runArguments
 if ($LASTEXITCODE -ne 0) { throw "M4.2.2 controlled OCR benchmark failed with exit code $LASTEXITCODE." }
