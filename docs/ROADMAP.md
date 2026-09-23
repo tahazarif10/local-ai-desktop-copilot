@@ -202,9 +202,11 @@ Accepted M4.1 ROI/privacy bounds remain the input boundary for all OCR work. Pro
 - Microsoft's current Windows AI Text Recognition API is NPU-only and is excluded on the fixed machines rather than scored as a failing OCR engine.
 - CI must parse and execute the preflight `-ValidateOnly` path before any physical use.
 - Accepted evidence: behavior/preflight head `d8f12b00524934138115f22cc8bd7149e20f4452`; CI #137 PASS; physical client and server preflights both completed content-free. Neither fixed machine currently exposes Persian through legacy Windows OCR; Tesseract/PaddleOCR are absent; both machines' existing Python 3.14 installations are outside the current Paddle Windows Python support range.
-- M4.2.1 is complete pending PR #31 merge. After merge, M4.2.2 controlled benchmarking is the next gate.
+- M4.2.1 is merged through PR #31 at `920bbecbb4c7ef4c22ca3ff055df1bcaa801e911`. M4.2.2 controlled benchmarking is active on `dev/m4-2-2-controlled-benchmark`.
 
 #### ▶ M4.2.2 Controlled OCR benchmark
+
+Environment preparation is accepted on exact server head `f8275451084af12637e66169ac3c3c06bf78f7cb` with CI #166 PASS. Current next step: build and run the controlled local-only OCR corpus/runner. The setup uses project-local Python 3.12 via Python Install Manager `--target`, pins PaddlePaddle GPU 3.2.0 on the CUDA 12.6 wheel index and PaddleOCR 3.7.0, and leaves the existing Python 3.14 installation untouched. See [M4.2 controlled OCR benchmark](M4_2_OCR_BENCHMARK.md).
 
 - Benchmark viable local candidates on Persian, English, mixed Persian-English, terminal/console, dialog, browser UI, and desktop application UI.
 - Keep real screenshots, ground truth, and OCR output local; PR/diagnostic evidence contains only sample IDs/categories and aggregate metrics.

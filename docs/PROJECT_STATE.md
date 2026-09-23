@@ -1,12 +1,12 @@
 ---
 state_schema: 2
-reference_code_commit: 03f719a1bb4a98a3834348d1f0d53fa50828c92e
-accepted_main_commit: 5ad17ee5276dccefbe5ac4d3e6f7ab845061fdaa
+reference_code_commit: d8f12b00524934138115f22cc8bd7149e20f4452
+accepted_main_commit: 920bbecbb4c7ef4c22ca3ff055df1bcaa801e911
 last_verified_date: 2026-09-23
-completed_through: M4.1
+completed_through: M4.2.1
 active_milestone: M4.2
-active_branch: dev/m4-2-ocr-benchmark
-active_status: M4.2.1 benchmark contract/preflight passed CI #137 and both fixed-machine preflights; ADR 0013 is accepted on PR #31, with review/merge remaining before M4.2.2 controlled OCR benchmarking starts
+active_branch: dev/m4-2-2-controlled-benchmark
+active_status: M4.2.2 server-local PaddleOCR GPU environment gate passed on exact clean head f8275451084af12637e66169ac3c3c06bf78f7cb with CI #166 PASS; controlled OCR corpus/runner measurement is the next gate
 next_milestone: M4.2
 next_milestone_name: OCR benchmark and integration
 ---
@@ -300,19 +300,25 @@ These are fixed design inputs, not upgrade suggestions:
 
 ## Immediate acceptance gate
 
-M4.2.1 benchmark contract and target-machine preflight are accepted on feature branch `dev/m4-2-ocr-benchmark` at behavior/preflight head:
+M4.2.2 environment preparation is physically accepted on the fixed server.
 
-```text
-d8f12b00524934138115f22cc8bd7149e20f4452
-```
+- exact accepted head: `f8275451084af12637e66169ac3c3c06bf78f7cb`;
+- [CI #166](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35876408615): PASS on the same head;
+- benchmark root: `D:\LocalAI-Prerequisites`;
+- project-local Python: 3.12.10 from the official CPython NuGet package;
+- PaddlePaddle GPU: 3.2.0;
+- PaddleOCR: 3.7.0;
+- NVIDIA driver: 596.49;
+- Paddle device: `gpu:0`;
+- CUDA compilation: `True`;
+- `system_python_modified=False`;
+- `ocr_executed=False`;
+- `benchmark_content_created=False`;
+- `backend_selected=False`.
 
-[CI #137](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35854783290) is PASS. The portable/Windows Core suites, Windows PowerShell parsing, M4.2 preflight `-ValidateOnly`, prior M3.4 runner/provider regressions, and strict WinUI build all passed.
+This accepts **environment preparation only**. It does not select PaddleOCR as the product backend and does not count as OCR accuracy/performance acceptance.
 
-Physical client preflight established: i7-6700K, 31.9 GiB RAM, AMD R9 M395X, legacy Windows OCR available only for `en-US`, no Tesseract, Python 3.14.7, no Paddle/PaddleOCR. Physical server preflight established: i5-12450HX, 15.7 GiB RAM, RTX 3050 6GB Laptop GPU, NVIDIA driver 596.49, legacy Windows OCR available only for `en-US`, no Tesseract, Python 3.14.0b2, no Paddle/PaddleOCR. Both runs were non-elevated, clean-tree, content-free, and performed no OCR or dependency installation.
-
-Accepted [ADR 0013](decisions/0013-evidence-gated-ocr-benchmark.md) records the evidence-gated benchmark protocol. No OCR backend or topology is selected from preflight alone.
-
-PR #31 review/merge is the remaining repository-state gate for M4.2.1. After merge, start **M4.2.2 — controlled OCR benchmark**. Create isolated benchmark environments rather than modifying the existing Python 3.14 installations. Benchmark Windows.Media.Ocr only as an English baseline unless an explicit Persian language-pack change is separately approved. Tesseract and PaddleOCR remain candidates to install in benchmark-only environments. Do not wire OCR into product runtime or begin M4.3 VLM work before controlled benchmark evidence is reviewed.
+The next M4.2.2 gate is a one-command, local-only controlled benchmark using stable opaque sample IDs and a manifest that references local ROI images plus exact local ground truth. The first measured candidate is PaddleOCR GPU with the recognition model explicitly pinned to `arabic_PP-OCRv5_mobile_rec`, because the official PP-OCRv5 multilingual model table lists Persian and English support for that model. Benchmark output committed or copied to review must contain aggregate accuracy/performance/resource metrics only, never screenshots, ground truth, or raw OCR text.
 
 ## How to update this file
 
