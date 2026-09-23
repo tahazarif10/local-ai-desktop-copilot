@@ -12,7 +12,7 @@
   <img alt="Platform: Windows" src="https://img.shields.io/badge/Platform-Windows-0078D4?style=for-the-badge&amp;logo=windows11&amp;logoColor=white" />
   <img alt="Runtime: .NET 10" src="https://img.shields.io/badge/Runtime-.NET_10-512BD4?style=for-the-badge&amp;logo=dotnet&amp;logoColor=white" />
   <img alt="UI: WinUI 3" src="https://img.shields.io/badge/UI-WinUI_3-2563EB?style=for-the-badge" />
-  <img alt="Current gate: M3.4" src="https://img.shields.io/badge/Current_Gate-M3.4-F59E0B?style=for-the-badge" />
+  <img alt="Current gate: M4.1" src="https://img.shields.io/badge/Current_Gate-M4.1-F59E0B?style=for-the-badge" />
   <a href="https://github.com/tahazarif10/local-ai-desktop-copilot/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/tahazarif10/local-ai-desktop-copilot/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
 </p>
 
@@ -32,17 +32,18 @@
 This repository is an engineering foundation, not a finished AI assistant. It focuses first on trustworthy sensing, bounded resource ownership, privacy gates, stale-result rejection, deterministic behavior, and verifiable failure handling.
 
 > [!IMPORTANT]
-> The accepted baseline includes foreground sensing, RAM-only capture, capability-based privacy and epochs, bounded change detection, application-owned lifecycle, UI Automation root probing, bounded non-text structure, separately authorized bounded semantic snapshots, and the M3.4.1 content-free orchestration admission policy. The M3.4.1 policy is intentionally **not wired to automatic runtime UIA**. Provider-isolation evidence is the next gate.
+> The accepted baseline includes foreground sensing, RAM-only capture, capability-based privacy and epochs, bounded change detection, application-owned lifecycle, UI Automation root probing, bounded non-text structure, separately authorized bounded semantic snapshots, and accepted M3.4 bounded runtime orchestration. Product defaults still deny `ReadUiText`; automatic semantic UIA runs only while sensing is explicitly Armed and both UIA capabilities remain current. ADR 0011 keeps the measured UIA worker in-process. M4.1 region-of-interest planning is the next gate.
 
 ## Current status
 
 | Area | Current truth |
 | --- | --- |
-| Active milestone | **M3.4 — Orchestrated UI enrichment and isolation decision** |
-| Accepted M3.4 slice | **M3.4.1 portable orchestration admission** via [PR #19](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/19) |
-| Automated verification | **140/140 deterministic tests** on Ubuntu and Windows plus both PowerShell runner parses and strict Windows app build in [CI #49](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/33153232435) |
-| Next gate | Provider-isolation evidence and explicit in-process vs restartable-helper decision |
-| Runtime composition | Existing packaged WinUI process; automatic UIA enrichment remains blocked |
+| Active milestone | **M4.1 — Region-of-interest planner** |
+| Accepted M3.4 | **Portable admission + measured in-process isolation + runtime integration** via [PR #19](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/19), [ADR 0011](docs/decisions/0011-measured-uia-provider-isolation.md), and [PR #24](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/24) |
+| Automated verification | [CI #115](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35844099601) passed portable/Windows tests, Windows PowerShell runner parsing, M3.4 wrapper validation, raw-provider smoke, and the strict Windows app build on the exact physical candidate |
+| Physical acceptance | Clean candidate `26c3290bf196701473b558da657d5c39c8c97e8a`: full M3.4 one-command acceptance **PASS** on 2026-09-23 |
+| Next gate | Bounded changed-region/UIA-rectangle ROI planning before OCR backend work |
+| Runtime composition | Packaged WinUI process with application-owned bounded enrichment runtime and the measured in-process COM MTA UIA worker |
 | Cloud path | Forbidden by the product architecture |
 | Autonomous input/actions | Out of scope |
 
@@ -61,9 +62,12 @@ The accepted product foundation provides:
 - bounded non-text Control View structure snapshots
 - separately authorized, bounded, short-lived semantic UI snapshots
 - a content-free orchestration admission policy with debounce, deduplication, priority, backpressure, and one-active/one-pending bounds
+- an application-owned M3.4 enrichment runtime that binds Meaningful/Large changes and metadata-only user-question triggers to the existing bounded M3.3 semantic path
+- measured in-process UIA provider recovery under ADR 0011, including bounded shutdown and joined-worker regression evidence
+- repeated Armed/epoch/capability/latest-request checks at admission and publication, with immediate semantic-result disposal and content-free diagnostics
 - deterministic tests across portable Core paths plus strict Windows build/runtime acceptance gates
 
-Not implemented yet: **OCR, memory, model inference, voice, autonomous actions, production privacy settings UI, and automatic UIA orchestration**.
+Not implemented yet: **OCR, structured event memory, model inference, voice, autonomous actions, and production privacy settings UI**. Automatic UIA orchestration is implemented only within the accepted M3.4 privacy and lifecycle gates; product defaults still deny semantic text access.
 
 ## Architecture at a glance
 
