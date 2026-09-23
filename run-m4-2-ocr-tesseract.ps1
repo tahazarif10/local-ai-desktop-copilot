@@ -193,7 +193,7 @@ foreach ($name in @("fas","eng")) {
         $url = "https://raw.githubusercontent.com/tesseract-ocr/$tessdataRepo/$tessdataCommit/$name.traineddata"
         $partial = $destination + ".partial"
         Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
-        Write-Host ("Downloading pinned tessdata_fast language: " + $name)
+        Write-Host ("Downloading pinned tessdata_" + $TessdataVariant + " language: " + $name)
         & $curl.Source @(
             "--fail",
             "--location",
