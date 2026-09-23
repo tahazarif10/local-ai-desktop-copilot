@@ -47,9 +47,7 @@ def request_body(
         1,
     )
     region = struct.pack(
-        ">iiiiiHHi",
-        10,
-        20,
+        ">iiiHHi",
         4,
         2,
         16,
@@ -70,9 +68,7 @@ class OcrServerProtocolTests(unittest.TestCase):
         self.assertEqual(7, parsed.epoch_id)
         self.assertEqual(1, len(parsed.regions))
         region = parsed.regions[0]
-        self.assertEqual((10, 20, 4, 2, 16), (
-            region.x,
-            region.y,
+        self.assertEqual((4, 2, 16), (
             region.width,
             region.height,
             region.stride,
@@ -225,7 +221,7 @@ class OcrServerProtocolTests(unittest.TestCase):
         )
         self.assertEqual(
             SERVER.REQUEST_REGION_HEADER,
-            struct.calcsize(">iiiiiHHi"),
+            struct.calcsize(">iiiHHi"),
         )
         self.assertEqual(
             SERVER.RESPONSE_FIXED_HEADER,
