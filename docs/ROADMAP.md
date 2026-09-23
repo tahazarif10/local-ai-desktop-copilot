@@ -217,11 +217,24 @@ Environment preparation is accepted and merged through PR #32 at `1486fb673a623b
 
 #### ▶ M4.2.3 Backend integration and acceptance
 
-- Revalidate same-epoch `CapturePixels + RunOcr` immediately before OCR and reject stale/cancelled results before publication.
-- Feed only accepted M4.1 bounded ROIs; never add an implicit whole-frame fallback.
-- Use bounded request ownership/queues, deterministic teardown, and content-free diagnostics.
-- If the selected OCR topology requires LAN pixel transfer, separately gate it with `SendPixelsToLocalServer` and an explicit authenticated local transport design.
-- Do not begin M4.3 VLM fallback until OCR integration passes the applicable physical acceptance matrix.
+ADR 0014 selects the measured server-local PaddleOCR configuration as the integration target while keeping Core model-agnostic.
+
+##### ▶ M4.2.3a Portable OCR integration gate
+
+- Revalidate Armed state, same current uncancelled epoch, and `CapturePixels + RunOcr`.
+- For the selected local-AI-server topology, additionally require `SendPixelsToLocalServer`.
+- Feed only accepted M4.1 bounded ROI plans; an empty plan is a safe rejection and never widens to a full frame.
+- Recheck capabilities/current epoch/latest request before publication.
+- Keep this slice transport-free and content-free so the gate is deterministic in Core.
+
+##### ◻ M4.2.3b Authenticated bounded OCR transport/runtime
+
+- Define the narrow authenticated/encrypted client-to-server OCR transport before any product ROI pixel crosses the LAN.
+- Bind request ID, epoch, deadline, cancellation and byte/count limits on both sides.
+- Pre-provision the selected Paddle models; no silent model/network download during product operation.
+- Use bounded request ownership/queues, deterministic teardown, short-lived sensitive OCR text, and content-free diagnostics.
+- Treat server unavailable as a typed degraded outcome; no cloud or unmeasured-backend fallback.
+- Do not begin M4.3 VLM fallback until OCR integration passes the fixed client/server physical acceptance matrix.
 
 ### M4.3 VLM fallback
 
