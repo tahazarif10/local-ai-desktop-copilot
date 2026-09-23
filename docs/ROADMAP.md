@@ -167,9 +167,9 @@ Accepted invariants:
 
 ## ▶ M4 — Visual text and visual fallback
 
-### ▶ M4.1 Region-of-interest planner
+### ✅ M4.1 Region-of-interest planner
 
-Current feature branch: `dev/m4-1-roi-planner`. Accepted [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md) defines the portable contract; PR #29 review/merge remains before the milestone is complete on `main`.
+Accepted [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md) defines the portable contract. [PR #29](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/29) merged behavior head `03f719a1bb4a98a3834348d1f0d53fa50828c92e` to `main` as `5ad17ee5276dccefbe5ac4d3e6f7ab845061fdaa`.
 
 - Convert downscaled changed regions to source-frame pixels with outward rounding and capture-bound clipping.
 - Convert UIA screen rectangles only through an explicit caller-supplied capture screen projection; do not assume DPI, border, or origin equivalence in Core.
@@ -188,9 +188,9 @@ Exit criteria:
 - all prior portable/Windows regression tests and the strict WinUI build remain green;
 - diagnostics/privacy rules remain unchanged: no bounds or coordinates are logged;
 - no physical Windows acceptance is required while the slice remains pure Core geometry with no new interop or content acquisition;
-- do not start M4.2 OCR backend selection until this contract and ADR 0012 are accepted.
+- M4.1 is complete on `main`; M4.2 OCR backend benchmarking/selection is now the next gate.
 
-### M4.2 OCR benchmark and integration
+### ▶ M4.2 OCR benchmark and integration
 
 - Benchmark local candidates on Persian, English, mixed Persian-English, terminals, dialogs, browser UI, and application UI.
 - Measure latency, CPU/RAM/GPU use, accuracy, language coverage, packaging, and cancellation.
