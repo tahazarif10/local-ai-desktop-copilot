@@ -183,7 +183,7 @@ def load_manifest(
     manifest_path: Path,
     require_files: bool,
 ) -> list[dict[str, Any]]:
-    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    data = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
 
     if data.get("schema") != SCHEMA_VERSION:
         raise ValueError("Unexpected corpus manifest schema.")
@@ -237,7 +237,7 @@ def load_manifest(
                 raise ValueError(
                     f"Missing local ground truth for sample {sample_id}."
                 )
-            if not truth_path.read_text(encoding="utf-8").strip():
+            if not truth_path.read_text(encoding="utf-8-sig").strip():
                 raise ValueError(
                     f"Ground truth is empty for sample {sample_id}."
                 )
@@ -631,7 +631,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
 
         for sample_index, sample in enumerate(samples):
             category_counts[sample["category"]] += 1
-            truth = sample["truth_path"].read_text(encoding="utf-8")
+            truth = sample["truth_path"].read_text(encoding="utf-8-sig")
             first_hypothesis: str | None = None
 
             for run_index in range(args.warm_runs):
