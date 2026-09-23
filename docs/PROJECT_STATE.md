@@ -327,7 +327,7 @@ The Tesseract 5.5.3 `fas+eng` baseline passed on the exact same seven-sample cor
 
 Legacy Windows Media OCR then passed at corrected clean head `563212ed9f8712057d25f6af1fc1d77893224cb3` on its eligible English-only three-sample subset: 0 failures, 0 timeouts, CER 0.31963470, WER 0.39285714, exact match 0.0, warm recognition p50/p95/max 7.028/7.619/7.667 ms and warm end-to-end p50/p95 12.235/22.830 ms. It remains ineligible for Persian/mixed use because only `en-US` is installed.
 
-No backend is selected yet. The next physical gate is a matched English-subset comparison of PaddleOCR, Tesseract, and Windows Media OCR on the exact same three controlled samples.
+The matched English-subset comparison then passed at clean head `133a6fba18731371f86ff8d26916ba974dcdbcf7`: PaddleOCR CER/WER/p50 0.28310502/0.35714286/52.599 ms; Tesseract 0.37442922/0.92857143/280.316 ms; Windows Media OCR 0.31963470/0.39285714/6.732 ms recognition (12.162 ms end-to-end). All three had zero failures/timeouts and raw OCR logging/persistence remained false. No backend is selected yet. PaddleOCR has the strongest multilingual evidence so far, but its absolute error remains high; the next gate is a bounded Paddle model/configuration tuning pass before selection.
 
 ## How to update this file
 
