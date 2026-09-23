@@ -40,10 +40,34 @@ def load_bundle(path: Path) -> tuple[str, int, str, bytearray]:
     if len(certificate) != 64:
         raise ValueError("Client certificate pin length is invalid.")
 
-    key_text = (path / key_name).read_text(encoding="ascii").strip()
-    key = bytearray.fromhex(key_text)
-    if len(key) < 32 or len(key) > 64:
-        raise ValueError("Client authentication key length is invalid.")
+    encoded = bytearray((path / key_name).read_bytes())
+    try:
+        start = 0
+        end = len(encoded)
+        whitespace = {9, 10, 13, 32}
+        while start < end and encoded[start] in whitespace:
+            start += 1
+        while end > start and encoded[end - 1] in whitespace:
+            end -= 1
+
+        hex_length = end - start
+        if hex_length < 64 or hex_length > 128 or hex_length % 2 != 0:
+            raise ValueError("Client authentication key length is invalid.")
+
+        key = bytearray(hex_length // 2)
+        try:
+            for index in range(len(key)):
+                pair = encoded[
+                    start + index * 2 : start + index * 2 + 2
+                ]
+                key[index] = int(bytes(pair), 16)
+        except BaseException:
+            for index in range(len(key)):
+                key[index] = 0
+            raise
+    finally:
+        for index in range(len(encoded)):
+            encoded[index] = 0
 
     return server_name, port, certificate, key
 
