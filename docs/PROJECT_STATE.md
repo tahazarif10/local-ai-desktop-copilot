@@ -5,8 +5,8 @@ accepted_main_commit: 5ad17ee5276dccefbe5ac4d3e6f7ab845061fdaa
 last_verified_date: 2026-09-23
 completed_through: M4.1
 active_milestone: M4.2
-active_branch: main
-active_status: M4.1 bounded ROI planning is accepted and merged through PR #29 at main commit 5ad17ee5276dccefbe5ac4d3e6f7ab845061fdaa; M4.2 OCR benchmark and integration is the next approved implementation gate and has not started yet
+active_branch: dev/m4-2-ocr-benchmark
+active_status: M4.2.1 benchmark contract/preflight passed CI #137 and both fixed-machine preflights; ADR 0013 is accepted on PR #31, with review/merge remaining before M4.2.2 controlled OCR benchmarking starts
 next_milestone: M4.2
 next_milestone_name: OCR benchmark and integration
 ---
@@ -300,18 +300,19 @@ These are fixed design inputs, not upgrade suggestions:
 
 ## Immediate acceptance gate
 
-M4.1 is accepted and merged to `main` through [PR #29](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/29).
+M4.2.1 benchmark contract and target-machine preflight are accepted on feature branch `dev/m4-2-ocr-benchmark` at behavior/preflight head:
 
-- behavior-bearing accepted head: `03f719a1bb4a98a3834348d1f0d53fa50828c92e`;
-- merge commit: `5ad17ee5276dccefbe5ac4d3e6f7ab845061fdaa`;
-- accepted [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md);
-- [CI #126](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35847291181): 160/160 Core tests on Ubuntu and Windows, existing M3.4 runner/provider regressions, controlled raw-provider smoke, and strict WinUI build all PASS;
-- documentation-only closeout head also passed CI #131;
-- no separate physical Windows acceptance was required because M4.1 adds only portable geometry/policy logic and no Windows interop, pixel acquisition, OCR, or runtime composition.
+```text
+d8f12b00524934138115f22cc8bd7149e20f4452
+```
 
-The accepted planner maps downscaled `ChangeRegion` geometry and explicitly projected UIA screen rectangles into bounded source-frame ROI candidates with outward scaling/clamping, bounded padding, background association filtering, change fallback, deterministic ordering, nested-candidate deduplication, count/per-region/total-area budgets, and no synthesized full-frame fallback. Product privacy capabilities and content-retention rules remain unchanged.
+[CI #137](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35854783290) is PASS. The portable/Windows Core suites, Windows PowerShell parsing, M4.2 preflight `-ValidateOnly`, prior M3.4 runner/provider regressions, and strict WinUI build all passed.
 
-The next implementation gate is **M4.2 — OCR benchmark and integration**. Start it from merged `main`. Backend selection must be evidence-driven on the fixed client/server hardware and must preserve M4.1 ROI bounds, `CapturePixels + RunOcr` gating, cancellation, local-only data handling, and no implicit whole-frame escalation.
+Physical client preflight established: i7-6700K, 31.9 GiB RAM, AMD R9 M395X, legacy Windows OCR available only for `en-US`, no Tesseract, Python 3.14.7, no Paddle/PaddleOCR. Physical server preflight established: i5-12450HX, 15.7 GiB RAM, RTX 3050 6GB Laptop GPU, NVIDIA driver 596.49, legacy Windows OCR available only for `en-US`, no Tesseract, Python 3.14.0b2, no Paddle/PaddleOCR. Both runs were non-elevated, clean-tree, content-free, and performed no OCR or dependency installation.
+
+Accepted [ADR 0013](decisions/0013-evidence-gated-ocr-benchmark.md) records the evidence-gated benchmark protocol. No OCR backend or topology is selected from preflight alone.
+
+PR #31 review/merge is the remaining repository-state gate for M4.2.1. After merge, start **M4.2.2 — controlled OCR benchmark**. Create isolated benchmark environments rather than modifying the existing Python 3.14 installations. Benchmark Windows.Media.Ocr only as an English baseline unless an explicit Persian language-pack change is separately approved. Tesseract and PaddleOCR remain candidates to install in benchmark-only environments. Do not wire OCR into product runtime or begin M4.3 VLM work before controlled benchmark evidence is reviewed.
 
 ## How to update this file
 

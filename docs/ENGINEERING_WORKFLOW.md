@@ -313,6 +313,43 @@ This matrix was accepted on 2026-08-25 for PR #18. Provider/capability cases use
 
 Acceptance record: functional head `3dccdbc24fc60093f46f903dec4f7ca04c08dc14` and [CI #43](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/32894314154) passed 124/124 tests on Ubuntu/Windows, both PowerShell runner parses, and the strict win-x64 build. Earlier provider sessions passed ordinary denial, opt-in/Notepad precedence, classic/packaged/browser sources, default/tiny budgets, recovery, and redaction; Chrome's non-exposure of `IsPassword` is recorded as provider-inapplicable with deterministic tests supplying exact exclusion proof. One-command session `b0af762a-6949-463f-98bf-aa1a0956ea87` passed semantic latest-wins clearing, higher-integrity denial, M3.1/M3.2 regressions, held-work joined teardown, and randomized prohibited-content scanning. ADR 0009 is accepted.
 
+### M4.2.1 OCR benchmark preflight
+
+Before installing an OCR dependency or running content-bearing benchmark
+fixtures, execute the target-machine preflight from a clean, non-elevated
+Windows PowerShell on the feature branch:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-preflight.ps1 -MachineRole Client
+```
+
+For the fixed AI server, use the same repository head and:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-preflight.ps1 -MachineRole Server
+```
+
+The preflight must remain content-free. It may report hardware, OS/runtime
+versions, installed Windows OCR language tags, Tesseract version plus
+`eng`/`fas` availability, Python/Paddle versions/device metadata, and
+NVIDIA model/driver/VRAM metadata. It must not capture pixels, run OCR, install
+language packs/packages/models, include usernames or arbitrary local paths, or
+make a backend selection.
+
+CI validates the runner with:
+
+```powershell
+.\run-m4-2-ocr-preflight.ps1 -ValidateOnly
+```
+
+Copy only the generated preflight summary into review/chat. The output is stored
+under ignored `.localcopilot/benchmarks`.
+
+The controlled M4.2.2 benchmark is a separate content-bearing step. Its images,
+ground truth, and OCR output remain local. PR evidence may contain only aggregate
+CER/WER/exact-match, latency, resource, footprint, failure, and cancellation
+measurements with sample/category identifiers.
+
 ## 8. Performance evidence
 
 Performance measurements must name:
