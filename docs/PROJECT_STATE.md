@@ -1,12 +1,12 @@
 ---
 state_schema: 2
 reference_code_commit: 979ed5a2318d32ff151d2950f7ace77ec274d601
-accepted_main_commit: pending-pr-24-merge
+accepted_main_commit: 55b98d9368d67bb15a1190a1292c8c37e531a9a1
 last_verified_date: 2026-09-23
 completed_through: M3.4
 active_milestone: M4.1
-active_branch: dev/m3-4-3-runtime-integration
-active_status: M3.4 runtime integration passed the full physical acceptance matrix at clean candidate 26c3290bf196701473b558da657d5c39c8c97e8a; PR #24 documentation/review/merge is the remaining repository-state step
+active_branch: main
+active_status: M3.4 is accepted and merged through PR #24 at main commit 55b98d9368d67bb15a1190a1292c8c37e531a9a1; M4.1 region-of-interest planning is the next approved implementation gate and has not started yet
 next_milestone: M4.1
 next_milestone_name: Region-of-interest planner
 ---
@@ -308,9 +308,9 @@ The final 2026-09-23 one-command run passed all gates:
 - provider-isolation regression session `c3cfd465-849e-4e27-984d-f16d4ee6c0b1`: real same-integrity blocking provider entered, the same worker recovered through the same-epoch replacement request as `Available / SnapshotCaptured`, shutdown remained bounded, architecture classification stayed `InProcessCandidate`, worker join and sentinel scan passed;
 - overall `M3.4 RUNTIME-INTEGRATION ACCEPTANCE: PASS`.
 
-[CI #115](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35844099601) is green on the exact physical candidate. PR #24 must carry this evidence, pass CI again after documentation-only updates, and merge before the milestone is considered complete on `main`.
+[CI #115](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35844099601) is green on the exact physical candidate. PR #24 merged to `main` as `55b98d9368d67bb15a1190a1292c8c37e531a9a1`; M3.4 is therefore complete in repository state as well as in physical evidence.
 
-The next implementation gate after PR #24 merges is **M4.1 — Region-of-interest planner**. Start it from the merged `main`; do not add OCR/VLM backend selection before the bounded ROI contract is reviewed and accepted.
+The next implementation gate is **M4.1 — Region-of-interest planner**. Start it from merged `main`; do not add OCR/VLM backend selection before the bounded ROI contract is reviewed and accepted.
 
 ## How to update this file
 
