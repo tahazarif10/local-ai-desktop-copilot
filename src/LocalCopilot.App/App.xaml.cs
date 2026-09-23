@@ -23,6 +23,9 @@ public partial class App : Application
     private UiEnrichmentRuntimeService?
         _uiEnrichmentRuntimeService;
 
+    private OcrEnrichmentRuntimeService?
+        _ocrEnrichmentRuntimeService;
+
     internal DesktopCopilotCoordinator Coordinator =>
         _coordinator ??
         throw new InvalidOperationException(
@@ -71,6 +74,9 @@ public partial class App : Application
         _uiEnrichmentRuntimeService =
             composition.UiEnrichmentRuntimeService;
 
+        _ocrEnrichmentRuntimeService =
+            composition.OcrEnrichmentRuntimeService;
+
         MainWindow window =
             new MainWindow(
                 coordinator);
@@ -96,8 +102,12 @@ public partial class App : Application
                 MainWindow_Closed;
         }
 
-        // Stop automatic enrichment before the coordinator tears down the
-        // shared UIA worker and epoch owner.
+        // Stop content-bearing enrichment before the coordinator tears down
+        // capture, epoch, and shared UIA ownership.
+        _ocrEnrichmentRuntimeService?.Dispose();
+        _ocrEnrichmentRuntimeService =
+            null;
+
         _uiEnrichmentRuntimeService?.Dispose();
         _uiEnrichmentRuntimeService =
             null;
