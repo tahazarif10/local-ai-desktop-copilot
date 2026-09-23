@@ -257,7 +257,7 @@ public static class OcrTransportProtocol
     private static readonly byte[] RequestMagic = Encoding.ASCII.GetBytes("LCOPROC1");
     private static readonly byte[] ResponseMagic = Encoding.ASCII.GetBytes("LCOPRS01");
     private const int RequestFixedHeaderBytes = 40;
-    private const int RequestRegionHeaderBytes = 28;
+    private const int RequestRegionHeaderBytes = 20;
     private const int ResponseFixedHeaderBytes = 32;
 
     public static byte[] SerializeRequest(
@@ -312,14 +312,12 @@ public static class OcrTransportProtocol
 
             CaptureRegion bounds = region.Bounds;
             Span<byte> descriptor = span.Slice(headerOffset, RequestRegionHeaderBytes);
-            BinaryPrimitives.WriteInt32BigEndian(descriptor.Slice(0, 4), bounds.X);
-            BinaryPrimitives.WriteInt32BigEndian(descriptor.Slice(4, 4), bounds.Y);
-            BinaryPrimitives.WriteInt32BigEndian(descriptor.Slice(8, 4), bounds.Width);
-            BinaryPrimitives.WriteInt32BigEndian(descriptor.Slice(12, 4), bounds.Height);
-            BinaryPrimitives.WriteInt32BigEndian(descriptor.Slice(16, 4), region.StrideBytes);
-            BinaryPrimitives.WriteUInt16BigEndian(descriptor.Slice(20, 2), (ushort)region.PixelFormat);
-            BinaryPrimitives.WriteUInt16BigEndian(descriptor.Slice(22, 2), 0);
-            BinaryPrimitives.WriteInt32BigEndian(descriptor.Slice(24, 4), region.ByteLength);
+            BinaryPrimitives.WriteInt32BigEndian(descriptor.Slice(0, 4), bounds.Width);
+            BinaryPrimitives.WriteInt32BigEndian(descriptor.Slice(4, 4), bounds.Height);
+            BinaryPrimitives.WriteInt32BigEndian(descriptor.Slice(8, 4), region.StrideBytes);
+            BinaryPrimitives.WriteUInt16BigEndian(descriptor.Slice(12, 2), (ushort)region.PixelFormat);
+            BinaryPrimitives.WriteUInt16BigEndian(descriptor.Slice(14, 2), 0);
+            BinaryPrimitives.WriteInt32BigEndian(descriptor.Slice(16, 4), region.ByteLength);
 
             region.Pixels.Span.CopyTo(span.Slice(payloadOffset, region.ByteLength));
             headerOffset += RequestRegionHeaderBytes;
