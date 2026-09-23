@@ -15,9 +15,8 @@ $paddlePythonTag = "3.12"
 $paddleVersion = "3.2.0"
 $paddleOcrVersion = "3.7.0"
 $paddleIndex = "https://www.paddlepaddle.org.cn/packages/stable/cu126/"
-$pythonInstallerVersion = "3.12.10"
-$pythonInstallerUrl = "https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe"
-$pythonInstallerSha256 = "67B5635E80EA51072B87941312D00EC8927C4DB9BA18938F7AD2D27B328B95FB"
+$pythonNuGetVersion = "3.12.10"
+$nugetUrl = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
 
 function Test-M422Elevated {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -54,28 +53,27 @@ function Test-M422PythonInstallManager {
     catch { return $false }
 }
 
-function Install-M422PythonFromOfficialInstaller {
+function Install-M422PythonFromNuGet {
     param(
-        [Parameter(Mandatory = $true)][string]$TargetRoot,
+        [Parameter(Mandatory = $true)][string]$PackageRoot,
         [Parameter(Mandatory = $true)][string]$CacheRoot
     )
 
     New-Item -ItemType Directory -Path $CacheRoot -Force | Out-Null
-    $installerPath = Join-Path $CacheRoot ("python-" + $pythonInstallerVersion + "-amd64.exe")
+    New-Item -ItemType Directory -Path $PackageRoot -Force | Out-Null
 
-    if (-not (Test-Path -LiteralPath $installerPath)) {
+    $nugetPath = Join-Path $CacheRoot "nuget.exe"
+
+    if (-not (Test-Path -LiteralPath $nugetPath)) {
         $curl = Get-M422Command -Name "curl.exe"
         if ($null -eq $curl) {
-            throw "curl.exe is required for the bounded Python installer download."
+            throw "curl.exe is required to download the project-local NuGet client."
         }
 
-        $partialPath = $installerPath + ".partial"
+        $partialPath = $nugetPath + ".partial"
         Remove-Item -LiteralPath $partialPath -Force -ErrorAction SilentlyContinue
 
-        Write-Host "Downloading official Python $pythonInstallerVersion installer..."
-        Write-Host "Source: python.org"
-        Write-Host "Expected size: about 25.7 MB"
-
+        Write-Host "Downloading NuGet CLI for project-local Python package extraction..."
         & $curl.Source @(
             "--fail",
             "--location",
@@ -86,82 +84,55 @@ function Install-M422PythonFromOfficialInstaller {
             "--retry-delay", "3",
             "--retry-connrefused",
             "--connect-timeout", "30",
-            "--max-time", "600",
+            "--max-time", "300",
             "--output", $partialPath,
-            $pythonInstallerUrl
+            $nugetUrl
         )
 
         if ($LASTEXITCODE -ne 0) {
             Remove-Item -LiteralPath $partialPath -Force -ErrorAction SilentlyContinue
-
-            Write-Host ""
-            Write-Host "Automatic download failed."
-            Write-Host "Manual fallback: download the official installer from:"
-            Write-Host $pythonInstallerUrl
-            Write-Host "and save it exactly as:"
-            Write-Host $installerPath
-            Write-Host "Then rerun this same command."
-            Write-Host "The script will verify SHA256 and Authenticode before installation."
-
-            throw "Official Python installer download failed with curl exit code $LASTEXITCODE."
+            throw "NuGet CLI download failed with curl exit code $LASTEXITCODE."
         }
 
-        Move-Item -LiteralPath $partialPath -Destination $installerPath -Force
+        Move-Item -LiteralPath $partialPath -Destination $nugetPath -Force
     }
     else {
-        Write-Host "Using cached Python installer."
+        Write-Host "Using cached NuGet CLI."
     }
 
-    Write-Host "Verifying Python installer SHA256..."
-    $hash = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash
-    if (-not [string]::Equals($hash, $pythonInstallerSha256, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Official Python installer SHA256 validation failed."
-    }
-
-    Write-Host "Verifying Python Software Foundation Authenticode signature..."
-    $signature = Get-AuthenticodeSignature -FilePath $installerPath
+    Write-Host "Verifying NuGet Authenticode signature..."
+    $signature = Get-AuthenticodeSignature -FilePath $nugetPath
     if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
-        throw "Official Python installer Authenticode signature is not valid."
-    }
-    if ($null -eq $signature.SignerCertificate -or $signature.SignerCertificate.Subject -notmatch "Python Software Foundation") {
-        throw "Official Python installer signer is unexpected."
+        throw "NuGet CLI Authenticode signature is not valid."
     }
 
-    New-Item -ItemType Directory -Path $TargetRoot -Force | Out-Null
-    $installerLog = Join-Path $CacheRoot ("python-" + $pythonInstallerVersion + "-install.log")
+    if ($null -eq $signature.SignerCertificate -or
+        $signature.SignerCertificate.Subject -notmatch "Microsoft") {
+        throw "NuGet CLI signer is unexpected."
+    }
 
-    $arguments = @(
-        "/quiet",
-        "/log", $installerLog,
-        "InstallAllUsers=0",
-        ("TargetDir=" + $TargetRoot),
-        ("DefaultJustForMeTargetDir=" + $TargetRoot),
-        "Include_exe=1",
-        "Include_lib=1",
-        "Include_dev=1",
-        "Include_tools=1",
-        "Include_launcher=0",
-        "InstallLauncherAllUsers=0",
-        "PrependPath=0",
-        "AppendPath=0",
-        "AssociateFiles=0",
-        "Shortcuts=0",
-        "Include_test=0",
-        "Include_doc=0",
-        "Include_tcltk=0",
-        "Include_pip=1"
+    $expectedPython = Join-Path $PackageRoot "python\tools\python.exe"
+    if (Test-Path -LiteralPath $expectedPython) {
+        Write-Host "Using cached project-local Python NuGet package."
+        return
+    }
+
+    Write-Host "Installing Python $pythonNuGetVersion NuGet package entirely under project-local storage..."
+    & $nugetPath @(
+        "install",
+        "python",
+        "-Version", $pythonNuGetVersion,
+        "-ExcludeVersion",
+        "-OutputDirectory", $PackageRoot,
+        "-NonInteractive"
     )
 
-    Write-Host "Installing isolated Python $pythonInstallerVersion under project-local storage..."
-    Write-Host "Installer log: $installerLog"
-    $process = Start-Process -FilePath $installerPath -ArgumentList $arguments -PassThru -Wait
-
-    if ($process.ExitCode -ne 0) {
-        throw ("Official Python " + $pythonInstallerVersion + " installer failed with exit code " + $process.ExitCode + ". See installer log: " + $installerLog)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Project-local Python NuGet package install failed with exit code $LASTEXITCODE."
     }
 
-    if (-not (Test-Path -LiteralPath (Join-Path $TargetRoot "python.exe"))) {
-        throw ("Python installer returned success but python.exe was not created under the requested project-local TargetDir. Do not rerun yet. Inspect py -0p / local Python 3.12 installs and the installer log: " + $installerLog)
+    if (-not (Test-Path -LiteralPath $expectedPython)) {
+        throw "NuGet reported success but project-local python.exe was not found."
     }
 }
 
@@ -190,9 +161,8 @@ if ($ValidateOnly) {
     if ($paddleVersion -ne "3.2.0") { throw "Unexpected pinned PaddlePaddle version." }
     if ($paddleOcrVersion -ne "3.7.0") { throw "Unexpected pinned PaddleOCR version." }
     if ($paddleIndex -notmatch "/cu126/$") { throw "M4.2.2 GPU benchmark must use the pinned CUDA 12.6 wheel index." }
-    if ($pythonInstallerVersion -ne "3.12.10") { throw "Unexpected fallback Python installer version." }
-    if ($pythonInstallerUrl -notmatch "^https://www\.python\.org/ftp/python/3\.12\.10/python-3\.12\.10-amd64\.exe$") { throw "Unexpected fallback Python installer source." }
-    if ($pythonInstallerSha256 -notmatch "^[0-9A-Fa-f]{64}$") { throw "Fallback Python installer SHA256 is invalid." }
+    if ($pythonNuGetVersion -ne "3.12.10") { throw "Unexpected project-local Python NuGet version." }
+    if ($nugetUrl -ne "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe") { throw "Unexpected NuGet CLI source." }
     Write-Host "M4.2.2 benchmark setup validation: PASS"
     return
 }
@@ -211,7 +181,8 @@ if (-not [string]::IsNullOrWhiteSpace($ExpectedBranch) -and $branch -ne $Expecte
 }
 
 $root = Join-Path $repoRoot ".localcopilot\ocr-benchmark"
-$runtimeRoot = Join-Path $root "python312"
+$pythonPackageRoot = Join-Path $root "python312-nuget"
+$runtimeRoot = Join-Path $pythonPackageRoot "python\tools"
 $cacheRoot = Join-Path $root "cache"
 $evidenceRoot = Join-Path $root "evidence"
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
@@ -239,7 +210,7 @@ if ($PreparePaddleGpu) {
             Invoke-M422Checked -FilePath $py.Source -Arguments @("install", "--target=$runtimeRoot", $paddlePythonTag) -Description "Isolated Python 3.12 target install"
         }
         else {
-            Install-M422PythonFromOfficialInstaller -TargetRoot $runtimeRoot -CacheRoot $cacheRoot
+            Install-M422PythonFromNuGet -PackageRoot $pythonPackageRoot -CacheRoot $cacheRoot
         }
     }
 
@@ -281,8 +252,9 @@ head=$head
 working_tree=clean
 runner_elevated=False
 python_install_manager_available=$installManagerAvailable
-python_fallback_installer_version=$pythonInstallerVersion
-python_fallback_installer_source=python.org
+python_project_local_package=nuget-python
+python_project_local_version=$pythonNuGetVersion
+python_project_local_root=$pythonPackageRoot
 nvidia_driver=$driverText
 prepare_paddle_gpu_requested=$([bool]$PreparePaddleGpu)
 environment_prepared=$prepared
