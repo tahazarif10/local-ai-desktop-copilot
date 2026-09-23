@@ -138,7 +138,9 @@ jobs:
 
       - name: Validate M4.2.2 Tesseract baseline wrapper
         shell: powershell
-        run: .\run-m4-2-ocr-tesseract.ps1 -ValidateOnly
+        run: |
+          .\run-m4-2-ocr-tesseract.ps1 -ValidateOnly
+          .\run-m4-2-ocr-tesseract.ps1 -ValidateOnly -TessdataVariant best
 
       - name: Validate M4.2.2 Windows Media OCR baseline wrapper
         shell: powershell
