@@ -321,7 +321,7 @@ The runner gate adds:
 - cold initialization, warm p50/p95/max latency, failure/timeout, RAM, GPU VRAM, runtime footprint, and model-cache footprint metrics;
 - aggregate-only result persistence. Raw OCR text, ground truth, and screenshots are neither printed nor written by the runner.
 
-The next physical step after CI is a single controlled-UI harness run on the fixed server; it generates the seven local OS-rendered ROI fixtures and ground truth automatically and then runs the aggregate benchmark. PaddleOCR remains an **unselected candidate** until measured against the required baselines.
+The first controlled OS-rendered PaddleOCR run passed at clean head `9fa4ba26daf4becc011f6e1ccc6cf7eeb81d0156` after CI #181 PASS: 7/7 required categories, 0 failures, 0 timeouts, CER 0.28873239, WER 0.31343284, exact normalized match 0.0, warm p50/p95/max 43.513/78.132/80.619 ms, cold initialization 3389.084 ms, worker RSS peak 1494.766 MiB, GPU VRAM delta 224 MiB, raw OCR logging/persistence false. The cuDNN 9.9-compiled versus 9.5 runtime mismatch remains a recorded compatibility risk. PaddleOCR remains an **unselected candidate**. The next physical gate is the Tesseract 5.5.3 `fas+eng` baseline on the exact same local corpus.
 
 ## How to update this file
 
