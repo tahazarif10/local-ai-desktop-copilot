@@ -269,7 +269,18 @@ $pythonPackageRoot = Join-Path $root "python312-nuget"
 $runtimeRoot = Join-Path $pythonPackageRoot "python\tools"
 $cacheRoot = Join-Path $root "cache"
 $evidenceRoot = Join-Path $root "evidence"
+$pipCacheRoot = Join-Path $root "pip-cache"
+$tempRoot = Join-Path $root "temp"
+
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $pipCacheRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+
+# Keep all benchmark download/cache/temp activity on the selected benchmark drive.
+# These environment changes are process-local to this PowerShell run.
+$env:TEMP = $tempRoot
+$env:TMP = $tempRoot
+$env:PIP_CACHE_DIR = $pipCacheRoot
 
 $driver = Get-M422NvidiaDriver
 $installManagerAvailable = Test-M422PythonInstallManager
@@ -335,6 +346,8 @@ branch=$branch
 head=$head
 working_tree=clean
 benchmark_root=$root
+pip_cache_root=$pipCacheRoot
+temp_root=$tempRoot
 runner_elevated=False
 python_install_manager_available=$installManagerAvailable
 python_project_local_package=nuget-python-direct
