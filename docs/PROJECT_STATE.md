@@ -1,14 +1,14 @@
 ---
 state_schema: 2
-reference_code_commit: 979ed5a2318d32ff151d2950f7ace77ec274d601
-accepted_main_commit: 55b98d9368d67bb15a1190a1292c8c37e531a9a1
+reference_code_commit: 03f719a1bb4a98a3834348d1f0d53fa50828c92e
+accepted_main_commit: 5ad17ee5276dccefbe5ac4d3e6f7ab845061fdaa
 last_verified_date: 2026-09-23
-completed_through: M3.4
-active_milestone: M4.1
-active_branch: dev/m4-1-roi-planner
-active_status: M4.1 behavior head 03f719a1bb4a98a3834348d1f0d53fa50828c92e passed CI #126 with 160/160 Core tests on Ubuntu/Windows and the strict Windows build; ADR 0012 is accepted on PR #29 and review/merge remain before main advances
-next_milestone: M4.1
-next_milestone_name: Region-of-interest planner
+completed_through: M4.1
+active_milestone: M4.2
+active_branch: main
+active_status: M4.1 bounded ROI planning is accepted and merged through PR #29 at main commit 5ad17ee5276dccefbe5ac4d3e6f7ab845061fdaa; M4.2 OCR benchmark and integration is the next approved implementation gate and has not started yet
+next_milestone: M4.2
+next_milestone_name: OCR benchmark and integration
 ---
 
 # Project state
@@ -47,6 +47,7 @@ The repository is not yet a complete copilot. The accepted product state is a ha
 | M3.4.1 Portable orchestration admission | Complete | [PR #19](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/19), functional head `c71a550` | [CI #49](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/33153232435) passed 140/140 tests on Ubuntu/Windows, both runner parses, and the strict Windows build; no runtime composition changed |
 | M3.4.2 Measured provider-isolation decision | Complete | [ADR 0011](decisions/0011-measured-uia-provider-isolation.md), physical behavior head `44d4752` | Same-integrity blocking provider entered; healthy provider recovered before release in 3,701 ms; app shutdown 118 ms; worker `joined=True`; `InProcessCandidate`; sentinel scan PASS |
 | M3.4.3 Runtime integration and acceptance | Complete | [PR #24](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/24), runtime head `979ed5a`, physical candidate `26c3290` | [CI #115](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35844099601) PASS; denied session `0cc6c55e-9141-4c32-bfab-3951c808b702`, allowed session `330a2f52-d8f2-4d5c-843d-7149caf9894a`, provider regression session `c3cfd465-849e-4e27-984d-f16d4ee6c0b1`; overall physical acceptance PASS |
+| M4.1 Bounded region-of-interest planner | Complete | [PR #29](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/29), behavior head `03f719a`, merge `5ad17ee`, [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md) | [CI #126](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35847291181) passed 160/160 Core tests on Ubuntu/Windows plus strict WinUI build; documentation-only head CI #131 also passed; no separate physical run required because the accepted slice is pure Core geometry/policy |
 
 PR #7 was squash-merged as `c29099a`. Its feature-branch head (`abcbf08`) is not the `main` baseline.
 
@@ -299,19 +300,18 @@ These are fixed design inputs, not upgrade suggestions:
 
 ## Immediate acceptance gate
 
-M3.4 is accepted and merged to `main` at `55b98d9368d67bb15a1190a1292c8c37e531a9a1`. M4.1 work is now isolated on:
+M4.1 is accepted and merged to `main` through [PR #29](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/29).
 
-```text
-dev/m4-1-roi-planner
-```
+- behavior-bearing accepted head: `03f719a1bb4a98a3834348d1f0d53fa50828c92e`;
+- merge commit: `5ad17ee5276dccefbe5ac4d3e6f7ab845061fdaa`;
+- accepted [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md);
+- [CI #126](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35847291181): 160/160 Core tests on Ubuntu and Windows, existing M3.4 runner/provider regressions, controlled raw-provider smoke, and strict WinUI build all PASS;
+- documentation-only closeout head also passed CI #131;
+- no separate physical Windows acceptance was required because M4.1 adds only portable geometry/policy logic and no Windows interop, pixel acquisition, OCR, or runtime composition.
 
-The current M4.1 slice is intentionally portable and content-free. It introduces a Core ROI planner plus proposed [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md). The planner converts downscaled `ChangeRegion` geometry and explicitly projected UIA screen rectangles into bounded source-frame ROI candidates. It uses outward scaling/clamping, bounded padding, background association filtering, change fallback, deterministic UIA ordering, nested-candidate deduplication, per-region/total-area budgets, and hard region-count ceilings.
+The accepted planner maps downscaled `ChangeRegion` geometry and explicitly projected UIA screen rectangles into bounded source-frame ROI candidates with outward scaling/clamping, bounded padding, background association filtering, change fallback, deterministic ordering, nested-candidate deduplication, count/per-region/total-area budgets, and no synthesized full-frame fallback. Product privacy capabilities and content-retention rules remain unchanged.
 
-The planner never synthesizes a full-frame fallback and is not wired to WGC cropping, OCR, VLM, question text, persistence, diagnostics coordinates, or any new privacy capability. UIA rectangles are mapped only when a caller supplies an explicit capture screen projection; Core makes no DPI/window-origin assumption.
-
-Proposed default bounds are 16 px padding, 24 px association margin, 4 regions, 25% maximum area per region, and 40% maximum total planned area, with stricter hard ceilings that prevent a full-frame plan. These are privacy/resource bounds, not OCR performance claims; M4.2 benchmarking may tune normal operating values after M4.1 is accepted.
-
-The acceptance candidate is behavior head `03f719a1bb4a98a3834348d1f0d53fa50828c92e`. [CI #126](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35847291181) passed 160/160 Core tests on Ubuntu and Windows, all existing M3.4 runner/provider regressions, and the strict Windows build. Accepted [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md) records the geometry/privacy boundary. Because the slice adds no Windows interop, pixel acquisition, OCR, or runtime composition, separate physical Windows acceptance is not required. PR #29 review/merge is the remaining repository-state gate; do not begin M4.2 OCR backend selection or runtime pixel cropping before that merge.
+The next implementation gate is **M4.2 — OCR benchmark and integration**. Start it from merged `main`. Backend selection must be evidence-driven on the fixed client/server hardware and must preserve M4.1 ROI bounds, `CapturePixels + RunOcr` gating, cancellation, local-only data handling, and no implicit whole-frame escalation.
 
 ## How to update this file
 
