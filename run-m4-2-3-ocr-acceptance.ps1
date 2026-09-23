@@ -317,6 +317,11 @@ $form.Dispose()
         "-NoProfile","-Sta","-WindowStyle","Hidden","-EncodedCommand",$encoded) -PassThru
     $targetHandle = Wait-ProcessWindow -Process $target -ExactTitle "LocalCopilot M4.2.3 OCR target" -TimeoutSeconds $StepTimeoutSeconds
 
+    $existingApps = @(Get-Process "LocalCopilot.App" -ErrorAction SilentlyContinue)
+    if ($existingApps.Count -ne 0) {
+        throw "Close all existing LocalCopilot.App processes before OCR acceptance."
+    }
+
     $sessionRoot = Join-Path $acceptanceRoot "diagnostic"
     New-Item -ItemType Directory -Path $sessionRoot -Force | Out-Null
 
@@ -403,8 +408,13 @@ $form.Dispose()
 
     [void][LocalCopilotM423Acceptance.Native]::PostMessage(
         [IntPtr]$appHandle,0x0010,[IntPtr]::Zero,[IntPtr]::Zero)
-    [void]$app.WaitForExit(15000)
-    [void]$runner.WaitForExit(30000)
+    if (-not $app.WaitForExit(15000)) {
+        throw "LocalCopilot did not exit within the teardown deadline."
+    }
+
+    if (-not $runner.WaitForExit(30000)) {
+        throw "Diagnostic runner did not finish bundle collection within the deadline."
+    }
 
     $finalLog = Get-FileText $appLog
     if ($finalLog.Contains($sentinelA) -or $finalLog.Contains($sentinelB)) {
