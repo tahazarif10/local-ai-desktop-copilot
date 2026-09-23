@@ -214,3 +214,21 @@ executed.
 The two preflights therefore establish environment facts only. They do not
 select an OCR backend or topology. M4.2.2 controlled benchmarking remains
 required.
+
+
+## M4.2.2 acceptance evidence
+
+The controlled benchmark slice completed on the fixed server using the local seven-category OS-rendered corpus. Raw screenshots, ground truth, and OCR hypotheses remained local; repository and PR evidence contains aggregate metrics only.
+
+Measured multilingual candidates:
+
+- PaddleOCR `PP-OCRv5_mobile_det + arabic_PP-OCRv5_mobile_rec`: CER 0.28873239, WER 0.31343284, warm p50 43.513 ms.
+- PaddleOCR `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec`: CER 0.23004695, WER 0.22388060, warm p50 91.392 ms, measured GPU VRAM delta 562 MiB.
+- Tesseract 5.5.3 `fas+eng` with pinned `tessdata_fast`: CER 0.50938967, WER 1.0, warm p50 285.938 ms.
+- Tesseract 5.5.3 `fas+eng` with pinned `tessdata_best`: CER 0.52347418, WER 1.07462687, warm p50 397.424 ms.
+
+Legacy Windows Media OCR was retained only as English-only evidence because the fixed machines expose `en-US` but no Persian recognizer. Its matched three-sample English run measured CER 0.31963470, WER 0.39285714, and 6.732 ms recognition p50 / 12.162 ms end-to-end p50.
+
+The bounded Paddle tuning pass showed that the server detector, not the English-specific recognizer alone, produced the material accuracy improvement. The multilingual server-detector pair is therefore the evidence-backed selection candidate for M4.2.3.
+
+M4.2.2 closes candidate benchmarking without integrating a backend. M4.2.3 must make the explicit backend/topology selection, reapply M4.1 ROI and same-epoch capability gates, prove cancellation/stale rejection and deterministic teardown in product integration, and preserve the recorded cuDNN compatibility warning until an upstream-compatible runtime changes the evidence.

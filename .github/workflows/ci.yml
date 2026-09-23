@@ -49,6 +49,14 @@ jobs:
           --settings ./tests/LocalCopilot.Core.Tests/.runsettings
           --logger "trx;LogFileName=core-tests-ubuntu.trx"
 
+      - name: Validate M4.2.2 benchmark Python contract
+        run: |
+          python3 -m py_compile ./scripts/m4_2_ocr_benchmark.py
+          python3 ./scripts/test_m4_2_ocr_benchmark.py
+          python3 -m py_compile ./scripts/m4_2_tesseract_benchmark.py
+          python3 -m py_compile ./scripts/m4_2_score_stdin.py
+          python3 ./scripts/m4_2_tesseract_benchmark.py --benchmark-root . --manifest dummy --tesseract-exe dummy --tessdata-dir dummy --validate-only
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -79,6 +87,13 @@ jobs:
             (Resolve-Path .\run-m3-4-acceptance.ps1).Path
             (Resolve-Path .\run-m4-2-ocr-preflight.ps1).Path
             (Resolve-Path .\run-m4-2-ocr-benchmark-setup.ps1).Path
+            (Resolve-Path .\run-m4-2-ocr-benchmark.ps1).Path
+            (Resolve-Path .\run-m4-2-ocr-auto-smoke.ps1).Path
+            (Resolve-Path .\run-m4-2-ocr-controlled-ui.ps1).Path
+            (Resolve-Path .\run-m4-2-ocr-tesseract.ps1).Path
+            (Resolve-Path .\run-m4-2-ocr-windows-media.ps1).Path
+            (Resolve-Path .\run-m4-2-ocr-english-comparison.ps1).Path
+            (Resolve-Path .\run-m4-2-ocr-paddle-variants.ps1).Path
             (Resolve-Path .\scripts\run-m3-4-provider-isolation-core.ps1).Path
             (Resolve-Path .\tests\fixtures\Test-RawUiAutomationProvider.ps1).Path
           )
@@ -108,6 +123,36 @@ jobs:
       - name: Validate M4.2.2 benchmark setup
         shell: powershell
         run: .\run-m4-2-ocr-benchmark-setup.ps1 -ValidateOnly
+
+      - name: Validate M4.2.2 controlled benchmark wrapper
+        shell: powershell
+        run: .\run-m4-2-ocr-benchmark.ps1 -ValidateOnly
+
+      - name: Validate M4.2.2 zero-touch synthetic smoke wrapper
+        shell: powershell
+        run: .\run-m4-2-ocr-auto-smoke.ps1 -ValidateOnly
+
+      - name: Validate M4.2.2 controlled OS-rendered UI wrapper
+        shell: powershell
+        run: .\run-m4-2-ocr-controlled-ui.ps1 -ValidateOnly
+
+      - name: Validate M4.2.2 Tesseract baseline wrapper
+        shell: powershell
+        run: |
+          .\run-m4-2-ocr-tesseract.ps1 -ValidateOnly
+          .\run-m4-2-ocr-tesseract.ps1 -ValidateOnly -TessdataVariant best
+
+      - name: Validate M4.2.2 Windows Media OCR baseline wrapper
+        shell: powershell
+        run: .\run-m4-2-ocr-windows-media.ps1 -ValidateOnly
+
+      - name: Validate M4.2.2 matched English comparison wrapper
+        shell: powershell
+        run: .\run-m4-2-ocr-english-comparison.ps1 -ValidateOnly
+
+      - name: Validate M4.2.2 bounded Paddle variant wrapper
+        shell: powershell
+        run: .\run-m4-2-ocr-paddle-variants.ps1 -ValidateOnly
 
       - name: Validate physical raw-provider runner patch
         shell: powershell
