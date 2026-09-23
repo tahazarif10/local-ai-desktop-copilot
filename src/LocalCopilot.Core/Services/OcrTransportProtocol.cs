@@ -379,14 +379,48 @@ public static class OcrTransportProtocol
                     body.Length - offset < utf8Length)
                     throw new FormatException("OCR response text descriptor is invalid.");
 
-                char[] characters = strictUtf8
-                    .GetString(body.Slice(offset, utf8Length))
-                    .ToCharArray();
+                ReadOnlySpan<byte> encodedText =
+                    body.Slice(offset, utf8Length);
 
-                texts.Add(
-                    new OcrTransportTextResult(
-                        regionIndex,
-                        new OcrSensitiveText(characters, utf8Length)));
+                int characterCount =
+                    strictUtf8.GetCharCount(encodedText);
+
+                char[] characters =
+                    new char[characterCount];
+
+                try
+                {
+                    int written =
+                        strictUtf8.GetChars(
+                            encodedText,
+                            characters);
+
+                    if (written != characterCount)
+                    {
+                        throw new FormatException(
+                            "OCR response character count changed during decoding.");
+                    }
+
+                    texts.Add(
+                        new OcrTransportTextResult(
+                            regionIndex,
+                            new OcrSensitiveText(
+                                characters,
+                                utf8Length)));
+
+                    characters =
+                        Array.Empty<char>();
+                }
+                finally
+                {
+                    if (characters.Length > 0)
+                    {
+                        Array.Clear(
+                            characters,
+                            0,
+                            characters.Length);
+                    }
+                }
 
                 offset += utf8Length;
             }
@@ -433,15 +467,27 @@ public static class OcrTransportProtocol
             nonceHex.Trim().ToLowerInvariant() + "\n" +
             bodySha256Hex.Trim().ToLowerInvariant();
 
-        byte[] canonicalBytes = Encoding.ASCII.GetBytes(canonical);
+        byte[] canonicalBytes =
+            Encoding.ASCII.GetBytes(canonical);
+
+        byte[] keyCopy =
+            authenticationKey.ToArray();
+
         try
         {
-            using HMACSHA256 hmac = new(authenticationKey.ToArray());
-            return Convert.ToBase64String(hmac.ComputeHash(canonicalBytes));
+            using HMACSHA256 hmac =
+                new(keyCopy);
+
+            return Convert.ToBase64String(
+                hmac.ComputeHash(canonicalBytes));
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(canonicalBytes);
+            CryptographicOperations.ZeroMemory(
+                canonicalBytes);
+
+            CryptographicOperations.ZeroMemory(
+                keyCopy);
         }
     }
 }
