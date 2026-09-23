@@ -1,12 +1,12 @@
 ---
 state_schema: 2
 reference_code_commit: d8f12b00524934138115f22cc8bd7149e20f4452
-accepted_main_commit: 920bbecbb4c7ef4c22ca3ff055df1bcaa801e911
+accepted_main_commit: 1486fb673a623b248e9238c747ac1cd49fa73979
 last_verified_date: 2026-09-23
 completed_through: M4.2.1
 active_milestone: M4.2
-active_branch: dev/m4-2-2-controlled-benchmark
-active_status: M4.2.2 server-local PaddleOCR GPU environment gate passed on exact clean head f8275451084af12637e66169ac3c3c06bf78f7cb with CI #166 PASS; controlled OCR corpus/runner measurement is the next gate
+active_branch: dev/m4-2-2-benchmark-runner
+active_status: M4.2.2 environment gate is accepted and merged through PR #32 at main commit 1486fb673a623b248e9238c747ac1cd49fa73979; controlled local-only OCR corpus/runner implementation is active
 next_milestone: M4.2
 next_milestone_name: OCR benchmark and integration
 ---
@@ -300,25 +300,27 @@ These are fixed design inputs, not upgrade suggestions:
 
 ## Immediate acceptance gate
 
-M4.2.2 environment preparation is physically accepted on the fixed server.
+M4.2.2 environment preparation is accepted and merged through [PR #32](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/32) at main commit `1486fb673a623b248e9238c747ac1cd49fa73979`. The exact physical environment head remains `f8275451084af12637e66169ac3c3c06bf78f7cb`; CI #166 passed on that same head.
 
-- exact accepted head: `f8275451084af12637e66169ac3c3c06bf78f7cb`;
-- [CI #166](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35876408615): PASS on the same head;
-- benchmark root: `D:\LocalAI-Prerequisites`;
-- project-local Python: 3.12.10 from the official CPython NuGet package;
-- PaddlePaddle GPU: 3.2.0;
-- PaddleOCR: 3.7.0;
-- NVIDIA driver: 596.49;
-- Paddle device: `gpu:0`;
-- CUDA compilation: `True`;
-- `system_python_modified=False`;
-- `ocr_executed=False`;
-- `benchmark_content_created=False`;
-- `backend_selected=False`.
+The active branch is:
 
-This accepts **environment preparation only**. It does not select PaddleOCR as the product backend and does not count as OCR accuracy/performance acceptance.
+```text
+dev/m4-2-2-benchmark-runner
+```
 
-The next M4.2.2 gate is a one-command, local-only controlled benchmark using stable opaque sample IDs and a manifest that references local ROI images plus exact local ground truth. The first measured candidate is PaddleOCR GPU with the recognition model explicitly pinned to `arabic_PP-OCRv5_mobile_rec`, because the official PP-OCRv5 multilingual model table lists Persian and English support for that model. Benchmark output committed or copied to review must contain aggregate accuracy/performance/resource metrics only, never screenshots, ground truth, or raw OCR text.
+The runner gate adds:
+
+- a one-command PowerShell wrapper;
+- a local-only corpus scaffold using seven opaque sample IDs across the required UI categories;
+- strict CER/WER/exact-match scoring with the same normalization contract as M4.2.1;
+- explicit `PP-OCRv5_mobile_det` + `arabic_PP-OCRv5_mobile_rec` model pins;
+- `gpu:0` and the local Paddle inference engine;
+- model cache under `D:\LocalAI-Prerequisites\models`;
+- process-bounded inference deadlines and a deterministic timeout-guard self-test;
+- cold initialization, warm p50/p95/max latency, failure/timeout, RAM, GPU VRAM, runtime footprint, and model-cache footprint metrics;
+- aggregate-only result persistence. Raw OCR text, ground truth, and screenshots are neither printed nor written by the runner.
+
+The next physical step after CI is model preparation, followed by local corpus population and the controlled benchmark. PaddleOCR remains an **unselected candidate** until measured against the required baselines.
 
 ## How to update this file
 
