@@ -5,8 +5,8 @@ accepted_main_commit: 55b98d9368d67bb15a1190a1292c8c37e531a9a1
 last_verified_date: 2026-09-23
 completed_through: M3.4
 active_milestone: M4.1
-active_branch: main
-active_status: M3.4 is accepted and merged through PR #24 at main commit 55b98d9368d67bb15a1190a1292c8c37e531a9a1; M4.1 region-of-interest planning is the next approved implementation gate and has not started yet
+active_branch: dev/m4-1-roi-planner
+active_status: M4.1 portable bounded ROI planner is implemented on the feature branch under proposed ADR 0012; automated regression/build verification and review remain before acceptance
 next_milestone: M4.1
 next_milestone_name: Region-of-interest planner
 ---
@@ -299,18 +299,19 @@ These are fixed design inputs, not upgrade suggestions:
 
 ## Immediate acceptance gate
 
-M3.4 runtime behavior is accepted at behavior-bearing head `979ed5a2318d32ff151d2950f7ace77ec274d601`. The clean physically tested repository candidate is `26c3290bf196701473b558da657d5c39c8c97e8a`; commits between those heads are acceptance-harness/CI changes and do not alter product runtime behavior. Documentation-only descendants created after the physical PASS are not themselves new runtime evidence.
+M3.4 is accepted and merged to `main` at `55b98d9368d67bb15a1190a1292c8c37e531a9a1`. M4.1 work is now isolated on:
 
-The final 2026-09-23 one-command run passed all gates:
+```text
+dev/m4-1-roi-planner
+```
 
-- denied session `0cc6c55e-9141-4c32-bfab-3951c808b702`: `ReadUiText` denial blocked automatic semantic UIA before dispatch;
-- allowed session `330a2f52-d8f2-4d5c-843d-7149caf9894a`: Meaningful/Large automatic dispatch, bounded M3.3 snapshot, background debounce, metadata-only user-question path, Disarm invalidation, teardown ordering, joined worker, and redaction all passed;
-- provider-isolation regression session `c3cfd465-849e-4e27-984d-f16d4ee6c0b1`: real same-integrity blocking provider entered, the same worker recovered through the same-epoch replacement request as `Available / SnapshotCaptured`, shutdown remained bounded, architecture classification stayed `InProcessCandidate`, worker join and sentinel scan passed;
-- overall `M3.4 RUNTIME-INTEGRATION ACCEPTANCE: PASS`.
+The current M4.1 slice is intentionally portable and content-free. It introduces a Core ROI planner plus proposed [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md). The planner converts downscaled `ChangeRegion` geometry and explicitly projected UIA screen rectangles into bounded source-frame ROI candidates. It uses outward scaling/clamping, bounded padding, background association filtering, change fallback, deterministic UIA ordering, nested-candidate deduplication, per-region/total-area budgets, and hard region-count ceilings.
 
-[CI #115](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35844099601) is green on the exact physical candidate. PR #24 merged to `main` as `55b98d9368d67bb15a1190a1292c8c37e531a9a1`; M3.4 is therefore complete in repository state as well as in physical evidence.
+The planner never synthesizes a full-frame fallback and is not wired to WGC cropping, OCR, VLM, question text, persistence, diagnostics coordinates, or any new privacy capability. UIA rectangles are mapped only when a caller supplies an explicit capture screen projection; Core makes no DPI/window-origin assumption.
 
-The next implementation gate is **M4.1 — Region-of-interest planner**. Start it from merged `main`; do not add OCR/VLM backend selection before the bounded ROI contract is reviewed and accepted.
+Proposed default bounds are 16 px padding, 24 px association margin, 4 regions, 25% maximum area per region, and 40% maximum total planned area, with stricter hard ceilings that prevent a full-frame plan. These are privacy/resource bounds, not OCR performance claims; M4.2 benchmarking may tune normal operating values after M4.1 is accepted.
+
+Acceptance requires the new deterministic ROI test matrix plus all existing portable/Windows regressions and the strict Windows build. Because this slice adds no Windows interop, pixel acquisition, OCR, or runtime composition, separate physical Windows acceptance is not required unless scope expands. Do not begin OCR backend selection or runtime pixel cropping before this planner contract is reviewed and accepted.
 
 ## How to update this file
 
