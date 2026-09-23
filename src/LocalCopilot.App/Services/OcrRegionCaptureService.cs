@@ -93,6 +93,15 @@ internal static class OcrRegionCaptureService
         using GraphicsCaptureSession session =
             framePool.CreateCaptureSession(item);
 
+        if (OperatingSystem.IsWindowsVersionAtLeast(
+                10,
+                0,
+                19041))
+        {
+            session.IsCursorCaptureEnabled =
+                false;
+        }
+
         TaskCompletionSource<Direct3D11CaptureFrame> completion =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
