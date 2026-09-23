@@ -748,7 +748,12 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "schema": SCHEMA_VERSION,
         "mode": "controlled-benchmark",
-        "candidate": "paddleocr-ppocrv5-fa-en",
+        "candidate": (
+            "paddleocr:"
+            + config["detection_model"]
+            + "+"
+            + config["recognition_model"]
+        ),
         "scope": (
             "matched-category-subset"
             if args.include_category
