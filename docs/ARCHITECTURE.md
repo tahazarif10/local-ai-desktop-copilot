@@ -256,16 +256,13 @@ The semantic phase independently caps 64 strings, 1,024 UTF-16 code units per st
 
 The worker also revalidates HWND/PID and fail-closes if the target token cannot be inspected or has a higher integrity level than the client. The manifest remains without `uiAccess`; the app never elevates or attempts secure-desktop access. Every COM interface pointer is created, used, and released on the worker before a result crosses the boundary.
 
-UIA properties are cross-process calls and providers vary in quality. `CancellationToken` alone cannot be assumed to interrupt a blocked COM call. M3.1 physically validated forced deadline/recovery on the same worker and joined teardown during active work; this is sufficient for the manual root probe but not a guarantee against every hostile provider. M3.4 must decide whether continuous UIA needs a restartable helper process from measured evidence; M3.1 does not create that process speculatively.
+UIA properties are cross-process calls and providers vary in quality. `CancellationToken` alone cannot be assumed to interrupt a blocked COM call. M3.4 Slice 2 therefore measured a real same-integrity raw UIA provider whose `Name` getter blocked after entry. Accepted [ADR 0011](decisions/0011-measured-uia-provider-isolation.md) keeps the worker in-process: physical behavior head `44d4752864372116a911de2ae3acf611ef033c1e`, session `2a7d17af-4d9b-4ddc-80ac-c727ddd60dc7`, recovered the healthy target before the 10-second request deadline, shut down in 118 ms, joined the worker, classified `InProcessCandidate`, and passed the randomized sentinel scan. A restartable helper process is not required by that measured failure mode; new contrary physical evidence would require revisiting the ADR.
 
-The first M3.4 slice defines only a portable admission policy in Core. It
-accepts content-free Meaningful/Large-change or user-question metadata after
-epoch/capability checks, applies an explicitly supplied debounce and per-kind
-deduplication, and owns one active plus one pending request. Background work is
-latest-wins only within the pending background slot; a question outranks that
-slot and receives explicit retryable backpressure rather than silent
-replacement. The policy is not composed into the application or UIA worker,
-so it cannot start an automatic read before the provider-isolation decision.
+M3.4 Slice 3 composes the accepted portable admission policy into the application through an application-owned `UiEnrichmentRuntimeService`. Product runtime behavior was introduced at `979ed5a2318d32ff151d2950f7ace77ec274d601`. The service subscribes to persistent `SampleReady` metadata, admits only Meaningful/Large background changes or explicit metadata-only user-question triggers, uses a five-second background debounce, and preserves one-active/one-pending ownership with question priority and explicit retryable backpressure.
+
+Admission and publication both require explicit Armed state, the current matching uncancelled epoch, and `ReadUiStructure | ReadUiText`. The service marshals policy admission/publication/completion back to the WinUI dispatcher, dispatches only accepted work to the existing M3.3 semantic request path, applies the M3.3 publication gate before completing/promoting policy state, records only content-free aggregates with `content=redacted`, and immediately disposes the returned semantic snapshot. Runtime disposal invalidates bounded policy state and occurs before coordinator/UIA-worker teardown.
+
+The clean physical candidate `26c3290bf196701473b558da657d5c39c8c97e8a` passed the full one-command Windows matrix on 2026-09-23. Denied session `0cc6c55e-9141-4c32-bfab-3951c808b702` proved capability denial before automatic dispatch; allowed session `330a2f52-d8f2-4d5c-843d-7149caf9894a` proved automatic dispatch/debounce, user-question routing, Disarm invalidation, teardown order, joined worker, and redaction; provider regression session `c3cfd465-849e-4e27-984d-f16d4ee6c0b1` preserved the ADR 0011 in-process recovery invariant. [CI #115](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35844099601) passed the automated Windows and portable gates on that exact physical candidate.
 
 ### 6.8 OCR and visual fallback
 
@@ -343,17 +340,18 @@ Today there are two production assemblies in one desktop process plus a portable
 ```text
 LocalCopilot.App
   App + ApplicationCompositionRoot (process/window composition and lifetime)
+  UiEnrichmentRuntimeService (bounded M3.4 admission/dispatch/publication/teardown)
   DesktopCopilotCoordinator (integration, subscriptions, commands, view state)
   MainPage (diagnostic rendering + command forwarding)
   Windows adapters (WinEvent, WGC, Win32 input)
-  UiAutomationProbeWorker (lazy COM MTA, root probe + bounded snapshot)
+  UiAutomationProbeWorker (lazy in-process COM MTA, root + bounded structural/semantic snapshots)
         |
         v
 LocalCopilot.Core
   privacy policy, epochs, lifecycle gate, change classification,
   timeline/correlation models, UIA typed outcomes/classifier/publication gate,
-  immutable structural contract/budget tracker, latest-pending slot,
-  unconnected M3.4 enrichment admission policy
+  immutable structural/semantic contracts and budgets, latest-pending slot,
+  connected M3.4 bounded enrichment admission policy
 
 LocalCopilot.Core.Tests -> LocalCopilot.Core
 ```
@@ -368,13 +366,13 @@ Logical boundaries, introduced only at their roadmap gate:
 LocalCopilot.App                WinUI/tray, commands, presentation
 LocalCopilot.Core               policy, epochs, events, orchestration contracts
 LocalCopilot.Windows            WinEvent/WGC/input adapters
-LocalCopilot.UIA.Worker         restartable read-only UIA boundary if M3 evidence requires it
+LocalCopilot.UIA.Worker         optional future isolation boundary only if new physical evidence supersedes ADR 0011
 LocalCopilot.Inference.Contracts versioned client/server DTOs
 LocalCopilot.Inference.Server   local endpoint, resource manager, runtime adapters
 *.Tests                         pure, contract, and Windows integration suites
 ```
 
-M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, M2.4.4 hardened diagnostics/input evidence, M3.1 accepted the smallest UIA worker boundary through a root-only probe, M3.2 accepted the generated budgeted non-text snapshot under ADR 0008, and M3.3 accepted separately authorized bounded semantic text under ADR 0009. M3.4 begins with the accepted portable policy in ADR 0010; physical provider-hang evidence and the isolation decision still precede runtime wiring. Later milestones must not create all future projects at once.
+M2.4.1 established the portable test boundary, M2.4.2 separated application composition/lifecycle from the page, M2.4.3 enforced capability privacy, M2.4.4 hardened diagnostics/input evidence, M3.1 accepted the smallest UIA worker boundary through a root-only probe, M3.2 accepted the generated budgeted non-text snapshot under ADR 0008, and M3.3 accepted separately authorized bounded semantic text under ADR 0009. M3.4 completed the orchestration boundary: ADR 0010 fixes bounded priority-aware admission, ADR 0011 selects the measured in-process UIA worker, and PR #24 binds the policy to the existing M3.3 path with repeated privacy/epoch/latest checks and one-command physical acceptance. M4.1 is the next boundary; later milestones must not create all future projects at once.
 
 ## 8. Threading and lifecycle model
 
@@ -385,21 +383,23 @@ M2.4.1 established the portable test boundary, M2.4.2 separated application comp
 | Low-level input callback | Constant-time classification and handoff only |
 | WGC `FrameArrived` | Free-threaded callback; take ownership and replace latest frame only |
 | Resize/readback/luma/diff | Background worker, never `FrameArrived` or UI thread |
-| UIA calls and subscriptions | Dedicated COM MTA worker; subscription removal on same worker |
+| UIA calls and subscriptions | Dedicated in-process COM MTA worker; all COM objects remain on that worker |
+| M3.4 enrichment admission/publication state | WinUI dispatcher through the application-owned runtime service; provider calls remain on the COM MTA worker |
 | Event normalization/memory | Single-owner worker or explicitly synchronized bounded pipeline |
 | Local inference | AI server worker with deadlines/resource arbitration |
 
-Application lifetime, not page navigation, owns the current long-running services. The accepted M2.4.2 implementation uses a one-shot lifecycle gate and this concrete shutdown sequence:
+Application lifetime, not page navigation, owns the current long-running services. M2.4.2 established the one-shot lifecycle gate; M3.4 extends the concrete shutdown order so no new semantic work can race worker disposal:
 
-1. mark the coordinator stopped so new commands/foreground events are rejected;
-2. remove the foreground hook on its installing UI thread;
-3. disarm and stop the active persistent capture session;
-4. stop content-free input tracking and reset the diagnostic timeline;
-5. reset/cancel the active epoch and capture probes;
-6. detach service subscriptions;
-7. stop/join the UIA worker and release its COM interfaces on that MTA thread;
-8. dispose the input tracker, foreground observer, and epoch manager;
-9. detach the view when XAML unloads.
+1. stop/dispose `UiEnrichmentRuntimeService`, detach its sample subscription, invalidate active/pending admission state, and cancel its runtime-owned request handles;
+2. mark the coordinator stopped so new commands/foreground events are rejected;
+3. remove the foreground hook on its installing UI thread;
+4. disarm and stop the active persistent capture session;
+5. stop content-free input tracking and reset the diagnostic timeline;
+6. reset/cancel the active epoch and capture probes;
+7. detach coordinator service subscriptions;
+8. stop/join the UIA worker and release its COM interfaces on that MTA thread;
+9. dispose the input tracker, foreground observer, and epoch manager;
+10. detach the view when XAML unloads.
 
 Already-queued sample/session UI notifications still pass through the epoch publication gate; the accepted shutdown run dropped them as stale after reset without rendering or touching disposed sensing resources.
 
