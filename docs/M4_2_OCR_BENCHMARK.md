@@ -53,6 +53,33 @@ Physical server acceptance on exact clean head `f8275451084af12637e66169ac3c3c06
 - no OCR or benchmark content created;
 - no backend selected.
 
+## Controlled runner
+
+The runner is split into two entry points:
+
+- `run-m4-2-ocr-benchmark.ps1` is the Windows/branch/privacy wrapper.
+- `scripts/m4_2_ocr_benchmark.py` owns the local OCR worker, strict scoring, timeout guard, resource sampling, and aggregate result generation.
+
+On the fixed server, all benchmark state lives below:
+
+```text
+D:\LocalAI-Prerequisites
+```
+
+The wrapper supports three physical modes:
+
+```powershell
+.\run-m4-2-ocr-benchmark.ps1 -InitializeCorpus
+.\run-m4-2-ocr-benchmark.ps1 -PrepareModels
+.\run-m4-2-ocr-benchmark.ps1 -Run
+```
+
+`-InitializeCorpus` creates seven opaque local sample IDs and empty local ground-truth files without capturing any pixels. The user populates bounded ROI PNGs and exact visible-text ground truth locally. Full-screen screenshots are not part of the corpus contract.
+
+`-PrepareModels` does not read corpus content. It pins `PP-OCRv5_mobile_det` plus `arabic_PP-OCRv5_mobile_rec`, forces `gpu:0`, disables document orientation/unwarping/text-line orientation extras, and directs the PaddleX model cache to `D:\LocalAI-Prerequisites\models`.
+
+`-Run` validates all seven categories, rejects absolute/path-escaping corpus entries, keeps OCR hypotheses in memory only, and writes aggregate metrics without raw content.
+
 ## Controlled benchmark corpus
 
 Real benchmark content stays local below ignored `.localcopilot/ocr-benchmark`.
