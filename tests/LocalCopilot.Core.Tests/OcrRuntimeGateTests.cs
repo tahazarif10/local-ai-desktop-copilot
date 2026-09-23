@@ -51,7 +51,7 @@ public sealed class OcrRuntimeGateTests
                 Request(
                     requestId: 1,
                     epochId: 7,
-                    OcrExecutionTopology.LocalAiServer),
+                    topology: OcrExecutionTopology.LocalAiServer),
                 isArmed: true,
                 epoch);
 
@@ -76,7 +76,7 @@ public sealed class OcrRuntimeGateTests
                 Request(
                     requestId: 1,
                     epochId: 7,
-                    OcrExecutionTopology.LocalAiServer),
+                    topology: OcrExecutionTopology.LocalAiServer),
                 isArmed: true,
                 epoch);
 
@@ -101,7 +101,7 @@ public sealed class OcrRuntimeGateTests
                 Request(
                     requestId: 1,
                     epochId: 7,
-                    OcrExecutionTopology.ClientLocal),
+                    topology: OcrExecutionTopology.ClientLocal),
                 isArmed: true,
                 epoch);
 
