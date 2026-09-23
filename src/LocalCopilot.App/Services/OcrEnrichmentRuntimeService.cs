@@ -415,19 +415,27 @@ internal sealed class OcrEnrichmentRuntimeService :
     private void StartWork(
         RuntimeWork work)
     {
-        Task task =
-            ExecuteAndAdvanceAsync(
-                work);
-
         lock (_gate)
         {
-            if (ReferenceEquals(
+            if (_stopped ||
+                !ReferenceEquals(
                     _active,
                     work))
             {
-                _activeTask =
-                    task;
+                if (ReferenceEquals(
+                        _active,
+                        work))
+                {
+                    _active =
+                        null;
+                }
+
+                return;
             }
+
+            _activeTask =
+                ExecuteAndAdvanceAsync(
+                    work);
         }
     }
 
