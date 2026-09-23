@@ -312,6 +312,7 @@ The runner gate adds:
 
 - a one-command PowerShell wrapper;
 - a local-only corpus scaffold using seven opaque sample IDs across the required UI categories;
+- a zero-touch controlled OS-rendered UI harness that captures visible WinForms client areas for all seven categories, writes ground truth only under the local benchmark root, and invokes the aggregate benchmark without manual screenshot/text preparation;
 - strict CER/WER/exact-match scoring with the same normalization contract as M4.2.1;
 - explicit `PP-OCRv5_mobile_det` + `arabic_PP-OCRv5_mobile_rec` model pins;
 - `gpu:0` and the local Paddle inference engine;
@@ -320,7 +321,7 @@ The runner gate adds:
 - cold initialization, warm p50/p95/max latency, failure/timeout, RAM, GPU VRAM, runtime footprint, and model-cache footprint metrics;
 - aggregate-only result persistence. Raw OCR text, ground truth, and screenshots are neither printed nor written by the runner.
 
-The next physical step after CI is model preparation, followed by local corpus population and the controlled benchmark. PaddleOCR remains an **unselected candidate** until measured against the required baselines.
+The next physical step after CI is a single controlled-UI harness run on the fixed server; it generates the seven local OS-rendered ROI fixtures and ground truth automatically and then runs the aggregate benchmark. PaddleOCR remains an **unselected candidate** until measured against the required baselines.
 
 ## How to update this file
 
