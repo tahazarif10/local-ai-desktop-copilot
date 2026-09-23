@@ -19,8 +19,8 @@ public sealed class RegionOfInterestPlannerTests
         Assert.AreEqual(24, options.AssociationMarginPixels);
         Assert.AreEqual(0.25, options.MaxRegionAreaRatio, 0.000001);
         Assert.AreEqual(0.40, options.MaxTotalAreaRatio, 0.000001);
-        Assert.IsTrue(options.MaxRegionAreaRatio < 1.0);
-        Assert.IsTrue(options.MaxTotalAreaRatio < 1.0);
+        Assert.IsLessThan(options.MaxRegionAreaRatio, 1.0);
+        Assert.IsLessThan(options.MaxTotalAreaRatio, 1.0);
     }
 
     [TestMethod]
