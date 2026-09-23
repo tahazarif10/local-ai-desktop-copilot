@@ -16,6 +16,9 @@ internal sealed class OcrEnrichmentRuntimeService :
     private static readonly TimeSpan RequestDeadline =
         TimeSpan.FromSeconds(15);
 
+    private static readonly TimeSpan ShutdownJoinTimeout =
+        TimeSpan.FromSeconds(20);
+
     private readonly object _gate = new();
     private readonly ContextEpochManager _contextEpochManager;
     private readonly SensingOrchestrator _sensingOrchestrator;
@@ -27,10 +30,12 @@ internal sealed class OcrEnrichmentRuntimeService :
 
     private RuntimeWork? _active;
     private RuntimeWork? _pending;
+    private Task? _activeTask;
     private long _nextRequestId;
     private long _latestRequestId;
     private bool _stopped;
     private bool _disposed;
+    private int _ownedResourcesDisposed;
 
     public OcrEnrichmentRuntimeService(
         ContextEpochManager contextEpochManager,
@@ -177,9 +182,8 @@ internal sealed class OcrEnrichmentRuntimeService :
 
         if (dispatchNow)
         {
-            _ =
-                ExecuteAndAdvanceAsync(
-                    work);
+            StartWork(
+                work);
         }
         else
         {
@@ -221,6 +225,7 @@ internal sealed class OcrEnrichmentRuntimeService :
                 if (ReferenceEquals(_active, work))
                 {
                     _active = null;
+                    _activeTask = null;
 
                     if (!_stopped)
                     {
@@ -233,9 +238,8 @@ internal sealed class OcrEnrichmentRuntimeService :
 
             if (next is not null)
             {
-                _ =
-                    ExecuteAndAdvanceAsync(
-                        next);
+                StartWork(
+                    next);
             }
         }
     }
@@ -408,19 +412,53 @@ internal sealed class OcrEnrichmentRuntimeService :
             $"stage={stage} reason={reason}");
     }
 
-    public void Stop(
-        string reason)
+    private void StartWork(
+        RuntimeWork work)
+    {
+        Task task =
+            ExecuteAndAdvanceAsync(
+                work);
+
+        lock (_gate)
+        {
+            if (ReferenceEquals(
+                    _active,
+                    work))
+            {
+                _activeTask =
+                    task;
+            }
+        }
+    }
+
+    private bool StopAndJoin(
+        string reason,
+        out Task? unfinishedTask)
     {
         RuntimeWork? pending;
+        Task? activeTask;
 
         lock (_gate)
         {
             if (_stopped)
-                return;
+            {
+                activeTask =
+                    _activeTask;
+
+                unfinishedTask =
+                    activeTask is not null &&
+                    !activeTask.IsCompleted
+                        ? activeTask
+                        : null;
+
+                return
+                    unfinishedTask is null;
+            }
 
             _stopped = true;
             pending = _pending;
             _pending = null;
+            activeTask = _activeTask;
         }
 
         try
@@ -431,10 +469,37 @@ internal sealed class OcrEnrichmentRuntimeService :
         {
         }
 
+        bool joined =
+            activeTask is null ||
+            activeTask.IsCompleted;
+
+        if (!joined)
+        {
+            try
+            {
+                joined =
+                    activeTask!.Wait(
+                        ShutdownJoinTimeout);
+            }
+            catch (AggregateException)
+            {
+                joined =
+                    activeTask!.IsCompleted;
+            }
+        }
+
+        unfinishedTask =
+            joined
+                ? null
+                : activeTask;
+
         DiagnosticLog.Write(
             "OCR.RUNTIME_STOP",
             $"reason={(string.IsNullOrWhiteSpace(reason) ? "runtime_stop" : reason)} " +
-            $"pendingDropped={(pending is null ? 0 : 1)}");
+            $"pendingDropped={(pending is null ? 0 : 1)} " +
+            $"joined={joined}");
+
+        return joined;
     }
 
     public void Dispose()
@@ -450,12 +515,39 @@ internal sealed class OcrEnrichmentRuntimeService :
         _persistentChangeDetectionService.SampleReady -=
             PersistentChangeDetectionService_SampleReady;
 
-        Stop("dispose");
+        bool joined =
+            StopAndJoin(
+                "dispose",
+                out Task? unfinishedTask);
 
-        _stopCancellation.Dispose();
-        _transport.Dispose();
+        if (joined)
+        {
+            DisposeOwnedResources();
+        }
+        else if (unfinishedTask is not null)
+        {
+            _ =
+                unfinishedTask.ContinueWith(
+                    _ => DisposeOwnedResources(),
+                    CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+        }
 
         GC.SuppressFinalize(this);
+    }
+
+    private void DisposeOwnedResources()
+    {
+        if (Interlocked.Exchange(
+                ref _ownedResourcesDisposed,
+                1) != 0)
+        {
+            return;
+        }
+
+        _transport.Dispose();
+        _stopCancellation.Dispose();
     }
 
     private sealed record RuntimeWork(
