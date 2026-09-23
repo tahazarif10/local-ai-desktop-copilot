@@ -18,10 +18,12 @@ from datetime import datetime, timezone
 from typing import Any
 
 from m4_2_ocr_benchmark import (
+    REQUIRED_CATEGORIES,
     directory_size_bytes,
     load_manifest,
     percentile,
     score_text,
+    select_samples,
 )
 
 SCHEMA_VERSION = 1
@@ -169,6 +171,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             raise ValueError(f"Required Tesseract language data is missing: {required}")
 
     samples = load_manifest(manifest_path, require_files=True)
+    samples = select_samples(samples, args.include_category)
+    included_categories = list(
+        dict.fromkeys(args.include_category or REQUIRED_CATEGORIES)
+    )
 
     first_sample = samples[0]
     cold_text, cold_ms, cold_rss = _run_tesseract(
@@ -249,7 +255,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "schema": SCHEMA_VERSION,
         "mode": "controlled-benchmark",
         "candidate": "tesseract-5-fas-eng",
+        "scope": (
+            "matched-category-subset"
+            if args.include_category
+            else "full-seven-category"
+        ),
         "sample_count": len(samples),
+        "included_categories": included_categories,
         "category_counts": category_counts,
         "raw_content_persisted": False,
         "raw_ocr_logged": False,
@@ -303,6 +315,12 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--benchmark-root", required=True)
     parser.add_argument("--manifest", required=True)
+    parser.add_argument(
+        "--include-category",
+        action="append",
+        choices=REQUIRED_CATEGORIES,
+        default=[],
+    )
     parser.add_argument("--tesseract-exe", required=True)
     parser.add_argument("--tessdata-dir", required=True)
     parser.add_argument("--language", default=DEFAULT_LANGUAGE)
