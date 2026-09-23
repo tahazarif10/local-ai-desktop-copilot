@@ -230,6 +230,21 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-english-c
 
 This command reuses the existing corpus; it does not recapture pixels or modify ground truth.
 
+
+## Matched English-subset physical comparison
+
+The one-command matched comparison passed at clean head `133a6fba18731371f86ff8d26916ba974dcdbcf7` on the same three controlled samples: `english-ui`, `terminal-console`, and `browser-ui`.
+
+| Candidate | CER | WER | Exact | Warm p50 |
+| --- | ---: | ---: | ---: | ---: |
+| PaddleOCR PP-OCRv5 multilingual | 0.28310502 | 0.35714286 | 0.0 | 52.599 ms |
+| Tesseract 5.5.3 `fas+eng` | 0.37442922 | 0.92857143 | 0.0 | 280.316 ms |
+| Windows Media OCR `en-US` | 0.31963470 | 0.39285714 | 0.0 | 6.732 ms recognition / 12.162 ms end-to-end |
+
+All three completed with zero failures and zero timeouts; none logged or persisted raw OCR output.
+
+On this matched subset, PaddleOCR measured the lowest CER and WER, Tesseract measured both higher error and higher latency, and Windows Media OCR measured much lower latency but remains English-only. This evidence still does **not** select a backend: PaddleOCR's absolute error remains high enough to justify one bounded model/configuration tuning pass before M4.2.2 is closed.
+
 ## Required aggregate measurements
 
 For every engine/configuration:
