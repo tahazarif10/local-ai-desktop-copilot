@@ -589,6 +589,10 @@ class BoundedHttpServer(ThreadingHTTPServer):
         finally:
             self._handler_slots.release()
 
+    def handle_error(self, request, client_address):
+        # Never let BaseServer print request/provider exception text.
+        return
+
 
 def _hex_nibble(value: int) -> int:
     if 48 <= value <= 57:
