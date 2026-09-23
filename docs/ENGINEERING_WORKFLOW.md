@@ -377,6 +377,32 @@ content flags `ocr_executed=False`, `benchmark_content_created=False`, and
 The later content-bearing OCR benchmark remains local. Screenshots, ground truth,
 and raw OCR output must not be copied into PRs, diagnostics, or committed files.
 
+### M4.2.2 controlled OCR benchmark
+
+After the accepted environment gate, use the runner branch and fixed D: benchmark root.
+
+First prepare the model cache without reading screenshots:
+
+```powershell
+.\run-m4-2-ocr-benchmark.ps1 -PrepareModels -BenchmarkRoot D:\LocalAI-Prerequisites
+```
+
+Then create the local corpus scaffold:
+
+```powershell
+.\run-m4-2-ocr-benchmark.ps1 -InitializeCorpus -BenchmarkRoot D:\LocalAI-Prerequisites
+```
+
+Populate only the local `corpus\images` and `corpus\ground-truth` files. Do not commit or paste their contents. Use bounded ROI screenshots, not full-screen captures.
+
+Once all seven categories have non-empty local images and exact ground truth:
+
+```powershell
+.\run-m4-2-ocr-benchmark.ps1 -Run -BenchmarkRoot D:\LocalAI-Prerequisites
+```
+
+The command may print and persist aggregate metrics only. Raw OCR text must remain in memory and must not appear in GitHub evidence.
+
 ## 8. Performance evidence
 
 Performance measurements must name:
