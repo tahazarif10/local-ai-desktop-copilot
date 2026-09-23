@@ -81,14 +81,28 @@ function Install-M422PythonFromOfficialInstaller {
             "--location",
             "--show-error",
             "--progress-bar",
-            "--connect-timeout", "20",
-            "--max-time", "300",
+            "--ipv4",
+            "--retry", "3",
+            "--retry-delay", "3",
+            "--retry-connrefused",
+            "--connect-timeout", "30",
+            "--max-time", "600",
             "--output", $partialPath,
             $pythonInstallerUrl
         )
 
         if ($LASTEXITCODE -ne 0) {
             Remove-Item -LiteralPath $partialPath -Force -ErrorAction SilentlyContinue
+
+            Write-Host ""
+            Write-Host "Automatic download failed."
+            Write-Host "Manual fallback: download the official installer from:"
+            Write-Host $pythonInstallerUrl
+            Write-Host "and save it exactly as:"
+            Write-Host $installerPath
+            Write-Host "Then rerun this same command."
+            Write-Host "The script will verify SHA256 and Authenticode before installation."
+
             throw "Official Python installer download failed with curl exit code $LASTEXITCODE."
         }
 
