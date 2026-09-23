@@ -314,7 +314,7 @@ M4.2.2 work is isolated on:
 dev/m4-2-2-controlled-benchmark
 ```
 
-The first M4.2.2 step prepares a **server-local PaddleOCR GPU benchmark environment** without touching the existing Python 3.14 installation. `run-m4-2-ocr-benchmark-setup.ps1` prefers Python Install Manager `py install --target`; if only the legacy launcher is present, it falls back to the official Python 3.12.10 x64 installer from python.org with pinned SHA-256 and Authenticode signer validation, installing only into ignored project-local storage. It then pins `paddlepaddle-gpu==3.2.0` from the CUDA 12.6 wheel index plus `paddleocr==3.7.0`. The server preflight driver 596.49 satisfies the documented CUDA 12.6 wheel minimum (550.54.14).
+The first M4.2.2 step prepares a **server-local PaddleOCR GPU benchmark environment** without touching the existing Python 3.14 installation. `run-m4-2-ocr-benchmark-setup.ps1` prefers Python Install Manager `py install --target`; when only the legacy launcher is present it uses the official CPython `python` NuGet package 3.12.10 entirely below ignored project-local storage on D:. It then pins `paddlepaddle-gpu==3.2.0` from the CUDA 12.6 wheel index plus `paddleocr==3.7.0`. Existing Python installations on C: are not used or modified by this fallback. The server preflight driver 596.49 satisfies the documented CUDA 12.6 wheel minimum (550.54.14).
 
 This setup downloads benchmark dependencies only. It does not execute OCR, create benchmark screenshots, select a backend, change product privacy capabilities, or add LAN pixel transport. The controlled corpus and OCR outputs remain local below ignored `.localcopilot/ocr-benchmark`; Git/PR evidence contains only aggregate metrics.
 
