@@ -192,10 +192,32 @@ Exit criteria:
 
 ### ▶ M4.2 OCR benchmark and integration
 
-- Benchmark local candidates on Persian, English, mixed Persian-English, terminals, dialogs, browser UI, and application UI.
-- Measure latency, CPU/RAM/GPU use, accuracy, language coverage, packaging, and cancellation.
-- The current Windows AI OCR API requires an NPU and is therefore not assumed suitable for the fixed client/server hardware. Recheck official support at this milestone.
-- Select a backend only after target-hardware evidence; keep it behind a contract.
+Accepted M4.1 ROI/privacy bounds remain the input boundary for all OCR work. Proposed [ADR 0013](decisions/0013-evidence-gated-ocr-benchmark.md) splits this milestone into evidence-first slices.
+
+#### ▶ M4.2.1 Benchmark contract and target-machine preflight
+
+- Add portable strict OCR scoring: Unicode NFC normalization, code-point CER, WER, and exact normalized match. Do not silently canonicalize Persian/Arabic variants in the primary score.
+- Add a one-command non-elevated Windows preflight that records only hardware, runtime/version, installed OCR-language, and accelerator metadata. It must not capture pixels, execute OCR, install packages/models, or select a backend.
+- Initial candidate groups: legacy `Windows.Media.Ocr`, Tesseract 5 with `fas+eng`, and PaddleOCR PP-OCRv5 Persian/English.
+- Microsoft's current Windows AI Text Recognition API is NPU-only and is excluded on the fixed machines rather than scored as a failing OCR engine.
+- CI must parse and execute the preflight `-ValidateOnly` path before any physical use.
+- Exit only after CI PASS plus physical client preflight. Run server preflight before including server/GPU OCR in the controlled benchmark.
+
+#### M4.2.2 Controlled OCR benchmark
+
+- Benchmark viable local candidates on Persian, English, mixed Persian-English, terminal/console, dialog, browser UI, and desktop application UI.
+- Keep real screenshots, ground truth, and OCR output local; PR/diagnostic evidence contains only sample IDs/categories and aggregate metrics.
+- Measure strict CER, strict WER, exact-match rate, cold initialization, warm per-ROI p50/p95 latency, failure count, memory, GPU VRAM where measurable, package/model footprint, and cancellation/timeout behavior.
+- Compare both fixed-machine roles where applicable. No LAN transport is implied by benchmarking a server-local model.
+- Select a backend only after target-hardware evidence; keep it behind a narrow replaceable contract.
+
+#### M4.2.3 Backend integration and acceptance
+
+- Revalidate same-epoch `CapturePixels + RunOcr` immediately before OCR and reject stale/cancelled results before publication.
+- Feed only accepted M4.1 bounded ROIs; never add an implicit whole-frame fallback.
+- Use bounded request ownership/queues, deterministic teardown, and content-free diagnostics.
+- If the selected OCR topology requires LAN pixel transfer, separately gate it with `SendPixelsToLocalServer` and an explicit authenticated local transport design.
+- Do not begin M4.3 VLM fallback until OCR integration passes the applicable physical acceptance matrix.
 
 ### M4.3 VLM fallback
 
