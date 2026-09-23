@@ -23,7 +23,7 @@ import threading
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Iterable
 
 PROTOCOL_VERSION = 1
@@ -432,6 +432,7 @@ class ServerState:
     runtime: PaddleRuntime
     replay_cache: ReplayCache
     inference_lock: threading.Lock
+    diagnostic_delay_ms: int
 
 
 class OcrRequestHandler(BaseHTTPRequestHandler):
@@ -516,6 +517,11 @@ class OcrRequestHandler(BaseHTTPRequestHandler):
                 )
             else:
                 try:
+                    if state.diagnostic_delay_ms > 0:
+                        time.sleep(state.diagnostic_delay_ms / 1000.0)
+                        if int(time.time() * 1000) >= request.deadline_unix_ms:
+                            raise TimeoutError("OCR request deadline expired.")
+
                     texts = state.runtime.predict(request)
                     response = build_response(
                         STATUS_OK,
@@ -542,9 +548,35 @@ class OcrRequestHandler(BaseHTTPRequestHandler):
             del body
 
 
-class BoundedHttpServer(HTTPServer):
+class BoundedHttpServer(ThreadingHTTPServer):
     request_queue_size = 2
     allow_reuse_address = True
+    daemon_threads = True
+    block_on_close = True
+    max_handler_threads = 4
+
+    def __init__(self, server_address, handler_class):
+        super().__init__(server_address, handler_class)
+        self._handler_slots = threading.BoundedSemaphore(
+            self.max_handler_threads
+        )
+
+    def process_request(self, request, client_address):
+        if not self._handler_slots.acquire(blocking=False):
+            self.shutdown_request(request)
+            return
+
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._handler_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._handler_slots.release()
 
 
 def _read_authentication_key(path: Path) -> bytes:
@@ -576,6 +608,7 @@ def main() -> int:
     parser.add_argument("--auth-key-file")
     parser.add_argument("--model-root")
     parser.add_argument("--device", default="gpu:0")
+    parser.add_argument("--diagnostic-delay-ms", type=int, default=0)
     parser.add_argument("--validate-only", action="store_true")
     args = parser.parse_args()
 
@@ -595,6 +628,8 @@ def main() -> int:
         raise ValueError("Missing required server arguments: " + ", ".join(missing))
     if args.port <= 0 or args.port > 65535:
         raise ValueError("Port is invalid.")
+    if args.diagnostic_delay_ms < 0 or args.diagnostic_delay_ms > 5000:
+        raise ValueError("Diagnostic delay must be between 0 and 5000 ms.")
 
     cert_file = Path(args.cert_file).resolve()
     key_file = Path(args.key_file).resolve()
@@ -610,6 +645,7 @@ def main() -> int:
         runtime=runtime,
         replay_cache=ReplayCache(),
         inference_lock=threading.Lock(),
+        diagnostic_delay_ms=args.diagnostic_delay_ms,
     )
 
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -620,7 +656,8 @@ def main() -> int:
     print(
         "M4.2.3 OCR SERVER: READY "
         f"protocol={PROTOCOL_VERSION} max_regions={MAX_REGIONS} "
-        f"max_request_bytes={MAX_REQUEST_BYTES}"
+        f"max_request_bytes={MAX_REQUEST_BYTES} "
+        f"diagnostic_delay_ms={args.diagnostic_delay_ms}"
     )
 
     try:
