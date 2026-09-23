@@ -2,7 +2,8 @@
 param(
     [switch]$ValidateOnly,
     [string]$BenchmarkRoot = "D:\LocalAI-Prerequisites",
-    [string]$ExpectedBranch = "dev/m4-2-2-benchmark-runner"
+    [string]$ExpectedBranch = "dev/m4-2-2-benchmark-runner",
+    [string[]]$IncludeCategory = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -212,7 +213,7 @@ Write-Host "Raw OCR text will not be printed or persisted."
 Write-Host "The exact existing controlled OS-rendered corpus will be reused."
 
 $script = Join-Path $repoRoot "scripts\m4_2_tesseract_benchmark.py"
-& $python @(
+$arguments = @(
     $script,
     "--benchmark-root", $root,
     "--manifest", $manifest,
@@ -222,6 +223,10 @@ $script = Join-Path $repoRoot "scripts\m4_2_tesseract_benchmark.py"
     "--oem", $oem,
     "--psm", $psm
 )
+foreach ($category in $IncludeCategory) {
+    $arguments += @("--include-category", $category)
+}
+& $python @arguments
 if ($LASTEXITCODE -ne 0) {
     throw "Tesseract controlled baseline failed with exit code $LASTEXITCODE."
 }
