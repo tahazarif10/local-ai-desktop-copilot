@@ -428,7 +428,7 @@ class PaddleRuntime:
 
 @dataclass
 class ServerState:
-    authentication_key: bytes
+    authentication_key: bytearray
     runtime: PaddleRuntime
     replay_cache: ReplayCache
     inference_lock: threading.Lock
