@@ -176,6 +176,27 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-tesseract
 
 If Tesseract is absent, the wrapper first uses Windows Package Manager when available. If `winget.exe` is unavailable, it downloads the pinned official Tesseract 5.5.3 installer directly from the upstream GitHub release, verifies its SHA-256 against the pinned Microsoft winget manifest value, and launches the verified installer silently. Because the package is machine-scope, Windows may require a UAC confirmation. The benchmark itself remains non-elevated. Persian and English traineddata are downloaded into the benchmark root and raw OCR output remains memory-only.
 
+
+## Windows Media OCR English-only baseline
+
+The fixed machines expose legacy Windows Media OCR only for `en-US`, so this candidate is not eligible for the Persian or mixed Persian-English portions of the seven-category matrix. It is retained as a descriptive English-only baseline rather than scored as a failing multilingual engine.
+
+The runner reuses the exact existing controlled corpus and selects only these categories:
+
+- `english-ui`;
+- `terminal-console`;
+- `browser-ui`.
+
+It never recaptures pixels and never prints or persists OCR text. The first hypothesis for each sample is passed in-memory to the strict scorer helper; only aggregate metrics are emitted.
+
+Physical entry point:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-windows-media.ps1 -BenchmarkRoot D:\LocalAI-Prerequisites
+```
+
+Because this baseline covers only three English-only samples, its accuracy numbers are not directly comparable to the full seven-category PaddleOCR/Tesseract aggregates without a matched subset rerun. Its purpose is to retain platform-native English evidence and confirm the target-machine limitation that Persian support is absent.
+
 ## Required aggregate measurements
 
 For every engine/configuration:
