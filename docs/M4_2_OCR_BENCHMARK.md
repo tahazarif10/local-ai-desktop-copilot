@@ -319,6 +319,47 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-tesseract
 
 It reuses the same seven local samples and emits aggregate-only evidence. If this accuracy-focused baseline still does not materially close the gap to the strongest multilingual Paddle configuration, M4.2.2 has enough candidate evidence to proceed to backend-selection review rather than expanding into an open-ended benchmark search.
 
+
+## Final Tesseract accuracy-focused physical result
+
+The pinned `tessdata_best` run passed on the same seven-sample controlled corpus at clean head `4ffac27a29e8260ca958f4c8ba5f703de88493c7`.
+
+Aggregate evidence:
+
+- candidate: Tesseract 5.5.3, `fas+eng`, OEM 1, PSM 6, `tessdata_best`;
+- sample count: 7 / all required categories;
+- failures: 0;
+- timeouts: 0;
+- strict CER: 0.52347418;
+- strict WER: 1.07462687;
+- exact normalized match rate: 0.0;
+- warm p50/p95/max: 397.424 / 791.157 / 812.740 ms;
+- cold first OCR: 454.762 ms;
+- process RSS peak: 58.031 MiB;
+- tessdata footprint: 17.859 MiB;
+- raw OCR log/persistence: false.
+
+This accuracy-oriented Tesseract dataset did not improve the controlled result relative to `tessdata_fast` (CER 0.50938967, WER 1.0, warm p50 285.938 ms). It therefore does not justify expanding the Tesseract search further for M4.2.2.
+
+## M4.2.2 benchmark conclusion
+
+The controlled candidate search is complete.
+
+Full multilingual seven-category evidence:
+
+| Candidate/configuration | CER | WER | Warm p50 | Key constraint |
+| --- | ---: | ---: | ---: | --- |
+| Paddle `mobile_det + arabic_mobile_rec` | 0.28873239 | 0.31343284 | 43.513 ms | lower GPU/resource cost |
+| Paddle `server_det + arabic_mobile_rec` | **0.23004695** | **0.22388060** | 91.392 ms | 562 MiB measured VRAM delta |
+| Tesseract 5.5.3 `tessdata_fast fas+eng` | 0.50938967 | 1.00000000 | 285.938 ms | CPU-only |
+| Tesseract 5.5.3 `tessdata_best fas+eng` | 0.52347418 | 1.07462687 | 397.424 ms | CPU-only, larger/slower |
+
+Legacy Windows Media OCR remains an English-only platform baseline and is not eligible for the Persian/mixed hard gate.
+
+The evidence supports carrying `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` forward as the M4.2.3 selection candidate. M4.2.2 itself does not integrate or mark a product backend selected; that architecture/product decision belongs to M4.2.3.
+
+The selected-candidate evidence already includes deterministic timeout-guard PASS for the Paddle runner, zero physical failures/timeouts, bounded local model/cache ownership, aggregate-only diagnostics, and local GPU execution. The repeated cuDNN version warning remains an explicit compatibility risk to preserve and monitor during integration acceptance.
+
 ## Required aggregate measurements
 
 For every engine/configuration:
