@@ -204,7 +204,7 @@ Accepted M4.1 ROI/privacy bounds remain the input boundary for all OCR work. Pro
 - Accepted evidence: behavior/preflight head `d8f12b00524934138115f22cc8bd7149e20f4452`; CI #137 PASS; physical client and server preflights both completed content-free. Neither fixed machine currently exposes Persian through legacy Windows OCR; Tesseract/PaddleOCR are absent; both machines' existing Python 3.14 installations are outside the current Paddle Windows Python support range.
 - M4.2.1 is merged through PR #31 at `920bbecbb4c7ef4c22ca3ff055df1bcaa801e911`. M4.2.2 controlled benchmarking is active on `dev/m4-2-2-controlled-benchmark`.
 
-#### ▶ M4.2.2 Controlled OCR benchmark
+#### ✅ M4.2.2 Controlled OCR benchmark
 
 Environment preparation is accepted and merged through PR #32 at `1486fb673a623b248e9238c747ac1cd49fa73979`. The controlled local-only corpus/runner is active on `dev/m4-2-2-benchmark-runner`. The setup uses project-local Python 3.12 via Python Install Manager `--target`, pins PaddlePaddle GPU 3.2.0 on the CUDA 12.6 wheel index and PaddleOCR 3.7.0, and leaves the existing Python 3.14 installation untouched. See [M4.2 controlled OCR benchmark](M4_2_OCR_BENCHMARK.md).
 
@@ -213,8 +213,9 @@ Environment preparation is accepted and merged through PR #32 at `1486fb673a623b
 - Measure strict CER, strict WER, exact-match rate, cold initialization, warm per-ROI p50/p95 latency, failure count, memory, GPU VRAM where measurable, package/model footprint, and cancellation/timeout behavior.
 - Compare both fixed-machine roles where applicable. No LAN transport is implied by benchmarking a server-local model.
 - Select a backend only after target-hardware evidence; keep it behind a narrow replaceable contract.
+- Accepted benchmark evidence: Paddle server-detector multilingual configuration CER/WER 0.23004695/0.22388060 with warm p50 91.392 ms and 562 MiB VRAM delta; Tesseract fast/best remained materially less accurate and slower; Windows Media OCR remained English-only. PR #33 is the review/merge record for the controlled benchmark slice.
 
-#### M4.2.3 Backend integration and acceptance
+#### ▶ M4.2.3 Backend integration and acceptance
 
 - Revalidate same-epoch `CapturePixels + RunOcr` immediately before OCR and reject stale/cancelled results before publication.
 - Feed only accepted M4.1 bounded ROIs; never add an implicit whole-frame fallback.
