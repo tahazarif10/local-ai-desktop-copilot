@@ -64,14 +64,47 @@ function Install-M422PythonFromOfficialInstaller {
     $installerPath = Join-Path $CacheRoot ("python-" + $pythonInstallerVersion + "-amd64.exe")
 
     if (-not (Test-Path -LiteralPath $installerPath)) {
-        Invoke-WebRequest -Uri $pythonInstallerUrl -OutFile $installerPath -UseBasicParsing
+        $curl = Get-M422Command -Name "curl.exe"
+        if ($null -eq $curl) {
+            throw "curl.exe is required for the bounded Python installer download."
+        }
+
+        $partialPath = $installerPath + ".partial"
+        Remove-Item -LiteralPath $partialPath -Force -ErrorAction SilentlyContinue
+
+        Write-Host "Downloading official Python $pythonInstallerVersion installer..."
+        Write-Host "Source: python.org"
+        Write-Host "Expected size: about 25.7 MB"
+
+        & $curl.Source @(
+            "--fail",
+            "--location",
+            "--show-error",
+            "--progress-bar",
+            "--connect-timeout", "20",
+            "--max-time", "300",
+            "--output", $partialPath,
+            $pythonInstallerUrl
+        )
+
+        if ($LASTEXITCODE -ne 0) {
+            Remove-Item -LiteralPath $partialPath -Force -ErrorAction SilentlyContinue
+            throw "Official Python installer download failed with curl exit code $LASTEXITCODE."
+        }
+
+        Move-Item -LiteralPath $partialPath -Destination $installerPath -Force
+    }
+    else {
+        Write-Host "Using cached Python installer."
     }
 
+    Write-Host "Verifying Python installer SHA256..."
     $hash = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash
     if (-not [string]::Equals($hash, $pythonInstallerSha256, [StringComparison]::OrdinalIgnoreCase)) {
         throw "Official Python installer SHA256 validation failed."
     }
 
+    Write-Host "Verifying Python Software Foundation Authenticode signature..."
     $signature = Get-AuthenticodeSignature -FilePath $installerPath
     if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
         throw "Official Python installer Authenticode signature is not valid."
@@ -98,6 +131,7 @@ function Install-M422PythonFromOfficialInstaller {
         "Include_pip=1"
     )
 
+    Write-Host "Installing isolated Python $pythonInstallerVersion under project-local storage..."
     $process = Start-Process -FilePath $installerPath -ArgumentList $arguments -PassThru -Wait
     if ($process.ExitCode -ne 0) {
         throw ("Official Python " + $pythonInstallerVersion + " installer failed with exit code " + $process.ExitCode + ".")
@@ -183,9 +217,14 @@ if ($PreparePaddleGpu) {
     }
 
     $python = Resolve-M422TargetPython -TargetRoot $runtimeRoot
+    Write-Host "Bootstrapping pip in isolated Python..."
     Invoke-M422Checked -FilePath $python -Arguments @("-m", "ensurepip", "--upgrade") -Description "ensurepip"
     Invoke-M422Checked -FilePath $python -Arguments @("-m", "pip", "install", "--disable-pip-version-check", "--upgrade", "pip", "setuptools", "wheel") -Description "pip bootstrap"
+
+    Write-Host "Installing PaddlePaddle GPU $paddleVersion..."
     Invoke-M422Checked -FilePath $python -Arguments @("-m", "pip", "install", "--disable-pip-version-check", "paddlepaddle-gpu==$paddleVersion", "-i", $paddleIndex) -Description "PaddlePaddle GPU install"
+
+    Write-Host "Installing PaddleOCR $paddleOcrVersion..."
     Invoke-M422Checked -FilePath $python -Arguments @("-m", "pip", "install", "--disable-pip-version-check", "paddleocr==$paddleOcrVersion") -Description "PaddleOCR install"
 
     $probeCode = "import importlib.metadata as m,json,platform,paddle; print(json.dumps({'python_version':platform.python_version(),'paddle_version':str(paddle.__version__),'paddleocr_version':m.version('paddleocr'),'device':str(paddle.device.get_device()),'compiled_with_cuda':bool(paddle.device.is_compiled_with_cuda())}, separators=(',',':')))"
