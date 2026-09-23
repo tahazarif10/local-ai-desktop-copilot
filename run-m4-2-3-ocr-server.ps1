@@ -79,8 +79,9 @@ if ($Provision) {
     New-Item -ItemType Directory -Path $transportRoot -Force | Out-Null
     & dotnet run --project $provisioner -- --output-dir $transportRoot --server-name $ServerName
     if ($LASTEXITCODE -ne 0) { throw "OCR transport provisioning failed." }
+    $currentPrincipal = [Security.Principal.WindowsIdentity]::GetCurrent().Name
     foreach ($secretPath in @($keyPath,$authPath,(Join-Path $clientBundle "ocr-auth-key.hex"))) {
-        & icacls.exe $secretPath /inheritance:r /grant:r ("{0}:(R,W)" -f $env:USERNAME) | Out-Null
+        & icacls.exe $secretPath /inheritance:r /grant:r ("{0}:F" -f $currentPrincipal) | Out-Null
         if ($LASTEXITCODE -ne 0) { throw ("Unable to restrict credential ACL: " + $secretPath) }
     }
 }
