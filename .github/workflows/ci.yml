@@ -93,6 +93,7 @@ jobs:
             (Resolve-Path .\run-m4-2-ocr-tesseract.ps1).Path
             (Resolve-Path .\run-m4-2-ocr-windows-media.ps1).Path
             (Resolve-Path .\run-m4-2-ocr-english-comparison.ps1).Path
+            (Resolve-Path .\run-m4-2-ocr-paddle-variants.ps1).Path
             (Resolve-Path .\scripts\run-m3-4-provider-isolation-core.ps1).Path
             (Resolve-Path .\tests\fixtures\Test-RawUiAutomationProvider.ps1).Path
           )
@@ -146,6 +147,10 @@ jobs:
       - name: Validate M4.2.2 matched English comparison wrapper
         shell: powershell
         run: .\run-m4-2-ocr-english-comparison.ps1 -ValidateOnly
+
+      - name: Validate M4.2.2 bounded Paddle variant wrapper
+        shell: powershell
+        run: .\run-m4-2-ocr-paddle-variants.ps1 -ValidateOnly
 
       - name: Validate physical raw-provider runner patch
         shell: powershell
