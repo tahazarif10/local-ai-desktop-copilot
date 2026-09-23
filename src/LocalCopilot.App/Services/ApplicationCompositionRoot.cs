@@ -69,10 +69,15 @@ public static class ApplicationCompositionRoot
         OcrEnrichmentRuntimeService? ocrEnrichmentRuntimeService =
             null;
 
-        if (LocalCopilot_App.Diagnostics.DiagnosticLog.IsOcrEnabled &&
-            OcrRuntimeConfiguration.TryLoad(
-                out OcrRuntimeConfiguration? ocrConfiguration))
+        if (LocalCopilot_App.Diagnostics.DiagnosticLog.IsOcrEnabled)
         {
+            if (!OcrRuntimeConfiguration.TryLoad(
+                    out OcrRuntimeConfiguration? ocrConfiguration))
+            {
+                throw new InvalidOperationException(
+                    "OCR diagnostic opt-in requires valid explicit server configuration.");
+            }
+
             OcrServerTransport transport =
                 ocrConfiguration!.CreateTransport();
 
