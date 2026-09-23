@@ -8,12 +8,14 @@ import hmac
 import importlib.util
 from pathlib import Path
 import struct
+import sys
 import time
 import unittest
 
 SCRIPT_PATH = Path(__file__).with_name("m4_2_ocr_server.py")
 SPEC = importlib.util.spec_from_file_location("m4_2_ocr_server", SCRIPT_PATH)
 SERVER = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = SERVER
 assert SPEC.loader is not None
 SPEC.loader.exec_module(SERVER)
 
