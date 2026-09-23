@@ -173,8 +173,13 @@ UIA can expose structured text beyond what a naive screenshot pipeline might exp
 
 - OCR requires `CapturePixels` and `RunOcr` for the same current epoch.
 - OCR receives only an allowed ROI when possible.
+- M4.1 ROI planning is geometry-only and grants no content capability by itself. A planned ROI is not permission to crop pixels, run OCR, retain text, or transmit pixels.
+- UIA bounds may be converted to frame-local ROI coordinates only through an explicit capture screen projection. Missing/invalid projection must fail to no UIA-derived ROI rather than guessing DPI, window origin, or border offsets.
+- The M4.1 planner must remain bounded by region count and area budgets and must not synthesize a full-frame fallback. Oversized candidates are rejected, not silently widened or arbitrarily cropped.
+- ROI coordinates and UIA bounds remain short-lived RAM metadata and are prohibited from diagnostics; only aggregate candidate/rejection/budget counts may be logged.
 - Sending OCR text to the server requires `SendTextToLocalServer`.
 - VLM input requires `SendPixelsToLocalServer`; it should be an ROI, not a whole desktop by default.
+- A future full-frame visual request, if supported, requires a separate explicit user-request policy path and is not implied by an empty ROI plan.
 - A local model server must not retain requests, screenshots, prompts, or responses by default.
 - Model/runtime debug logging must be configured independently so third-party runtimes cannot silently write prompts or images.
 

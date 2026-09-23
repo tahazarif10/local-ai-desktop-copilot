@@ -264,13 +264,28 @@ Admission and publication both require explicit Armed state, the current matchin
 
 The clean physical candidate `26c3290bf196701473b558da657d5c39c8c97e8a` passed the full one-command Windows matrix on 2026-09-23. Denied session `0cc6c55e-9141-4c32-bfab-3951c808b702` proved capability denial before automatic dispatch; allowed session `330a2f52-d8f2-4d5c-843d-7149caf9894a` proved automatic dispatch/debounce, user-question routing, Disarm invalidation, teardown order, joined worker, and redaction; provider regression session `c3cfd465-849e-4e27-984d-f16d4ee6c0b1` preserved the ADR 0011 in-process recovery invariant. [CI #115](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35844099601) passed the automated Windows and portable gates on that exact physical candidate.
 
-### 6.8 OCR and visual fallback
+### 6.8 ROI planning, OCR, and visual fallback
 
-OCR operates on a relevant region after UIA is insufficient. Backend selection is deferred to an M4 benchmark.
+M4.1 introduces a portable geometry boundary before any OCR backend or pixel-crop integration. Proposed [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md) keeps the planner in `LocalCopilot.Core` so coordinate mapping, association, and budgets remain deterministic and testable without Windows interop.
+
+The planner has two geometry sources:
+
+- the persistent detector's `ChangeRegion`, which is expressed in the downscaled change-map coordinate space and is mapped outward to source-frame pixels using the explicit change-map/source dimensions;
+- UIA `BoundingRectangle` values, which are screen-relative and may be mapped only when the caller supplies an explicit screen-space projection for the current capture frame.
+
+Core does not infer DPI scaling, window borders, or screen origin. A later Windows adapter must provide the capture projection; invalid or absent projection produces no UIA-derived ROI rather than a guessed transform.
+
+Background planning remains anchored to the observed change envelope. UIA rectangles must intersect that envelope after bounded association padding; if none survive, the mapped change rectangle is the fallback. User-question planning may use caller-ordered UIA rectangles without a simultaneous change, but M4.1 itself never synthesizes a full-frame fallback.
+
+Initial planner defaults are 16 px ROI padding, 24 px association margin, at most 4 regions, at most 25% of the source frame per region, and at most 40% total planned area. Hard ceilings limit configured values to 8 regions, 50% per region, and 75% total. These are privacy/resource bounds, not OCR throughput claims. Oversized candidates are rejected rather than silently cropped to an arbitrary subregion.
+
+ROI coordinates remain short-lived RAM metadata. Diagnostics may expose only aggregate candidate/rejection/budget counts; existing privacy rules continue to forbid logging UIA bounds or capture coordinates. M4.1 does not crop pixels, run OCR/VLM, inspect question text, persist content, or change capabilities.
+
+OCR operates on a relevant allowed ROI after UIA is insufficient. Backend selection is deferred to the M4.2 benchmark. OCR still requires the same current epoch to authorize both `CapturePixels` and `RunOcr`; ROI planning alone is not permission to read pixels or text.
 
 As of the architecture review on 2026-08-21, Microsoft's newer Windows AI Text Recognition API lists NPU-only OCR support. Neither fixed machine has that target NPU, so it is not the default plan. Legacy Windows OCR and third-party local candidates must be compared on accuracy, mixed Persian-English, latency, resources, packaging, and cancellation.
 
-VLM is the final fallback for visual relationships that structured accessibility/text cannot express. It must not run on every frame or every meaningful diff.
+VLM is the final fallback for visual relationships that structured accessibility/text cannot express. It must not run on every frame or every meaningful diff. Full-frame visual escalation, if ever needed, requires a separate explicit user-request path; it is not a fallback emitted by the M4.1 planner.
 
 ### 6.9 Structured event pipeline
 
