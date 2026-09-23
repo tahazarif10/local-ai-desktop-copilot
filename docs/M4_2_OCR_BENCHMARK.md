@@ -271,6 +271,54 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-paddle-va
 
 The command reuses the existing controlled corpus and local model cache, prepares only the pinned variant models, and emits aggregate-only evidence.
 
+
+## Bounded Paddle variant physical result
+
+The bounded Paddle variant matrix passed at clean head `3c4f300ec852a681fa5f0a5fda0587e8027ba393` on the existing controlled corpus.
+
+Full seven-category multilingual comparison:
+
+| Configuration | CER | WER | Exact | Warm p50 | Warm p95 | GPU VRAM delta | Model cache |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `PP-OCRv5_mobile_det + arabic_PP-OCRv5_mobile_rec` | 0.28873239 | 0.31343284 | 0.0 | 43.513 ms | 78.132 ms | 224 MiB | 12.511 MiB |
+| `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` | 0.23004695 | 0.22388060 | 0.0 | 91.392 ms | 117.272 ms | 562 MiB | 96.775 MiB |
+
+The server detector reduced strict CER by about 20.3% and strict WER by about 28.6% relative to the original multilingual configuration, at roughly 2.10x warm p50 latency and about 2.51x GPU VRAM delta. The measured VRAM delta remains below 1 GiB on the fixed 6 GiB server GPU.
+
+Matched English-subset variant evidence:
+
+| Configuration | CER | WER | Exact | Warm p50 |
+| --- | ---: | ---: | ---: | ---: |
+| mobile detector + multilingual recognizer | 0.28310502 | 0.35714286 | 0.0 | 52.599 ms |
+| mobile detector + English recognizer | 0.28310502 | 0.35714286 | 0.0 | 49.892 ms |
+| server detector + English recognizer | 0.21461187 | 0.21428571 | 0.0 | 94.660 ms |
+
+The English-specific recognizer did not improve strict accuracy when the mobile detector was held constant. The server detector again produced the material accuracy change. The evidence therefore points to `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` as the strongest measured Paddle multilingual configuration, without yet selecting the product backend.
+
+The cuDNN 9.9-compiled versus 9.5.1.17 runtime warning remained present in every GPU run. An open upstream Paddle issue reports the same warning on official Windows cu126 wheels while `pip check`, Paddle verification, and inference still succeed; no upstream resolution is recorded there. The benchmark environment therefore remains pinned rather than manually overriding Paddle's cuDNN dependency:
+https://github.com/PaddlePaddle/Paddle/issues/79388
+
+## Final accuracy-focused Tesseract check
+
+Before backend selection, one final bounded baseline uses official `tessdata_best` rather than the already measured speed-oriented `tessdata_fast`. This is warranted because ADR 0013 explicitly identifies both official model sets and `tessdata_best` is the accuracy-oriented Tesseract option.
+
+Pinned source:
+
+- repository: `tesseract-ocr/tessdata_best`;
+- commit: `e12c65a915945e4c28e237a9b52bc4a8f39a0cec`;
+- language set: `fas+eng`;
+- Tesseract: 5.5.3;
+- OEM: 1;
+- PSM: 6.
+
+Physical command:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-tesseract.ps1 -BenchmarkRoot D:\LocalAI-Prerequisites -TessdataVariant best
+```
+
+It reuses the same seven local samples and emits aggregate-only evidence. If this accuracy-focused baseline still does not materially close the gap to the strongest multilingual Paddle configuration, M4.2.2 has enough candidate evidence to proceed to backend-selection review rather than expanding into an open-ended benchmark search.
+
 ## Required aggregate measurements
 
 For every engine/configuration:
