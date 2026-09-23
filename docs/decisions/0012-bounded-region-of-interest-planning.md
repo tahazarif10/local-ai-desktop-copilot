@@ -1,7 +1,8 @@
 # ADR 0012: Bounded region-of-interest planning before OCR
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-23
+- Accepted: 2026-09-23
 - Supersedes: none
 - Extends: ADR 0003, ADR 0008, ADR 0009, ADR 0010, and ADR 0011
 
@@ -113,6 +114,14 @@ Before acceptance, require:
 - documentation alignment across `PROJECT_STATE`, `ARCHITECTURE`, `ROADMAP`,
   and the ADR index.
 
+Accepted at behavior-bearing head `03f719a1bb4a98a3834348d1f0d53fa50828c92e`. CI #126
+(https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35847291181)
+passed 160/160 Core tests on Ubuntu and Windows, Windows PowerShell runner
+parsing, both accepted M3.4 wrapper regressions, the controlled raw-provider
+cross-process smoke gate, and the strict WinUI `Debug/win-x64` build.
+
 Because this slice adds only portable geometry/policy logic and no new Windows
 interop, capture path, content acquisition, or runtime wiring, no separate
-physical Windows evidence is required unless implementation scope expands.
+physical Windows evidence is required. Any later expansion into capture
+projection, pixel cropping, OCR, or other Windows/content acquisition must pass
+its own applicable runtime gate.
