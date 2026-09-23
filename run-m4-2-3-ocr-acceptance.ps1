@@ -429,48 +429,7 @@ $form.Dispose()
 
     if (-not [Regex]::IsMatch(
             $finalLog,
-            '(?m)^.*\| OCR\.RUNTIME_STOP \| .*joined=True.*
-    $bundlePath = Join-Path $sessionDirectory "diagnostic-bundle.txt"
-    $bundleText = Get-FileText $bundlePath
-    if ($bundleText.Contains($sentinelA) -or $bundleText.Contains($sentinelB)) {
-        throw "Raw OCR sentinel leaked into the final diagnostic bundle."
-    }
-
-    Write-Host ""
-    Write-Host "M4.2.3 OCR CLIENT ACCEPTANCE: PASS"
-    Write-Host ("head=" + $head)
-    Write-Host "authenticated_tls_product_path=PASS"
-    Write-Host "bounded_roi_capture=PASS"
-    Write-Host "latest_wins_stale_rejection=PASS"
-    Write-Host "disarm_cancellation=PASS"
-    Write-Host "runtime_before_coordinator_teardown=PASS"
-    Write-Host "raw_pixels_logged=False"
-    Write-Host "raw_ocr_logged=False"
-    Write-Host ("evidence_directory=" + $sessionDirectory)
-}
-finally {
-    if ($null -ne $app) {
-        try {
-            $app.Refresh()
-            if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue }
-        } catch {}
-    }
-    if ($null -ne $target) {
-        try {
-            if (-not $target.HasExited) {
-                New-Item -ItemType File -Path $stopPath -Force | Out-Null
-                [void]$target.WaitForExit(3000)
-            }
-            $target.Refresh()
-            if (-not $target.HasExited) { Stop-Process -Id $target.Id -Force -ErrorAction SilentlyContinue }
-        } catch {}
-    }
-
-    $env:LOCALCOPILOT_OCR_SERVER_URI = $previousUri
-    $env:LOCALCOPILOT_OCR_SERVER_CERT_SHA256 = $previousPin
-    $env:LOCALCOPILOT_OCR_AUTH_KEY_FILE = $previousKey
-}
-)) {
+            '(?m)^.*\| OCR\.RUNTIME_STOP \| .*joined=True.*$')) {
         throw "OCR runtime did not join active work before teardown."
     }
 
@@ -488,6 +447,7 @@ finally {
     Write-Host "latest_wins_stale_rejection=PASS"
     Write-Host "disarm_cancellation=PASS"
     Write-Host "runtime_before_coordinator_teardown=PASS"
+    Write-Host "joined_teardown=PASS"
     Write-Host "raw_pixels_logged=False"
     Write-Host "raw_ocr_logged=False"
     Write-Host ("evidence_directory=" + $sessionDirectory)
@@ -496,18 +456,28 @@ finally {
     if ($null -ne $app) {
         try {
             $app.Refresh()
-            if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue }
-        } catch {}
+            if (-not $app.HasExited) {
+                Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
+            }
+        }
+        catch {
+        }
     }
+
     if ($null -ne $target) {
         try {
             if (-not $target.HasExited) {
                 New-Item -ItemType File -Path $stopPath -Force | Out-Null
                 [void]$target.WaitForExit(3000)
             }
+
             $target.Refresh()
-            if (-not $target.HasExited) { Stop-Process -Id $target.Id -Force -ErrorAction SilentlyContinue }
-        } catch {}
+            if (-not $target.HasExited) {
+                Stop-Process -Id $target.Id -Force -ErrorAction SilentlyContinue
+            }
+        }
+        catch {
+        }
     }
 
     $env:LOCALCOPILOT_OCR_SERVER_URI = $previousUri
