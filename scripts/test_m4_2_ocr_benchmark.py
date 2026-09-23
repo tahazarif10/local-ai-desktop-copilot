@@ -115,6 +115,27 @@ class ManifestValidationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 BENCH.load_manifest(path, require_files=False)
 
+    def test_select_samples_filters_to_requested_categories(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = self._write_manifest(Path(temp))
+            samples = BENCH.load_manifest(path, require_files=True)
+            selected = BENCH.select_samples(
+                samples,
+                ["english-ui", "terminal-console", "browser-ui"],
+            )
+            self.assertEqual(3, len(selected))
+            self.assertEqual(
+                {"english-ui", "terminal-console", "browser-ui"},
+                {sample["category"] for sample in selected},
+            )
+
+    def test_select_samples_rejects_unknown_category(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = self._write_manifest(Path(temp))
+            samples = BENCH.load_manifest(path, require_files=True)
+            with self.assertRaises(ValueError):
+                BENCH.select_samples(samples, ["not-a-category"])
+
     def test_manifest_rejects_missing_category(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
