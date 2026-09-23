@@ -22,7 +22,7 @@ STATUS_OK = 0
 STATUS_BUSY = 3
 
 
-def load_bundle(path: Path) -> tuple[str, int, str, bytes]:
+def load_bundle(path: Path) -> tuple[str, int, str, bytearray]:
     config_path = path / "ocr-client-config.json"
     data = json.loads(config_path.read_text(encoding="utf-8-sig"))
     if data.get("schema") != 1:
@@ -41,7 +41,7 @@ def load_bundle(path: Path) -> tuple[str, int, str, bytes]:
         raise ValueError("Client certificate pin length is invalid.")
 
     key_text = (path / key_name).read_text(encoding="ascii").strip()
-    key = bytes.fromhex(key_text)
+    key = bytearray.fromhex(key_text)
     if len(key) < 32 or len(key) > 64:
         raise ValueError("Client authentication key length is invalid.")
 
@@ -357,9 +357,8 @@ def main() -> int:
         print("M4.2.3 OCR TRANSPORT PROBE: PASS")
         return 0
     finally:
-        mutable_key = bytearray(key)
-        for index in range(len(mutable_key)):
-            mutable_key[index] = 0
+        for index in range(len(key)):
+            key[index] = 0
 
 
 if __name__ == "__main__":
