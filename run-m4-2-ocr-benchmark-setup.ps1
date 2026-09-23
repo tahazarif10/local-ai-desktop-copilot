@@ -15,6 +15,9 @@ $paddlePythonTag = "3.12"
 $paddleVersion = "3.2.0"
 $paddleOcrVersion = "3.7.0"
 $paddleIndex = "https://www.paddlepaddle.org.cn/packages/stable/cu126/"
+$pythonInstallerVersion = "3.12.10"
+$pythonInstallerUrl = "https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe"
+$pythonInstallerSha256 = "67B5635E80EA51072B87941312D00EC8927C4DB9BA18938F7AD2D27B328B95FB"
 
 function Test-M422Elevated {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -51,6 +54,56 @@ function Test-M422PythonInstallManager {
     catch { return $false }
 }
 
+function Install-M422PythonFromOfficialInstaller {
+    param(
+        [Parameter(Mandatory = $true)][string]$TargetRoot,
+        [Parameter(Mandatory = $true)][string]$CacheRoot
+    )
+
+    New-Item -ItemType Directory -Path $CacheRoot -Force | Out-Null
+    $installerPath = Join-Path $CacheRoot ("python-" + $pythonInstallerVersion + "-amd64.exe")
+
+    if (-not (Test-Path -LiteralPath $installerPath)) {
+        Invoke-WebRequest -Uri $pythonInstallerUrl -OutFile $installerPath -UseBasicParsing
+    }
+
+    $hash = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash
+    if (-not [string]::Equals($hash, $pythonInstallerSha256, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Official Python installer SHA256 validation failed."
+    }
+
+    $signature = Get-AuthenticodeSignature -FilePath $installerPath
+    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
+        throw "Official Python installer Authenticode signature is not valid."
+    }
+    if ($null -eq $signature.SignerCertificate -or $signature.SignerCertificate.Subject -notmatch "Python Software Foundation") {
+        throw "Official Python installer signer is unexpected."
+    }
+
+    New-Item -ItemType Directory -Path $TargetRoot -Force | Out-Null
+    $targetArgument = 'TargetDir="{0}"' -f $TargetRoot
+    $arguments = @(
+        "/quiet",
+        "InstallAllUsers=0",
+        $targetArgument,
+        "Include_launcher=0",
+        "InstallLauncherAllUsers=0",
+        "PrependPath=0",
+        "AppendPath=0",
+        "AssociateFiles=0",
+        "Shortcuts=0",
+        "Include_test=0",
+        "Include_doc=0",
+        "Include_tcltk=0",
+        "Include_pip=1"
+    )
+
+    $process = Start-Process -FilePath $installerPath -ArgumentList $arguments -PassThru -Wait
+    if ($process.ExitCode -ne 0) {
+        throw ("Official Python " + $pythonInstallerVersion + " installer failed with exit code " + $process.ExitCode + ".")
+    }
+}
+
 function Resolve-M422TargetPython {
     param([Parameter(Mandatory = $true)][string]$TargetRoot)
     $direct = Join-Path $TargetRoot "python.exe"
@@ -76,6 +129,9 @@ if ($ValidateOnly) {
     if ($paddleVersion -ne "3.2.0") { throw "Unexpected pinned PaddlePaddle version." }
     if ($paddleOcrVersion -ne "3.7.0") { throw "Unexpected pinned PaddleOCR version." }
     if ($paddleIndex -notmatch "/cu126/$") { throw "M4.2.2 GPU benchmark must use the pinned CUDA 12.6 wheel index." }
+    if ($pythonInstallerVersion -ne "3.12.10") { throw "Unexpected fallback Python installer version." }
+    if ($pythonInstallerUrl -notmatch "^https://www\.python\.org/ftp/python/3\.12\.10/python-3\.12\.10-amd64\.exe$") { throw "Unexpected fallback Python installer source." }
+    if ($pythonInstallerSha256 -notmatch "^[0-9A-Fa-f]{64}$") { throw "Fallback Python installer SHA256 is invalid." }
     Write-Host "M4.2.2 benchmark setup validation: PASS"
     return
 }
@@ -95,6 +151,7 @@ if (-not [string]::IsNullOrWhiteSpace($ExpectedBranch) -and $branch -ne $Expecte
 
 $root = Join-Path $repoRoot ".localcopilot\ocr-benchmark"
 $runtimeRoot = Join-Path $root "python312"
+$cacheRoot = Join-Path $root "cache"
 $evidenceRoot = Join-Path $root "evidence"
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 
@@ -113,13 +170,16 @@ if ($PreparePaddleGpu) {
     try { $driverVersion = [Version]$driver } catch { throw "Unable to parse NVIDIA driver version '$driver'." }
     $minimumDriver = [Version]"550.54.14"
     if ($driverVersion -lt $minimumDriver) { throw ("NVIDIA driver " + $driver + " is below the pinned CUDA 12.6 wheel minimum " + $minimumDriver + ".") }
-    if (-not $installManagerAvailable) { throw "Python Install Manager with py install --target is required to create the isolated Python 3.12 runtime without changing the existing Python installation." }
-
-    if (-not (Test-Path -LiteralPath $runtimeRoot)) {
-        New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
-        $py = Get-M422Command -Name "py.exe"
-        if ($null -eq $py) { throw "py.exe disappeared after preflight." }
-        Invoke-M422Checked -FilePath $py.Source -Arguments @("install", "--target=$runtimeRoot", $paddlePythonTag) -Description "Isolated Python 3.12 target install"
+    if (-not (Test-Path -LiteralPath (Join-Path $runtimeRoot "python.exe"))) {
+        if ($installManagerAvailable) {
+            New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
+            $py = Get-M422Command -Name "py.exe"
+            if ($null -eq $py) { throw "py.exe disappeared after install-manager preflight." }
+            Invoke-M422Checked -FilePath $py.Source -Arguments @("install", "--target=$runtimeRoot", $paddlePythonTag) -Description "Isolated Python 3.12 target install"
+        }
+        else {
+            Install-M422PythonFromOfficialInstaller -TargetRoot $runtimeRoot -CacheRoot $cacheRoot
+        }
     }
 
     $python = Resolve-M422TargetPython -TargetRoot $runtimeRoot
@@ -155,6 +215,8 @@ head=$head
 working_tree=clean
 runner_elevated=False
 python_install_manager_available=$installManagerAvailable
+python_fallback_installer_version=$pythonInstallerVersion
+python_fallback_installer_source=python.org
 nvidia_driver=$driverText
 prepare_paddle_gpu_requested=$([bool]$PreparePaddleGpu)
 environment_prepared=$prepared
