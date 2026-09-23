@@ -17,7 +17,7 @@ $paddleVersion = "3.2.0"
 $paddleOcrVersion = "3.7.0"
 $paddleIndex = "https://www.paddlepaddle.org.cn/packages/stable/cu126/"
 $pythonNuGetVersion = "3.12.10"
-$nugetUrl = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
+$pythonNuGetPackageUrl = "https://www.nuget.org/api/v2/package/python/3.12.10"
 
 function Test-M422Elevated {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -63,18 +63,27 @@ function Install-M422PythonFromNuGet {
     New-Item -ItemType Directory -Path $CacheRoot -Force | Out-Null
     New-Item -ItemType Directory -Path $PackageRoot -Force | Out-Null
 
-    $nugetPath = Join-Path $CacheRoot "nuget.exe"
+    $packagePath = Join-Path $CacheRoot ("python." + $pythonNuGetVersion + ".nupkg")
+    $expectedPython = Join-Path $PackageRoot "python\tools\python.exe"
 
-    if (-not (Test-Path -LiteralPath $nugetPath)) {
+    if (Test-Path -LiteralPath $expectedPython) {
+        Write-Host "Using cached project-local Python NuGet package."
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $packagePath)) {
         $curl = Get-M422Command -Name "curl.exe"
         if ($null -eq $curl) {
-            throw "curl.exe is required to download the project-local NuGet client."
+            throw "curl.exe is required for the bounded Python package download."
         }
 
-        $partialPath = $nugetPath + ".partial"
+        $partialPath = $packagePath + ".partial"
         Remove-Item -LiteralPath $partialPath -Force -ErrorAction SilentlyContinue
 
-        Write-Host "Downloading NuGet CLI for project-local Python package extraction..."
+        Write-Host "Downloading official CPython NuGet package $pythonNuGetVersion..."
+        Write-Host "Source: nuget.org"
+        Write-Host "Expected size: about 13.8 MB"
+
         & $curl.Source @(
             "--fail",
             "--location",
@@ -85,55 +94,52 @@ function Install-M422PythonFromNuGet {
             "--retry-delay", "3",
             "--retry-connrefused",
             "--connect-timeout", "30",
-            "--max-time", "300",
+            "--max-time", "600",
             "--output", $partialPath,
-            $nugetUrl
+            $pythonNuGetPackageUrl
         )
 
         if ($LASTEXITCODE -ne 0) {
             Remove-Item -LiteralPath $partialPath -Force -ErrorAction SilentlyContinue
-            throw "NuGet CLI download failed with curl exit code $LASTEXITCODE."
+            Write-Host ""
+            Write-Host "Automatic NuGet package download failed."
+            Write-Host "Manual fallback: open this official NuGet page in a browser:"
+            Write-Host "https://www.nuget.org/packages/python/3.12.10"
+            Write-Host "Choose Download package and save the file exactly as:"
+            Write-Host $packagePath
+            Write-Host "Then rerun this same setup command."
+            Write-Host "The script will verify the NuGet package signature before extraction."
+            throw "Official CPython NuGet package download failed with curl exit code $LASTEXITCODE."
         }
 
-        Move-Item -LiteralPath $partialPath -Destination $nugetPath -Force
+        Move-Item -LiteralPath $partialPath -Destination $packagePath -Force
     }
     else {
-        Write-Host "Using cached NuGet CLI."
+        Write-Host "Using cached CPython NuGet package."
     }
 
-    Write-Host "Verifying NuGet Authenticode signature..."
-    $signature = Get-AuthenticodeSignature -FilePath $nugetPath
-    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
-        throw "NuGet CLI Authenticode signature is not valid."
+    $dotnet = Get-M422Command -Name "dotnet.exe"
+    if ($null -eq $dotnet) {
+        throw "dotnet.exe is required to verify the signed CPython NuGet package."
     }
 
-    if ($null -eq $signature.SignerCertificate -or
-        $signature.SignerCertificate.Subject -notmatch "Microsoft") {
-        throw "NuGet CLI signer is unexpected."
-    }
-
-    $expectedPython = Join-Path $PackageRoot "python\tools\python.exe"
-    if (Test-Path -LiteralPath $expectedPython) {
-        Write-Host "Using cached project-local Python NuGet package."
-        return
-    }
-
-    Write-Host "Installing Python $pythonNuGetVersion NuGet package entirely under project-local storage..."
-    & $nugetPath @(
-        "install",
-        "python",
-        "-Version", $pythonNuGetVersion,
-        "-ExcludeVersion",
-        "-OutputDirectory", $PackageRoot,
-        "-NonInteractive"
-    )
-
+    Write-Host "Verifying CPython NuGet package signature..."
+    & $dotnet.Source @("nuget", "verify", $packagePath, "--all")
     if ($LASTEXITCODE -ne 0) {
-        throw "Project-local Python NuGet package install failed with exit code $LASTEXITCODE."
+        throw "CPython NuGet package signature verification failed."
     }
+
+    $extractRoot = Join-Path $PackageRoot "python"
+    if (Test-Path -LiteralPath $extractRoot) {
+        Remove-Item -LiteralPath $extractRoot -Recurse -Force
+    }
+
+    Write-Host "Extracting Python $pythonNuGetVersion entirely under: $PackageRoot"
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($packagePath, $extractRoot)
 
     if (-not (Test-Path -LiteralPath $expectedPython)) {
-        throw "NuGet reported success but project-local python.exe was not found."
+        throw "Signed CPython NuGet package extracted, but tools\python.exe was not found."
     }
 }
 
@@ -163,7 +169,7 @@ if ($ValidateOnly) {
     if ($paddleOcrVersion -ne "3.7.0") { throw "Unexpected pinned PaddleOCR version." }
     if ($paddleIndex -notmatch "/cu126/$") { throw "M4.2.2 GPU benchmark must use the pinned CUDA 12.6 wheel index." }
     if ($pythonNuGetVersion -ne "3.12.10") { throw "Unexpected project-local Python NuGet version." }
-    if ($nugetUrl -ne "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe") { throw "Unexpected NuGet CLI source." }
+    if ($pythonNuGetPackageUrl -ne "https://www.nuget.org/api/v2/package/python/3.12.10") { throw "Unexpected CPython NuGet package source." }
     Write-Host "M4.2.2 benchmark setup validation: PASS"
     return
 }
@@ -260,7 +266,7 @@ working_tree=clean
 benchmark_root=$root
 runner_elevated=False
 python_install_manager_available=$installManagerAvailable
-python_project_local_package=nuget-python
+python_project_local_package=nuget-python-direct
 python_project_local_version=$pythonNuGetVersion
 python_project_local_root=$pythonPackageRoot
 nvidia_driver=$driverText
