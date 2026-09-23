@@ -169,7 +169,7 @@ Accepted invariants:
 
 ### ▶ M4.1 Region-of-interest planner
 
-Current feature branch: `dev/m4-1-roi-planner`. Proposed [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md) defines the first portable contract.
+Current feature branch: `dev/m4-1-roi-planner`. Accepted [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md) defines the portable contract; PR #29 review/merge remains before the milestone is complete on `main`.
 
 - Convert downscaled changed regions to source-frame pixels with outward rounding and capture-bound clipping.
 - Convert UIA screen rectangles only through an explicit caller-supplied capture screen projection; do not assume DPI, border, or origin equivalence in Core.
@@ -178,7 +178,9 @@ Current feature branch: `dev/m4-1-roi-planner`. Proposed [ADR 0012](decisions/00
 - Preserve ROI provenance and enforce bounded padding, deduplication, count, per-region area, and total-area budgets. Oversized candidates are rejected rather than arbitrarily cropped.
 - Keep the slice geometry-only: no WGC crop, OCR/VLM backend, question-text inspection, persistence, coordinate logging, capability change, or server transfer.
 
-Proposed initial bounds are 16 px padding, 24 px association margin, 4 regions, 25% maximum area per region, and 40% total planned area. Hard ceilings prevent a configured full-frame plan. These are privacy/resource bounds, not OCR performance claims.
+Accepted initial bounds are 16 px padding, 24 px association margin, 4 regions, 25% maximum area per region, and 40% total planned area. Hard ceilings prevent a configured full-frame plan. These are privacy/resource bounds, not OCR performance claims.
+
+Acceptance candidate `03f719a1bb4a98a3834348d1f0d53fa50828c92e` passed [CI #126](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35847291181): 160/160 Core tests on Ubuntu and Windows, prior M3.4 runner/provider regressions, and the strict Windows build.
 
 Exit criteria:
 
