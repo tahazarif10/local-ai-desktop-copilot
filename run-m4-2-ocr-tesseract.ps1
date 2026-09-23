@@ -3,7 +3,9 @@ param(
     [switch]$ValidateOnly,
     [string]$BenchmarkRoot = "D:\LocalAI-Prerequisites",
     [string]$ExpectedBranch = "dev/m4-2-2-benchmark-runner",
-    [string[]]$IncludeCategory = @()
+    [string[]]$IncludeCategory = @(),
+    [ValidateSet("fast","best")]
+    [string]$TessdataVariant = "fast"
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,7 +16,8 @@ $tesseractPackageId = "tesseract-ocr.tesseract"
 $tesseractPackageVersion = "5.5.3"
 $tesseractInstallerUrl = "https://github.com/tesseract-ocr/tesseract/releases/download/5.5.3/tesseract-ocr-w64-setup-5.5.3.20260724.exe"
 $tesseractInstallerSha256 = "BEE9E3434BD94FD65387D9BE28CD467A41F61B1275383B55B0F59A1331270AE4"
-$tessdataCommit = "87416418657359cb625c412a48b6e1d6d41c29bd"
+$tessdataFastCommit = "87416418657359cb625c412a48b6e1d6d41c29bd"
+$tessdataBestCommit = "e12c65a915945e4c28e237a9b52bc4a8f39a0cec"
 $language = "fas+eng"
 $oem = "1"
 $psm = "6"
@@ -25,7 +28,7 @@ if ($ValidateOnly) {
     if ($tesseractPackageVersion -ne "5.5.3") { throw "Unexpected Tesseract package version." }
     if ($tesseractInstallerUrl -notmatch "^https://github\.com/tesseract-ocr/tesseract/releases/download/5\.5\.3/") { throw "Unexpected Tesseract installer source." }
     if ($tesseractInstallerSha256 -notmatch "^[A-F0-9]{64}$") { throw "Unexpected Tesseract installer SHA256." }
-    if ($tessdataCommit.Length -ne 40) { throw "Tessdata commit must be pinned." }
+    if ($tessdataFastCommit.Length -ne 40 -or $tessdataBestCommit.Length -ne 40) { throw "Tessdata commits must be pinned." }
     if ($language -ne "fas+eng" -or $oem -ne "1" -or $psm -ne "6") {
         throw "Unexpected Tesseract baseline configuration."
     }
@@ -60,7 +63,9 @@ $root = [IO.Path]::GetFullPath($BenchmarkRoot)
 $manifest = Join-Path $root "corpus\manifest.json"
 $provenance = Join-Path $root "corpus\controlled-ui-provenance.json"
 $python = Join-Path $root "python312-nuget\python\tools\python.exe"
-$tessdataDir = Join-Path $root "tesseract\tessdata-fast"
+$tessdataCommit = if ($TessdataVariant -eq "best") { $tessdataBestCommit } else { $tessdataFastCommit }
+$tessdataRepo = if ($TessdataVariant -eq "best") { "tessdata_best" } else { "tessdata_fast" }
+$tessdataDir = Join-Path $root ("tesseract\tessdata-" + $TessdataVariant)
 
 if (-not (Test-Path -LiteralPath $manifest)) {
     throw "Controlled corpus manifest is missing. Run the controlled UI Paddle benchmark first."
@@ -185,7 +190,7 @@ if ($null -eq $curl) { throw "curl.exe is required for pinned tessdata download.
 foreach ($name in @("fas","eng")) {
     $destination = Join-Path $tessdataDir ($name + ".traineddata")
     if (-not (Test-Path -LiteralPath $destination)) {
-        $url = "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/$tessdataCommit/$name.traineddata"
+        $url = "https://raw.githubusercontent.com/tesseract-ocr/$tessdataRepo/$tessdataCommit/$name.traineddata"
         $partial = $destination + ".partial"
         Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
         Write-Host ("Downloading pinned tessdata_fast language: " + $name)
@@ -208,7 +213,7 @@ foreach ($name in @("fas","eng")) {
     }
 }
 
-Write-Host "Running local-only Tesseract fas+eng controlled baseline..."
+Write-Host ("Running local-only Tesseract fas+eng controlled baseline (" + $TessdataVariant + ")...")
 Write-Host "Raw OCR text will not be printed or persisted."
 Write-Host "The exact existing controlled OS-rendered corpus will be reused."
 
@@ -219,6 +224,7 @@ $arguments = @(
     "--manifest", $manifest,
     "--tesseract-exe", $tesseract,
     "--tessdata-dir", $tessdataDir,
+    "--tessdata-variant", $TessdataVariant,
     "--language", $language,
     "--oem", $oem,
     "--psm", $psm
