@@ -149,7 +149,7 @@ The one-command physical entry point is:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-tesseract.ps1 -BenchmarkRoot D:\LocalAI-Prerequisites
 ```
 
-If Tesseract is absent, the wrapper installs the pinned Windows package through Windows Package Manager; because that package is machine-scope, Windows may require a UAC confirmation. The benchmark itself remains non-elevated. Persian and English traineddata are downloaded into the benchmark root and raw OCR output remains memory-only.
+If Tesseract is absent, the wrapper first uses Windows Package Manager when available. If `winget.exe` is unavailable, it downloads the pinned official Tesseract 5.5.3 installer directly from the upstream GitHub release, verifies its SHA-256 against the pinned Microsoft winget manifest value, and launches the verified installer silently. Because the package is machine-scope, Windows may require a UAC confirmation. The benchmark itself remains non-elevated. Persian and English traineddata are downloaded into the benchmark root and raw OCR output remains memory-only.
 
 ## Required aggregate measurements
 
