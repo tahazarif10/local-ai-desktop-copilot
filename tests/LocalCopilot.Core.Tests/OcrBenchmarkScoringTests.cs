@@ -52,7 +52,7 @@ public sealed class OcrBenchmarkScoringTests
                 "فشار حک");
 
         Assert.AreEqual(1, result.CharacterEdits);
-        Assert.IsTrue(result.CharacterErrorRate > 0.0);
+        Assert.IsGreaterThan(0.0, result.CharacterErrorRate);
         Assert.AreEqual(1, result.WordEdits);
         Assert.IsFalse(result.ExactNormalizedMatch);
     }
