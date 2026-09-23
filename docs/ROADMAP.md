@@ -227,14 +227,29 @@ ADR 0014 selects the measured server-local PaddleOCR configuration as the integr
 - Recheck capabilities/current epoch/latest request before publication.
 - Keep this slice transport-free and content-free so the gate is deterministic in Core.
 
-##### ◻ M4.2.3b Authenticated bounded OCR transport/runtime
+##### ▶ M4.2.3b Authenticated bounded OCR transport/runtime
 
-- Define the narrow authenticated/encrypted client-to-server OCR transport before any product ROI pixel crosses the LAN.
-- Bind request ID, epoch, deadline, cancellation and byte/count limits on both sides.
+ADR 0015 selects pinned mutual-TLS HTTPS and a binary OCR-only protocol.
+
+###### ▶ M4.2.3b.1 Portable transport framing
+
+- Version request/response frames and bind request ID, epoch ID and an absolute deadline.
+- Carry at most four lossless PNG ROI payloads; do not transmit ROI screen coordinates, titles, paths, UIA text, process names or diagnostic strings.
+- Enforce immutable dimension/pixel/encoded-byte/text-byte ceilings before allocation where possible.
+- Own content-bearing PNG/OCR UTF-8 arrays explicitly and zero them on disposal.
+- Deterministically reject malformed version/magic/count/length/deadline input and cancellation.
+- Keep this slice free of sockets and product pixel acquisition.
+
+###### ◻ M4.2.3b.2 Pinned mTLS host/client and Paddle worker
+
+- Require pinned server and client certificates with private keys remaining in each machine's Windows certificate store.
+- Implement the HTTPS OCR endpoint and one-active server inference boundary.
 - Pre-provision the selected Paddle models; no silent model/network download during product operation.
-- Use bounded request ownership/queues, deterministic teardown, short-lived sensitive OCR text, and content-free diagnostics.
+- Kill/recover the model worker on deadline or unhealthy execution so one request cannot escape its bound.
+- Integrate client-side bounded ROI crop/PNG encoding only after the current epoch passes `CapturePixels + RunOcr + SendPixelsToLocalServer`.
+- Use bounded request ownership, deterministic teardown, short-lived sensitive OCR text, and content-free diagnostics.
 - Treat server unavailable as a typed degraded outcome; no cloud or unmeasured-backend fallback.
-- Do not begin M4.3 VLM fallback until OCR integration passes the fixed client/server physical acceptance matrix.
+- Pass a one-command fixed client/server physical acceptance matrix before M4.3.
 
 ### M4.3 VLM fallback
 
