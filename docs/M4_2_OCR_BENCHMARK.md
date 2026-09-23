@@ -25,7 +25,7 @@ Pinned benchmark dependencies:
 
 The server driver 596.49 is above PaddlePaddle's documented Windows minimum for the CUDA 12.6 wheel family (550.54.14). The setup script therefore permits that candidate only on `MachineRole=Server`.
 
-The setup prefers Python Install Manager `py install --target` to place Python 3.12 below ignored `.localcopilot/ocr-benchmark`. On machines that only have the legacy `py.exe` launcher, it falls back to the official Python 3.12.10 x64 installer from python.org, verifies the pinned SHA-256 and Python Software Foundation Authenticode signer, and installs into the same project-local directory with launcher/PATH/file-association changes disabled. It does not replace or modify the existing Python 3.14 installation.
+The setup prefers Python Install Manager `py install --target`. When the machine only exposes the legacy launcher, it now uses the official CPython `python` NuGet package 3.12.10, which Python's own Windows documentation recommends for CI/build scenarios and allows to be placed under an arbitrary output directory. The NuGet CLI and Python runtime are both kept below ignored `.localcopilot/ocr-benchmark`; the existing Python installations on C: are not modified.
 
 ## Setup command
 
