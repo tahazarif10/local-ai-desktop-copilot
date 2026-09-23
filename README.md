@@ -12,7 +12,7 @@
   <img alt="Platform: Windows" src="https://img.shields.io/badge/Platform-Windows-0078D4?style=for-the-badge&amp;logo=windows11&amp;logoColor=white" />
   <img alt="Runtime: .NET 10" src="https://img.shields.io/badge/Runtime-.NET_10-512BD4?style=for-the-badge&amp;logo=dotnet&amp;logoColor=white" />
   <img alt="UI: WinUI 3" src="https://img.shields.io/badge/UI-WinUI_3-2563EB?style=for-the-badge" />
-  <img alt="Current gate: M4.1" src="https://img.shields.io/badge/Current_Gate-M4.1-F59E0B?style=for-the-badge" />
+  <img alt="Current gate: M4.2" src="https://img.shields.io/badge/Current_Gate-M4.2-F59E0B?style=for-the-badge" />
   <a href="https://github.com/tahazarif10/local-ai-desktop-copilot/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/tahazarif10/local-ai-desktop-copilot/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
 </p>
 
@@ -32,17 +32,17 @@
 This repository is an engineering foundation, not a finished AI assistant. It focuses first on trustworthy sensing, bounded resource ownership, privacy gates, stale-result rejection, deterministic behavior, and verifiable failure handling.
 
 > [!IMPORTANT]
-> The accepted baseline includes foreground sensing, RAM-only capture, capability-based privacy and epochs, bounded change detection, application-owned lifecycle, UI Automation root probing, bounded non-text structure, separately authorized bounded semantic snapshots, and accepted M3.4 bounded runtime orchestration. Product defaults still deny `ReadUiText`; automatic semantic UIA runs only while sensing is explicitly Armed and both UIA capabilities remain current. ADR 0011 keeps the measured UIA worker in-process. M4.1 region-of-interest planning is the next gate.
+> The accepted baseline now also includes M4.1 bounded region-of-interest planning under ADR 0012. ROI generation stays geometry-only, explicitly projected, count/area-bounded, and never synthesizes a full-frame fallback. Product defaults and privacy capabilities remain unchanged. M4.2 OCR benchmark and integration is the next gate.
 
 ## Current status
 
 | Area | Current truth |
 | --- | --- |
-| Active milestone | **M4.1 — Region-of-interest planner** |
+| Active milestone | **M4.2 — OCR benchmark and integration** |
 | Accepted M3.4 | **Portable admission + measured in-process isolation + runtime integration** via [PR #19](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/19), [ADR 0011](docs/decisions/0011-measured-uia-provider-isolation.md), and [PR #24](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/24) |
 | Automated verification | [CI #115](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35844099601) passed portable/Windows tests, Windows PowerShell runner parsing, M3.4 wrapper validation, raw-provider smoke, and the strict Windows app build on the exact physical candidate |
 | Physical acceptance | Clean candidate `26c3290bf196701473b558da657d5c39c8c97e8a`: full M3.4 one-command acceptance **PASS** on 2026-09-23 |
-| Next gate | Bounded changed-region/UIA-rectangle ROI planning before OCR backend work |
+| Next gate | Benchmark and select a local OCR backend on the fixed client/server hardware, preserving M4.1 ROI/privacy/cancellation bounds |
 | Runtime composition | Packaged WinUI process with application-owned bounded enrichment runtime and the measured in-process COM MTA UIA worker |
 | Cloud path | Forbidden by the product architecture |
 | Autonomous input/actions | Out of scope |
