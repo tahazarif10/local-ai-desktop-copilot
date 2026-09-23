@@ -64,7 +64,7 @@ internal sealed class OcrServerTransport : IDisposable
         options.Validate();
 
         _limits = options.Limits;
-        _authenticationKey = options.AuthenticationKey.ToArray();
+        _authenticationKey = (byte[])options.AuthenticationKey.Clone();
         _serverCertificateSha256 =
             Convert.FromHexString(options.ServerCertificateSha256.Trim());
 
