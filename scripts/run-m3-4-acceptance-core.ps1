@@ -804,7 +804,16 @@ namespace LocalCopilotM34Acceptance
 
     Write-Host "[RUN] Accepted in-process provider-isolation regression"
 
-    $providerRoot = Join-Path $runRoot "provider-regression"
+    # Keep the nested provider-regression diagnostic path safely below the
+    # legacy MAX_PATH boundary used by Windows PowerShell/.NET Framework.
+    # The provider runner creates two additional GUID/timestamp directories,
+    # so nesting it below the already-long acceptance run root can reach 260
+    # characters before session-meta.txt is written.
+    $providerRoot =
+        Join-Path `
+            $diagnosticBase `
+            ("m34pr-" + [Guid]::NewGuid().ToString("N").Substring(0, 8))
+
     & $providerRunnerPath `
         -DiagnosticRoot $providerRoot `
         -ExpectedBranch $branch
