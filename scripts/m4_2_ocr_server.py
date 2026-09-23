@@ -579,13 +579,13 @@ class BoundedHttpServer(ThreadingHTTPServer):
             self._handler_slots.release()
 
 
-def _read_authentication_key(path: Path) -> bytes:
+def _read_authentication_key(path: Path) -> bytearray:
     text = path.read_text(encoding="ascii").strip()
     if not re.fullmatch(r"[0-9a-fA-F]{64,128}", text) or len(text) % 2 != 0:
         raise ValueError(
             "Authentication key file must contain 32-64 bytes as hexadecimal."
         )
-    return bytes.fromhex(text)
+    return bytearray.fromhex(text)
 
 
 def validate_contract() -> None:
@@ -657,13 +657,16 @@ def main() -> int:
         "M4.2.3 OCR SERVER: READY "
         f"protocol={PROTOCOL_VERSION} max_regions={MAX_REGIONS} "
         f"max_request_bytes={MAX_REQUEST_BYTES} "
-        f"diagnostic_delay_ms={args.diagnostic_delay_ms}"
+        f"diagnostic_delay_ms={args.diagnostic_delay_ms}",
+        flush=True,
     )
 
     try:
         server.serve_forever(poll_interval=0.2)
     finally:
         server.server_close()
+        for index in range(len(authentication_key)):
+            authentication_key[index] = 0
 
     return 0
 
