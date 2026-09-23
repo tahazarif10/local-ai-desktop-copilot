@@ -93,9 +93,7 @@ def build_request(
         1,
     )
     region = struct.pack(
-        ">iiiiiHHi",
-        0,
-        0,
+        ">iiiHHi",
         width,
         height,
         stride,
