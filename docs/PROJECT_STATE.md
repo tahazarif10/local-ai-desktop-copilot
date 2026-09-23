@@ -1,14 +1,14 @@
 ---
 state_schema: 2
-reference_code_commit: d8f12b00524934138115f22cc8bd7149e20f4452
-accepted_main_commit: 1486fb673a623b248e9238c747ac1cd49fa73979
+reference_code_commit: d780a0bbeb963b0b491caeddaacc42166dd02fd1
+accepted_main_commit: d780a0bbeb963b0b491caeddaacc42166dd02fd1
 last_verified_date: 2026-09-23
-completed_through: M4.2.1
-active_milestone: M4.2
-active_branch: dev/m4-2-2-benchmark-runner
-active_status: M4.2.2 environment gate is accepted and merged through PR #32 at main commit 1486fb673a623b248e9238c747ac1cd49fa73979; controlled local-only OCR corpus/runner implementation is active
-next_milestone: M4.2
-next_milestone_name: OCR benchmark and integration
+completed_through: M4.2.2
+active_milestone: M4.2.3
+active_branch: dev/m4-2-3-ocr-integration
+active_status: M4.2.3a portable OCR integration gate is active; ADR 0014 carries the measured server-local PaddleOCR configuration forward but no product OCR transport/runtime is integrated yet
+next_milestone: M4.2.3b
+next_milestone_name: Authenticated bounded OCR transport/runtime
 ---
 
 # Project state
@@ -48,6 +48,7 @@ The repository is not yet a complete copilot. The accepted product state is a ha
 | M3.4.2 Measured provider-isolation decision | Complete | [ADR 0011](decisions/0011-measured-uia-provider-isolation.md), physical behavior head `44d4752` | Same-integrity blocking provider entered; healthy provider recovered before release in 3,701 ms; app shutdown 118 ms; worker `joined=True`; `InProcessCandidate`; sentinel scan PASS |
 | M3.4.3 Runtime integration and acceptance | Complete | [PR #24](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/24), runtime head `979ed5a`, physical candidate `26c3290` | [CI #115](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35844099601) PASS; denied session `0cc6c55e-9141-4c32-bfab-3951c808b702`, allowed session `330a2f52-d8f2-4d5c-843d-7149caf9894a`, provider regression session `c3cfd465-849e-4e27-984d-f16d4ee6c0b1`; overall physical acceptance PASS |
 | M4.1 Bounded region-of-interest planner | Complete | [PR #29](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/29), behavior head `03f719a`, merge `5ad17ee`, [ADR 0012](decisions/0012-bounded-region-of-interest-planning.md) | [CI #126](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35847291181) passed 160/160 Core tests on Ubuntu/Windows plus strict WinUI build; documentation-only head CI #131 also passed; no separate physical run required because the accepted slice is pure Core geometry/policy |
+| M4.2.2 Controlled OCR benchmark | Complete | [PR #33](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/33), merge `d780a0b`, [ADR 0013](decisions/0013-evidence-gated-ocr-benchmark.md) | [CI #213](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35899194600) PASS; fixed-server seven-category physical evidence selected `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` as the M4.2.3 integration target with CER/WER 0.23004695/0.22388060, warm p50 91.392 ms, 562 MiB VRAM delta, zero failures/timeouts; Tesseract fast/best materially trailed and Windows Media OCR remained English-only |
 
 PR #7 was squash-merged as `c29099a`. Its feature-branch head (`abcbf08`) is not the `main` baseline.
 
@@ -300,35 +301,28 @@ These are fixed design inputs, not upgrade suggestions:
 
 ## Immediate acceptance gate
 
-M4.2.2 environment preparation is accepted and merged through [PR #32](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/32) at main commit `1486fb673a623b248e9238c747ac1cd49fa73979`. The exact physical environment head remains `f8275451084af12637e66169ac3c3c06bf78f7cb`; CI #166 passed on that same head.
+M4.2.2 controlled benchmarking is accepted and merged through [PR #33](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/33) at main commit `d780a0bbeb963b0b491caeddaacc42166dd02fd1`. Final CI #213 passed on the documentation-complete head before merge.
 
 The active branch is:
 
 ```text
-dev/m4-2-2-benchmark-runner
+dev/m4-2-3-ocr-integration
 ```
 
-The runner gate adds:
+ADR 0014 carries the measured `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` configuration forward as the product OCR integration target on the fixed local AI server. This is a selection/integration target, not evidence that product OCR already exists.
 
-- a one-command PowerShell wrapper;
-- a local-only corpus scaffold using seven opaque sample IDs across the required UI categories;
-- a zero-touch controlled OS-rendered UI harness that captures visible WinForms client areas for all seven categories, writes ground truth only under the local benchmark root, and invokes the aggregate benchmark without manual screenshot/text preparation;
-- strict CER/WER/exact-match scoring with the same normalization contract as M4.2.1;
-- explicit `PP-OCRv5_mobile_det` + `arabic_PP-OCRv5_mobile_rec` model pins;
-- `gpu:0` and the local Paddle inference engine;
-- model cache under `D:\LocalAI-Prerequisites\models`;
-- process-bounded inference deadlines and a deterministic timeout-guard self-test;
-- cold initialization, warm p50/p95/max latency, failure/timeout, RAM, GPU VRAM, runtime footprint, and model-cache footprint metrics;
-- aggregate-only result persistence. Raw OCR text, ground truth, and screenshots are neither printed nor written by the runner.
+M4.2.3a is the current implementation slice. It adds only a portable Core gate that requires:
 
-The first controlled OS-rendered PaddleOCR run passed at clean head `9fa4ba26daf4becc011f6e1ccc6cf7eeb81d0156` after CI #181 PASS: 7/7 required categories, 0 failures, 0 timeouts, CER 0.28873239, WER 0.31343284, exact normalized match 0.0, warm p50/p95/max 43.513/78.132/80.619 ms, cold initialization 3389.084 ms, worker RSS peak 1494.766 MiB, GPU VRAM delta 224 MiB, raw OCR logging/persistence false. The cuDNN 9.9-compiled versus 9.5 runtime mismatch remains a recorded compatibility risk.
+- explicit Armed state;
+- the same current uncancelled epoch;
+- `CapturePixels + RunOcr` for any OCR request;
+- `SendPixelsToLocalServer` additionally for the selected server topology;
+- a non-empty accepted M4.1 `RegionOfInterestPlan`;
+- capability/current-epoch/latest-request revalidation before publication.
 
-The Tesseract 5.5.3 `fas+eng` baseline passed on the exact same seven-sample corpus at clean head `3a2386442b357a92829f619c0b12250b6b394179`: 0 failures, 0 timeouts, CER 0.50938967, WER 1.0, exact match 0.0, warm p50/p95/max 285.938/651.489/656.062 ms, RSS peak 38.27 MiB.
+The product default still denies `RunOcr` and `SendPixelsToLocalServer`. M4.2.3a does not capture/crop pixels, invoke PaddleOCR, create a socket, serialize ROI pixels, retain OCR text, or begin M4.3.
 
-Legacy Windows Media OCR then passed at corrected clean head `563212ed9f8712057d25f6af1fc1d77893224cb3` on its eligible English-only three-sample subset: 0 failures, 0 timeouts, CER 0.31963470, WER 0.39285714, exact match 0.0, warm recognition p50/p95/max 7.028/7.619/7.667 ms and warm end-to-end p50/p95 12.235/22.830 ms. It remains ineligible for Persian/mixed use because only `en-US` is installed.
-
-The matched English-subset comparison then passed at clean head `133a6fba18731371f86ff8d26916ba974dcdbcf7`: PaddleOCR CER/WER/p50 0.28310502/0.35714286/52.599 ms; Tesseract 0.37442922/0.92857143/280.316 ms; Windows Media OCR 0.31963470/0.39285714/6.732 ms recognition (12.162 ms end-to-end). All three had zero failures/timeouts and raw OCR logging/persistence remained false. The bounded Paddle variant run then passed at clean head `3c4f300ec852a681fa5f0a5fda0587e8027ba393`. On all seven categories, `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` improved CER/WER from 0.28873239/0.31343284 to 0.23004695/0.22388060, with warm p50/p95 91.392/117.272 ms and GPU VRAM delta 562 MiB. On the matched English subset, switching only to `en_PP-OCRv5_mobile_rec` did not change accuracy, while the server detector with the English recognizer improved CER/WER to 0.21461187/0.21428571. The final Tesseract 5.5.3 `tessdata_best` run passed at clean head `4ffac27a29e8260ca958f4c8ba5f703de88493c7`: CER 0.52347418, WER 1.07462687, exact match 0.0, warm p50/p95/max 397.424/791.157/812.740 ms, RSS peak 58.031 MiB, and zero failures/timeouts. It did not improve on `tessdata_fast`. M4.2.2 candidate benchmarking is therefore complete. No product backend is integrated yet; `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` is the evidence-backed selection candidate to carry into M4.2.3. The next implementation gate is M4.2.3 backend selection/integration with bounded M4.1 ROIs, same-epoch `CapturePixels + RunOcr`, cancellation/stale rejection, bounded ownership, content-free diagnostics, and explicit topology review before any LAN pixel path.
-
+The next dependent slice is M4.2.3b: a narrow authenticated/encrypted bounded OCR transport/runtime path for the fixed client/server pair. No product ROI pixel may cross the LAN before that transport gate is reviewed and accepted.
 ## How to update this file
 
 For every milestone merge:
