@@ -261,6 +261,13 @@ def load_manifest(
     return validated
 
 
+def _distribution_version(metadata_module: Any, name: str) -> str:
+    try:
+        return str(metadata_module.version(name))
+    except metadata_module.PackageNotFoundError:
+        return "unavailable"
+
+
 def _extract_text(result_items: Iterable[Any]) -> str:
     texts: list[str] = []
     for result in result_items:
@@ -305,11 +312,9 @@ def _worker_main(
                 "python_version": sys.version.split()[0],
                 "paddle_version": str(paddle.__version__),
                 "paddleocr_version": metadata.version("paddleocr"),
-                "cudnn_package_version": (
-                    metadata.version("nvidia-cudnn-cu12")
-                    if metadata.packages_distributions().get("nvidia-cudnn-cu12")
-                    is not None
-                    else "unavailable"
+                "cudnn_package_version": _distribution_version(
+                    metadata,
+                    "nvidia-cudnn-cu12",
                 ),
                 "compiled_cudnn_version": str(paddle.version.cudnn()),
                 "runtime_cudnn_version": (
