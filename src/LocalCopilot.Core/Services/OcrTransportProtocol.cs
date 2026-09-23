@@ -290,7 +290,7 @@ public static class OcrTransportProtocol
 
         byte[] body = new byte[(int)totalBytes];
         Span<byte> span = body;
-        RequestMagic.CopyTo(span);
+        RequestMagic.AsSpan().CopyTo(span);
         BinaryPrimitives.WriteUInt16BigEndian(span.Slice(8, 2), Version);
         BinaryPrimitives.WriteUInt16BigEndian(span.Slice(10, 2), 0);
         BinaryPrimitives.WriteInt64BigEndian(span.Slice(12, 8), request.RequestId);
