@@ -26,6 +26,7 @@ ADRs preserve why a material decision exists so a new session does not undo it a
 | [0011](0011-measured-uia-provider-isolation.md) | Accepted | Keep the automatic UIA worker in-process after measured blocking-provider recovery and joined shutdown |
 | [0012](0012-bounded-region-of-interest-planning.md) | Accepted | Plan bounded capture ROIs from change regions and explicit UIA screen projections before OCR |
 | [0013](0013-evidence-gated-ocr-benchmark.md) | Accepted | Gate OCR backend selection behind target-machine preflight and controlled Persian/English benchmark evidence |
+| [0014](0014-server-paddle-ocr-integration.md) | Accepted | Carry the measured Paddle configuration to the local AI server behind explicit OCR pixel-egress and transport gates |
 
 ## When to add an ADR
 
