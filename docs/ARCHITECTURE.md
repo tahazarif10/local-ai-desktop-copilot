@@ -289,6 +289,8 @@ Microsoft's current Windows AI Text Recognition API remains NPU-only, so it is e
 
 The controlled benchmark uses local-only fixtures and strict NFC-normalized CER/WER/exact-match scoring plus initialization/warm latency, p50/p95, memory/VRAM where measurable, package/model footprint, failures, and cancellation. Real screenshot pixels, ground-truth text, and OCR outputs are benchmark content and stay outside normal diagnostics and PR evidence. A backend becomes eligible for product integration only after Persian, English, mixed technical UI, bounded ROI, local execution, cancellation, packaging, and privacy gates all pass.
 
+M4.2.2 completed that evidence gate. ADR 0014 carries `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` forward as the M4.2.3 integration target on the fixed local AI server. Portable Core remains model-agnostic. Because the measured runtime is server-side, product dispatch requires `CapturePixels + RunOcr + SendPixelsToLocalServer` for the same current epoch, and no ROI may cross the LAN until the narrow authenticated/encrypted bounded OCR transport slice is accepted. An empty ROI or unavailable server degrades to unavailable; neither case widens to full-frame or cloud processing.
+
 VLM is the final fallback for visual relationships that structured accessibility/text cannot express. It must not run on every frame or every meaningful diff. Full-frame visual escalation, if ever needed, requires a separate explicit user-request path; it is not a fallback emitted by the M4.1 planner.
 
 ### 6.9 Structured event pipeline
