@@ -305,6 +305,18 @@ def _worker_main(
                 "python_version": sys.version.split()[0],
                 "paddle_version": str(paddle.__version__),
                 "paddleocr_version": metadata.version("paddleocr"),
+                "cudnn_package_version": (
+                    metadata.version("nvidia-cudnn-cu12")
+                    if metadata.packages_distributions().get("nvidia-cudnn-cu12")
+                    is not None
+                    else "unavailable"
+                ),
+                "compiled_cudnn_version": str(paddle.version.cudnn()),
+                "runtime_cudnn_version": (
+                    None
+                    if paddle.device.get_cudnn_version() is None
+                    else str(paddle.device.get_cudnn_version())
+                ),
                 "device": str(paddle.device.get_device()),
                 "compiled_with_cuda": bool(
                     paddle.device.is_compiled_with_cuda()
@@ -569,6 +581,13 @@ def prepare_models(args: argparse.Namespace) -> dict[str, Any]:
         "python_version": ready["python_version"],
         "paddle_version": ready["paddle_version"],
         "paddleocr_version": ready["paddleocr_version"],
+        "cudnn_package_version": ready["cudnn_package_version"],
+        "compiled_cudnn_version": ready["compiled_cudnn_version"],
+        "runtime_cudnn_version": ready["runtime_cudnn_version"],
+        "cudnn_version_match": (
+            ready["compiled_cudnn_version"]
+            == ready["runtime_cudnn_version"]
+        ),
         "initialization_ms": round(ready["initialization_ms"], 3),
         "worker_rss_mib": None if rss_mib is None else round(rss_mib, 3),
         "gpu_vram_baseline_mib": monitor.baseline_mib,
@@ -738,6 +757,13 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         "python_version": ready["python_version"],
         "paddle_version": ready["paddle_version"],
         "paddleocr_version": ready["paddleocr_version"],
+        "cudnn_package_version": ready["cudnn_package_version"],
+        "compiled_cudnn_version": ready["compiled_cudnn_version"],
+        "runtime_cudnn_version": ready["runtime_cudnn_version"],
+        "cudnn_version_match": (
+            ready["compiled_cudnn_version"]
+            == ready["runtime_cudnn_version"]
+        ),
         "engine": config["engine"],
         "device": ready["device"],
         "compiled_with_cuda": ready["compiled_with_cuda"],
