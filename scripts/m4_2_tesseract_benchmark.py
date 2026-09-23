@@ -32,6 +32,7 @@ DEFAULT_TIMEOUT_SECONDS = 15.0
 DEFAULT_LANGUAGE = "fas+eng"
 DEFAULT_OEM = "1"
 DEFAULT_PSM = "6"
+DEFAULT_TESSDATA_VARIANT = "fast"
 
 
 class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
@@ -254,7 +255,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "schema": SCHEMA_VERSION,
         "mode": "controlled-benchmark",
-        "candidate": "tesseract-5-fas-eng",
+        "candidate": f"tesseract-5-fas-eng-{args.tessdata_variant}",
+        "tessdata_variant": args.tessdata_variant,
         "scope": (
             "matched-category-subset"
             if args.include_category
@@ -303,7 +305,8 @@ def write_result(benchmark_root: Path, result: dict[str, Any]) -> Path:
     root = benchmark_root / "results"
     root.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    path = root / f"aggregate-tesseract-{stamp}.json"
+    variant = result.get("tessdata_variant", "unknown")
+    path = root / f"aggregate-tesseract-{variant}-{stamp}.json"
     path.write_text(
         json.dumps(result, ensure_ascii=True, indent=2) + "\n",
         encoding="utf-8",
@@ -323,6 +326,11 @@ def main() -> int:
     )
     parser.add_argument("--tesseract-exe", required=True)
     parser.add_argument("--tessdata-dir", required=True)
+    parser.add_argument(
+        "--tessdata-variant",
+        choices=("fast", "best"),
+        default=DEFAULT_TESSDATA_VARIANT,
+    )
     parser.add_argument("--language", default=DEFAULT_LANGUAGE)
     parser.add_argument("--oem", default=DEFAULT_OEM)
     parser.add_argument("--psm", default=DEFAULT_PSM)
