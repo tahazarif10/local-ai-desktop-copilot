@@ -103,7 +103,7 @@ public static class OcrRuntimeGate
         {
             return new OcrPublicationDecision(
                 OcrPublicationOutcome.Stale,
-                OcrDispatchRejectionReason.EpochMismatch);
+                OcrDispatchRejectionReason.Superseded);
         }
 
         return new OcrPublicationDecision(
