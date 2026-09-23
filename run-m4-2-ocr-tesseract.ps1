@@ -11,6 +11,8 @@ Set-StrictMode -Version 2.0
 $schemaVersion = 1
 $tesseractPackageId = "tesseract-ocr.tesseract"
 $tesseractPackageVersion = "5.5.3"
+$tesseractInstallerUrl = "https://github.com/tesseract-ocr/tesseract/releases/download/5.5.3/tesseract-ocr-w64-setup-5.5.3.20260724.exe"
+$tesseractInstallerSha256 = "BEE9E3434BD94FD65387D9BE28CD467A41F61B1275383B55B0F59A1331270AE4"
 $tessdataCommit = "87416418657359cb625c412a48b6e1d6d41c29bd"
 $language = "fas+eng"
 $oem = "1"
@@ -20,6 +22,8 @@ if ($ValidateOnly) {
     if ($schemaVersion -ne 1) { throw "Unexpected Tesseract benchmark schema." }
     if ($tesseractPackageId -ne "tesseract-ocr.tesseract") { throw "Unexpected Tesseract package id." }
     if ($tesseractPackageVersion -ne "5.5.3") { throw "Unexpected Tesseract package version." }
+    if ($tesseractInstallerUrl -notmatch "^https://github\.com/tesseract-ocr/tesseract/releases/download/5\.5\.3/") { throw "Unexpected Tesseract installer source." }
+    if ($tesseractInstallerSha256 -notmatch "^[A-F0-9]{64}$") { throw "Unexpected Tesseract installer SHA256." }
     if ($tessdataCommit.Length -ne 40) { throw "Tessdata commit must be pinned." }
     if ($language -ne "fas+eng" -or $oem -ne "1" -or $psm -ne "6") {
         throw "Unexpected Tesseract baseline configuration."
@@ -99,25 +103,72 @@ function Resolve-Tesseract {
 $tesseract = Resolve-Tesseract
 if ($null -eq $tesseract) {
     $winget = Get-Command winget.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($null -eq $winget) {
-        throw "winget.exe is required to install the pinned Tesseract baseline."
+    if ($null -ne $winget) {
+        Write-Host "Installing pinned Tesseract 5.5.3 baseline through Windows Package Manager..."
+        Write-Host "A Windows UAC confirmation may appear for the machine-scope installer."
+        & $winget.Source @(
+            "install",
+            "--id", $tesseractPackageId,
+            "--version", $tesseractPackageVersion,
+            "--exact",
+            "--source", "winget",
+            "--accept-source-agreements",
+            "--accept-package-agreements",
+            "--silent",
+            "--disable-interactivity"
+        )
+        if ($LASTEXITCODE -ne 0) {
+            throw "Pinned Tesseract installation failed with exit code $LASTEXITCODE."
+        }
     }
+    else {
+        $curl = Get-Command curl.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($null -eq $curl) {
+            throw "Neither winget.exe nor curl.exe is available for the pinned Tesseract installation."
+        }
 
-    Write-Host "Installing pinned Tesseract 5.5.3 baseline through Windows Package Manager..."
-    Write-Host "A Windows UAC confirmation may appear for the machine-scope installer."
-    & $winget.Source @(
-        "install",
-        "--id", $tesseractPackageId,
-        "--version", $tesseractPackageVersion,
-        "--exact",
-        "--source", "winget",
-        "--accept-source-agreements",
-        "--accept-package-agreements",
-        "--silent",
-        "--disable-interactivity"
-    )
-    if ($LASTEXITCODE -ne 0) {
-        throw "Pinned Tesseract installation failed with exit code $LASTEXITCODE."
+        $installerRoot = Join-Path $root "tesseract\installer"
+        New-Item -ItemType Directory -Path $installerRoot -Force | Out-Null
+        $installerPath = Join-Path $installerRoot "tesseract-ocr-w64-setup-5.5.3.20260724.exe"
+        $partialPath = $installerPath + ".partial"
+
+        if (-not (Test-Path -LiteralPath $installerPath)) {
+            Remove-Item -LiteralPath $partialPath -Force -ErrorAction SilentlyContinue
+            Write-Host "winget.exe is unavailable; downloading the pinned official Tesseract installer..."
+            & $curl.Source @(
+                "--fail",
+                "--location",
+                "--show-error",
+                "--progress-bar",
+                "--retry", "3",
+                "--retry-delay", "3",
+                "--connect-timeout", "30",
+                "--max-time", "900",
+                "--output", $partialPath,
+                $tesseractInstallerUrl
+            )
+            if ($LASTEXITCODE -ne 0) {
+                Remove-Item -LiteralPath $partialPath -Force -ErrorAction SilentlyContinue
+                throw "Pinned Tesseract installer download failed with exit code $LASTEXITCODE."
+            }
+            Move-Item -LiteralPath $partialPath -Destination $installerPath -Force
+        }
+        else {
+            Write-Host "Using cached pinned Tesseract installer."
+        }
+
+        Write-Host "Verifying Tesseract installer SHA256 against the pinned winget manifest..."
+        $actualInstallerSha256 = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash.ToUpperInvariant()
+        if ($actualInstallerSha256 -ne $tesseractInstallerSha256) {
+            throw "Tesseract installer SHA256 mismatch; refusing installation."
+        }
+
+        Write-Host "Launching the verified Tesseract installer silently..."
+        Write-Host "A Windows UAC confirmation may appear. Approve it to continue."
+        $installerProcess = Start-Process -FilePath $installerPath -ArgumentList "/S" -Verb RunAs -Wait -PassThru
+        if ($installerProcess.ExitCode -ne 0) {
+            throw ("Pinned Tesseract installer failed with exit code " + $installerProcess.ExitCode + ".")
+        }
     }
 
     $tesseract = Resolve-Tesseract
