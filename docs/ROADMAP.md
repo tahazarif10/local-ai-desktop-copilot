@@ -194,16 +194,17 @@ Exit criteria:
 
 Accepted M4.1 ROI/privacy bounds remain the input boundary for all OCR work. Proposed [ADR 0013](decisions/0013-evidence-gated-ocr-benchmark.md) splits this milestone into evidence-first slices.
 
-#### ▶ M4.2.1 Benchmark contract and target-machine preflight
+#### ✅ M4.2.1 Benchmark contract and target-machine preflight
 
 - Add portable strict OCR scoring: Unicode NFC normalization, code-point CER, WER, and exact normalized match. Do not silently canonicalize Persian/Arabic variants in the primary score.
 - Add a one-command non-elevated Windows preflight that records only hardware, runtime/version, installed OCR-language, and accelerator metadata. It must not capture pixels, execute OCR, install packages/models, or select a backend.
 - Initial candidate groups: legacy `Windows.Media.Ocr`, Tesseract 5 with `fas+eng`, and PaddleOCR PP-OCRv5 Persian/English.
 - Microsoft's current Windows AI Text Recognition API is NPU-only and is excluded on the fixed machines rather than scored as a failing OCR engine.
 - CI must parse and execute the preflight `-ValidateOnly` path before any physical use.
-- Exit only after CI PASS plus physical client preflight. Run server preflight before including server/GPU OCR in the controlled benchmark.
+- Accepted evidence: behavior/preflight head `d8f12b00524934138115f22cc8bd7149e20f4452`; CI #137 PASS; physical client and server preflights both completed content-free. Neither fixed machine currently exposes Persian through legacy Windows OCR; Tesseract/PaddleOCR are absent; both machines' existing Python 3.14 installations are outside the current Paddle Windows Python support range.
+- M4.2.1 is complete pending PR #31 merge. After merge, M4.2.2 controlled benchmarking is the next gate.
 
-#### M4.2.2 Controlled OCR benchmark
+#### ▶ M4.2.2 Controlled OCR benchmark
 
 - Benchmark viable local candidates on Persian, English, mixed Persian-English, terminal/console, dialog, browser UI, and desktop application UI.
 - Keep real screenshots, ground truth, and OCR output local; PR/diagnostic evidence contains only sample IDs/categories and aggregate metrics.
