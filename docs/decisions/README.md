@@ -24,6 +24,7 @@ ADRs preserve why a material decision exists so a new session does not undo it a
 | [0009](0009-capability-gated-semantic-uia-snapshot.md) | Accepted | Read selected visible UI semantics behind a separate capability and lifetime budget |
 | [0010](0010-bounded-priority-ui-enrichment-policy.md) | Accepted | Admit UI enrichment through a bounded, priority-aware, per-epoch policy before runtime wiring |
 | [0011](0011-measured-uia-provider-isolation.md) | Accepted | Keep the automatic UIA worker in-process after measured blocking-provider recovery and joined shutdown |
+| [0012](0012-bounded-region-of-interest-planning.md) | Proposed | Plan bounded capture ROIs from change regions and explicit UIA screen projections before OCR |
 
 ## When to add an ADR
 
