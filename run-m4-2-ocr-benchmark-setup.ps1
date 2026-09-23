@@ -128,11 +128,18 @@ function Install-M422PythonFromOfficialInstaller {
     }
 
     New-Item -ItemType Directory -Path $TargetRoot -Force | Out-Null
-    $targetArgument = 'TargetDir="{0}"' -f $TargetRoot
+    $installerLog = Join-Path $CacheRoot ("python-" + $pythonInstallerVersion + "-install.log")
+
     $arguments = @(
         "/quiet",
+        "/log", $installerLog,
         "InstallAllUsers=0",
-        $targetArgument,
+        ("TargetDir=" + $TargetRoot),
+        ("DefaultJustForMeTargetDir=" + $TargetRoot),
+        "Include_exe=1",
+        "Include_lib=1",
+        "Include_dev=1",
+        "Include_tools=1",
         "Include_launcher=0",
         "InstallLauncherAllUsers=0",
         "PrependPath=0",
@@ -146,9 +153,15 @@ function Install-M422PythonFromOfficialInstaller {
     )
 
     Write-Host "Installing isolated Python $pythonInstallerVersion under project-local storage..."
+    Write-Host "Installer log: $installerLog"
     $process = Start-Process -FilePath $installerPath -ArgumentList $arguments -PassThru -Wait
+
     if ($process.ExitCode -ne 0) {
-        throw ("Official Python " + $pythonInstallerVersion + " installer failed with exit code " + $process.ExitCode + ".")
+        throw ("Official Python " + $pythonInstallerVersion + " installer failed with exit code " + $process.ExitCode + ". See installer log: " + $installerLog)
+    }
+
+    if (-not (Test-Path -LiteralPath (Join-Path $TargetRoot "python.exe"))) {
+        throw ("Python installer returned success but python.exe was not created under the requested project-local TargetDir. Do not rerun yet. Inspect py -0p / local Python 3.12 installs and the installer log: " + $installerLog)
     }
 }
 
