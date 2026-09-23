@@ -197,6 +197,39 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-windows-m
 
 Because this baseline covers only three English-only samples, its accuracy numbers are not directly comparable to the full seven-category PaddleOCR/Tesseract aggregates without a matched subset rerun. Its purpose is to retain platform-native English evidence and confirm the target-machine limitation that Persian support is absent.
 
+
+## Windows Media OCR physical result
+
+The corrected WinRT bridge completed successfully on the fixed server at clean head `563212ed9f8712057d25f6af1fc1d77893224cb3`.
+
+English-only aggregate evidence:
+
+- scope: `english-ui`, `terminal-console`, `browser-ui`;
+- sample count: 3;
+- failures: 0;
+- timeouts: 0;
+- strict CER: 0.31963470;
+- strict WER: 0.39285714;
+- exact normalized match rate: 0.0;
+- warm recognition p50/p95/max: 7.028 / 7.619 / 7.667 ms;
+- warm end-to-end p50/p95: 12.235 / 22.830 ms;
+- cold engine creation: 2.378 ms;
+- cold first OCR / end-to-end: 15.944 / 71.798 ms;
+- raw OCR text logged/persisted: false;
+- Persian support: false;
+- mixed Persian-English eligibility: false;
+- backend remains unselected.
+
+These English-only accuracy numbers are not directly comparable with the seven-category PaddleOCR/Tesseract aggregates. A final matched-subset run therefore executes all three candidates on the same three English samples before the comparison gate is closed.
+
+The one-command matched comparison is:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-english-comparison.ps1 -BenchmarkRoot D:\LocalAI-Prerequisites
+```
+
+This command reuses the existing corpus; it does not recapture pixels or modify ground truth.
+
 ## Required aggregate measurements
 
 For every engine/configuration:
