@@ -360,11 +360,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-benchmark
 ```
 
 The setup is allowed to download benchmark-only dependencies. It must not
-replace or modify the existing Python 3.14 installation. Python 3.12 is placed
-below ignored `.localcopilot/ocr-benchmark`. Prefer Python Install Manager
-`py install --target`; when only the legacy launcher is present, use the script's
-verified python.org 3.12.10 installer fallback with launcher/PATH/file-association
-changes disabled. The pinned first candidate is PaddlePaddle GPU 3.2.0
+replace or modify the existing Python 3.14 installation. Python 3.12 is placed below ignored `.localcopilot/ocr-benchmark`. Prefer Python Install Manager `py install --target`; when only the legacy launcher is present, use the script's project-local CPython NuGet package fallback (`python` 3.12.10). The NuGet client and extracted runtime stay inside the repository-local benchmark directory and do not install a runtime under `%LocalAppData%` or `Program Files`. The pinned first candidate is PaddlePaddle GPU 3.2.0
 from the CUDA 12.6 wheel index plus PaddleOCR 3.7.0.
 
 CI validates only the static/setup contract:
