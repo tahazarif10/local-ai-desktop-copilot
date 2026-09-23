@@ -39,6 +39,13 @@ New-Item -ItemType Directory -Path $truthRoot -Force | Out-Null
 
 Add-Type -AssemblyName System.Drawing
 
+function ConvertFrom-M422Utf8Base64 {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $bytes = [Convert]::FromBase64String($Value)
+    return [Text.Encoding]::UTF8.GetString($bytes)
+}
+
 function New-M422SyntheticImage {
     param(
         [Parameter(Mandatory = $true)][string]$Path,
@@ -106,14 +113,24 @@ function New-M422SyntheticImage {
     }
 }
 
+$faSettings = ConvertFrom-M422Utf8Base64 "2KrZhti424zZhdin2Kog2K/Ys9iq2q/Yp9mH"
+$faPressure = ConvertFrom-M422Utf8Base64 "2YHYtNin2LEg2qnYp9ix24wgNiDYqNin2LE="
+$faSpeed = ConvertFrom-M422Utf8Base64 "2LPYsdi52Kog2K3Ysdqp2KogMTIwINmF24zZhNuMINmF2KrYsSDYqNixINir2KfZhtuM2Yc="
+$faAxisPressure = ConvertFrom-M422Utf8Base64 "2YHYtNin2LEg2YXYrdmI2LEg2KjYsdin2KjYsSA2INio2KfYsQ=="
+$faWarning = ConvertFrom-M422Utf8Base64 "2YfYtNiv2KfYsSDYs9uM2LPYqtmF"
+$faSavePrompt = ConvertFrom-M422Utf8Base64 "2KLbjNinINiq2YbYuNuM2YXYp9iqINis2K/bjNivINiw2K7bjNix2Ycg2LTZiNiv2J8="
+$faConfirmCancel = ConvertFrom-M422Utf8Base64 "2KrYp9uM24zYryAgICAg2KfZhti12LHYp9mB"
+$faLocalAddress = ConvertFrom-M422Utf8Base64 "2KLYr9ix2LMg2YXYrdmE24wgMTI3LjAuMC4x"
+$faReady = ConvertFrom-M422Utf8Base64 "2YjYtti524zYqiDYotmF2KfYr9mHINio2Ycg2qnYp9ix"
+
 $samples = @(
-    [ordered]@{ id="s001"; category="persian-ui"; terminal=$false; lines=@("تنظیمات دستگاه", "فشار کاری 6 بار", "سرعت حرکت 120 میلی متر بر ثانیه") },
+    [ordered]@{ id="s001"; category="persian-ui"; terminal=$false; lines=@($faSettings, $faPressure, $faSpeed) },
     [ordered]@{ id="s002"; category="english-ui"; terminal=$false; lines=@("Machine Settings", "Working Pressure 6 bar", "Axis Speed 120 mm per second") },
-    [ordered]@{ id="s003"; category="mixed-fa-en"; terminal=$false; lines=@("Servo A1 Ready", "فشار محور برابر 6 بار", "Error Code ER01") },
+    [ordered]@{ id="s003"; category="mixed-fa-en"; terminal=$false; lines=@("Servo A1 Ready", $faAxisPressure, "Error Code ER01") },
     [ordered]@{ id="s004"; category="terminal-console"; terminal=$true; lines=@("PS D:\local-ai-desktop-copilot>", "Build succeeded.", "0 Warning(s)  0 Error(s)") },
-    [ordered]@{ id="s005"; category="dialog"; terminal=$false; lines=@("هشدار سیستم", "آیا تنظیمات جدید ذخیره شود؟", "تایید     انصراف") },
-    [ordered]@{ id="s006"; category="browser-ui"; terminal=$false; lines=@("Local AI Dashboard", "Server Status Connected", "آدرس محلی 127.0.0.1") },
-    [ordered]@{ id="s007"; category="desktop-app-ui"; terminal=$false; lines=@("Production Control", "Job E-CT-2140", "وضعیت آماده به کار") }
+    [ordered]@{ id="s005"; category="dialog"; terminal=$false; lines=@($faWarning, $faSavePrompt, $faConfirmCancel) },
+    [ordered]@{ id="s006"; category="browser-ui"; terminal=$false; lines=@("Local AI Dashboard", "Server Status Connected", $faLocalAddress) },
+    [ordered]@{ id="s007"; category="desktop-app-ui"; terminal=$false; lines=@("Production Control", "Job E-CT-2140", $faReady) }
 )
 
 $manifestSamples = @()
