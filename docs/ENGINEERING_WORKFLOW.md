@@ -402,6 +402,38 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-tesseract
 Every comparison runner requires a clean non-elevated working tree on the expected branch and emits aggregate-only evidence. The corpus is not recaptured between candidate runs. The accepted M4.2.2 evidence carries `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` forward as the M4.2.3 selection candidate; M4.2.2 itself does not integrate a backend.
 
 
+
+### M4.2.3a portable OCR integration gate
+
+M4.2.3a is intentionally transport-free. The accepted benchmark target runs on
+the local AI server, but no product ROI pixel may cross the LAN until the
+separate authenticated transport slice is accepted.
+
+The portable gate must be covered by Core tests for:
+
+- Armed/current/uncancelled epoch;
+- `CapturePixels + RunOcr` on every OCR topology;
+- `SendPixelsToLocalServer` additionally for `LocalAiServer`;
+- non-empty accepted M4.1 ROI plan;
+- capability revocation before publication;
+- latest-request rejection before publication.
+
+Run the focused portable test class during development:
+
+```powershell
+dotnet test .\tests\LocalCopilot.Core.Tests\LocalCopilot.Core.Tests.csproj --filter FullyQualifiedName~OcrIntegrationGateTests
+```
+
+Then run the normal full Core tests and strict Windows build through CI. No
+physical Windows acceptance is required for M4.2.3a while it remains pure Core
+policy with no new pixel crop, OCR runtime, process, or network path.
+
+M4.2.3b must not reuse benchmark scripts as an implicit product protocol. It
+requires an explicit authenticated/encrypted bounded request contract,
+pre-provisioned models, cancellation/deadline/size limits, content-free
+diagnostics, and a one-command physical client/server acceptance harness.
+
+
 ## 8. Performance evidence
 
 Performance measurements must name:

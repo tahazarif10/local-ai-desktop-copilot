@@ -68,7 +68,7 @@ The target policy decision must express operations independently. The exact code
 | `RunOcr` | OCR on an allowed bounded pixel region | Full-screen OCR, retention, server transfer |
 | `RetainDerivedEvent` | Store bounded derived facts until TTL | Raw frames/audio or indefinite memory |
 | `SendTextToLocalServer` | Bounded selected text/events over authenticated LAN | Pixels, audio, unrelated memory |
-| `SendPixelsToLocalServer` | Bounded ROI for a required VLM request | Full desktop, file persistence, future requests |
+| `SendPixelsToLocalServer` | Bounded policy-approved ROI pixels for a required local-server OCR/VLM operation | Full desktop, file persistence, OCR by itself, future requests |
 | `CaptureMicrophone` | Local microphone frames for the voice pipeline | Screen data or network transfer |
 | `SendAudioToLocalServer` | Bounded activated utterance to local STT | Ambient retention, screen data, cloud transfer |
 
@@ -177,6 +177,7 @@ UIA can expose structured text beyond what a naive screenshot pipeline might exp
 - UIA bounds may be converted to frame-local ROI coordinates only through an explicit capture screen projection. Missing/invalid projection must fail to no UIA-derived ROI rather than guessing DPI, window origin, or border offsets.
 - The M4.1 planner must remain bounded by region count and area budgets and must not synthesize a full-frame fallback. Oversized candidates are rejected, not silently widened or arbitrarily cropped.
 - ROI coordinates and UIA bounds remain short-lived RAM metadata and are prohibited from diagnostics; only aggregate candidate/rejection/budget counts may be logged.
+- Server-side OCR additionally requires `SendPixelsToLocalServer` before the bounded ROI is serialized; `RunOcr` alone never authorizes LAN pixel egress.
 - Sending OCR text to the server requires `SendTextToLocalServer`.
 - VLM input requires `SendPixelsToLocalServer`; it should be an ROI, not a whole desktop by default.
 - A future full-frame visual request, if supported, requires a separate explicit user-request policy path and is not implied by an empty ROI plan.
