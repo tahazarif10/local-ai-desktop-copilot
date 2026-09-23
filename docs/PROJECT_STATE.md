@@ -6,7 +6,7 @@ last_verified_date: 2026-09-23
 completed_through: M4.2.1
 active_milestone: M4.2
 active_branch: dev/m4-2-2-controlled-benchmark
-active_status: M4.2.1 is accepted and merged through PR #31 at main commit 920bbecbb4c7ef4c22ca3ff055df1bcaa801e911; M4.2.2 controlled OCR benchmark setup is active on the feature branch
+active_status: M4.2.2 server-local PaddleOCR GPU environment gate passed on exact clean head f8275451084af12637e66169ac3c3c06bf78f7cb with CI #166 PASS; controlled OCR corpus/runner measurement is the next gate
 next_milestone: M4.2
 next_milestone_name: OCR benchmark and integration
 ---
@@ -300,27 +300,25 @@ These are fixed design inputs, not upgrade suggestions:
 
 ## Immediate acceptance gate
 
-M4.2.1 is accepted and merged to `main` through [PR #31](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/31).
+M4.2.2 environment preparation is physically accepted on the fixed server.
 
-- accepted preflight/behavior head: `d8f12b00524934138115f22cc8bd7149e20f4452`;
-- merge commit: `920bbecbb4c7ef4c22ca3ff055df1bcaa801e911`;
-- accepted [ADR 0013](decisions/0013-evidence-gated-ocr-benchmark.md);
-- CI #137 passed portable/Windows Core tests, Windows PowerShell parsing, preflight validation, prior M3.4 regressions, and the strict WinUI build;
-- physical client/server preflights completed content-free and selected no backend.
+- exact accepted head: `f8275451084af12637e66169ac3c3c06bf78f7cb`;
+- [CI #166](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35876408615): PASS on the same head;
+- benchmark root: `D:\LocalAI-Prerequisites`;
+- project-local Python: 3.12.10 from the official CPython NuGet package;
+- PaddlePaddle GPU: 3.2.0;
+- PaddleOCR: 3.7.0;
+- NVIDIA driver: 596.49;
+- Paddle device: `gpu:0`;
+- CUDA compilation: `True`;
+- `system_python_modified=False`;
+- `ocr_executed=False`;
+- `benchmark_content_created=False`;
+- `backend_selected=False`.
 
-M4.2.2 work is isolated on:
+This accepts **environment preparation only**. It does not select PaddleOCR as the product backend and does not count as OCR accuracy/performance acceptance.
 
-```text
-dev/m4-2-2-controlled-benchmark
-```
-
-The first M4.2.2 step prepares a **server-local PaddleOCR GPU benchmark environment** without touching the existing Python 3.14 installation. `run-m4-2-ocr-benchmark-setup.ps1` prefers Python Install Manager `py install --target`; when only the legacy launcher is present it uses the official CPython `python` NuGet package 3.12.10 entirely below ignored project-local storage on D:. It then pins `paddlepaddle-gpu==3.2.0` from the CUDA 12.6 wheel index plus `paddleocr==3.7.0`. Existing Python installations on C: are not used or modified by this fallback. The physical server will use `-BenchmarkRoot D:\LocalAI-Prerequisites` so the benchmark runtime, caches, and later models stay on D:. The server preflight driver 596.49 satisfies the documented CUDA 12.6 wheel minimum (550.54.14).
-
-This setup downloads benchmark dependencies only. It does not execute OCR, create benchmark screenshots, select a backend, change product privacy capabilities, or add LAN pixel transport. The controlled corpus and OCR outputs remain local below ignored `.localcopilot/ocr-benchmark`; Git/PR evidence contains only aggregate metrics.
-
-Acceptance for this setup step requires CI parse/`-ValidateOnly` PASS and a physical server environment-preparation run reporting isolated Python 3.12, pinned Paddle/PaddleOCR versions, `paddle_compiled_with_cuda=True`, and a GPU device. After that, build/run the controlled Persian/English/mixed/UI benchmark and add a Tesseract Persian+English baseline before any product backend selection.
-
-See [M4.2 controlled OCR benchmark](M4_2_OCR_BENCHMARK.md).
+The next M4.2.2 gate is a one-command, local-only controlled benchmark using stable opaque sample IDs and a manifest that references local ROI images plus exact local ground truth. The first measured candidate is PaddleOCR GPU with the recognition model explicitly pinned to `arabic_PP-OCRv5_mobile_rec`, because the official PP-OCRv5 multilingual model table lists Persian and English support for that model. Benchmark output committed or copied to review must contain aggregate accuracy/performance/resource metrics only, never screenshots, ground truth, or raw OCR text.
 
 ## How to update this file
 
