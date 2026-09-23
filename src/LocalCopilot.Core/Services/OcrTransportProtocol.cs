@@ -82,6 +82,16 @@ public sealed class OcrEncodedRegion : IDisposable
                 "OCR transport region byte length exceeds the protocol limit.");
         }
 
+        if (!PngHeaderMatches(
+                ownedPngBytes,
+                width,
+                height))
+        {
+            throw new ArgumentException(
+                "OCR transport payload is not a matching PNG image.",
+                nameof(ownedPngBytes));
+        }
+
         Width = width;
         Height = height;
         _pngBytes = ownedPngBytes;
@@ -124,6 +134,26 @@ public sealed class OcrEncodedRegion : IDisposable
         IsDisposed
             ? "<ocr-region disposed>"
             : $"<ocr-region {Width}x{Height} bytes={EncodedByteCount} content=redacted>";
+
+    private static bool PngHeaderMatches(
+        ReadOnlySpan<byte> bytes,
+        int width,
+        int height)
+    {
+        ReadOnlySpan<byte> signature =
+            [137, 80, 78, 71, 13, 10, 26, 10];
+
+        return
+            bytes.Length >= 24 &&
+            bytes[..8].SequenceEqual(signature) &&
+            BinaryPrimitives.ReadUInt32BigEndian(
+                bytes.Slice(8, 4)) == 13 &&
+            bytes.Slice(12, 4).SequenceEqual("IHDR"u8) &&
+            BinaryPrimitives.ReadInt32BigEndian(
+                bytes.Slice(16, 4)) == width &&
+            BinaryPrimitives.ReadInt32BigEndian(
+                bytes.Slice(20, 4)) == height;
+    }
 }
 
 public sealed class OcrTransportRequest : IDisposable
