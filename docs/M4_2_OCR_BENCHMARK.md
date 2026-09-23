@@ -32,10 +32,10 @@ The setup prefers Python Install Manager `py install --target`. When the machine
 From a clean non-elevated PowerShell on the server and the exact feature branch:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-benchmark-setup.ps1 -MachineRole Server -PreparePaddleGpu
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-benchmark-setup.ps1 -MachineRole Server -PreparePaddleGpu -BenchmarkRoot D:\LocalAI-Prerequisites
 ```
 
-The setup step downloads benchmark dependencies but does **not** run OCR, create benchmark screenshots, or select a backend.
+The setup step downloads benchmark dependencies but does **not** run OCR, create benchmark screenshots, or select a backend. `-BenchmarkRoot` may point outside the repository; on the fixed server use `D:\LocalAI-Prerequisites` so benchmark prerequisites stay off C: and are not mixed with source files.
 
 ## Controlled benchmark corpus
 
