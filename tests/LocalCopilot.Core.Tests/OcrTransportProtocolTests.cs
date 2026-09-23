@@ -42,6 +42,9 @@ public sealed class OcrTransportProtocolTests
             Assert.AreEqual(11L, BinaryPrimitives.ReadInt64BigEndian(body.AsSpan(12, 8)));
             Assert.AreEqual(22L, BinaryPrimitives.ReadInt64BigEndian(body.AsSpan(20, 8)));
             Assert.AreEqual(1, BinaryPrimitives.ReadInt32BigEndian(body.AsSpan(36, 4)));
+            Assert.AreEqual(4, BinaryPrimitives.ReadInt32BigEndian(body.AsSpan(40, 4)));
+            Assert.AreEqual(2, BinaryPrimitives.ReadInt32BigEndian(body.AsSpan(44, 4)));
+            Assert.AreEqual(16, BinaryPrimitives.ReadInt32BigEndian(body.AsSpan(48, 4)));
             Assert.AreSequenceEqual(
                 pixels,
                 body.AsSpan(body.Length - pixels.Length).ToArray());
