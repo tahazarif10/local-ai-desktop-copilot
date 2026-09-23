@@ -158,7 +158,9 @@ internal sealed class OcrEnrichmentRuntimeService :
             if (_stopped)
                 return;
 
-            _latestRequestId = requestId;
+            Interlocked.Exchange(
+                ref _latestRequestId,
+                requestId);
 
             if (_active is null)
             {
