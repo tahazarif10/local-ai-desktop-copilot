@@ -20,7 +20,8 @@ public sealed class OcrIntegrationGateTests
                 isArmed: true,
                 Epoch(
                     PrivacyCapability.CapturePixels |
-                    PrivacyCapability.RunOcr));
+                    PrivacyCapability.RunOcr,
+                    cancellationToken: CancellationToken.None));
 
         Assert.IsTrue(allowed.Allowed);
         Assert.AreEqual(
@@ -41,7 +42,8 @@ public sealed class OcrIntegrationGateTests
                 isArmed: true,
                 Epoch(
                     PrivacyCapability.CapturePixels |
-                    PrivacyCapability.RunOcr));
+                    PrivacyCapability.RunOcr,
+                    cancellationToken: CancellationToken.None));
 
         Assert.IsFalse(denied.Allowed);
         Assert.AreEqual(
@@ -55,7 +57,8 @@ public sealed class OcrIntegrationGateTests
                 Epoch(
                     PrivacyCapability.CapturePixels |
                     PrivacyCapability.RunOcr |
-                    PrivacyCapability.SendPixelsToLocalServer));
+                    PrivacyCapability.SendPixelsToLocalServer,
+                    cancellationToken: CancellationToken.None));
 
         Assert.IsTrue(allowed.Allowed);
         Assert.IsTrue(
@@ -74,7 +77,7 @@ public sealed class OcrIntegrationGateTests
             OcrIntegrationGate.EvaluateDispatch(
                 request,
                 isArmed: false,
-                Epoch(AllClientCapabilities)));
+                Epoch(AllClientCapabilities, cancellationToken: CancellationToken.None)));
 
         AssertDecision(
             OcrIntegrationRejectionReason.NoCurrentEpoch,
@@ -88,7 +91,7 @@ public sealed class OcrIntegrationGateTests
             OcrIntegrationGate.EvaluateDispatch(
                 request,
                 isArmed: true,
-                Epoch(AllClientCapabilities, id: 8)));
+                Epoch(AllClientCapabilities, id: 8, cancellationToken: CancellationToken.None)));
 
         using CancellationTokenSource cancellation = new();
         cancellation.Cancel();
@@ -119,7 +122,7 @@ public sealed class OcrIntegrationGateTests
             OcrIntegrationGate.EvaluateDispatch(
                 request,
                 isArmed: true,
-                Epoch(AllClientCapabilities));
+                Epoch(AllClientCapabilities, cancellationToken: CancellationToken.None));
 
         AssertDecision(
             OcrIntegrationRejectionReason.EmptyRegionPlan,
@@ -159,7 +162,7 @@ public sealed class OcrIntegrationGateTests
             OcrIntegrationGate.EvaluateDispatch(
                 request,
                 isArmed: true,
-                Epoch(AllClientCapabilities));
+                Epoch(AllClientCapabilities, cancellationToken: CancellationToken.None));
 
         AssertDecision(
             OcrIntegrationRejectionReason.InvalidRegionPlan,
@@ -199,7 +202,7 @@ public sealed class OcrIntegrationGateTests
             OcrIntegrationGate.EvaluateDispatch(
                 request,
                 isArmed: true,
-                Epoch(AllClientCapabilities));
+                Epoch(AllClientCapabilities, cancellationToken: CancellationToken.None));
 
         AssertDecision(
             OcrIntegrationRejectionReason.InvalidRegionPlan,
@@ -230,7 +233,7 @@ public sealed class OcrIntegrationGateTests
                 request,
                 latestRequestId: request.RequestId + 1,
                 isArmed: true,
-                Epoch(AllServerCapabilities));
+                Epoch(AllServerCapabilities, cancellationToken: CancellationToken.None));
 
         AssertDecision(
             OcrIntegrationRejectionReason.NotLatestRequest,
@@ -241,7 +244,7 @@ public sealed class OcrIntegrationGateTests
                 request,
                 latestRequestId: request.RequestId,
                 isArmed: true,
-                Epoch(AllClientCapabilities));
+                Epoch(AllClientCapabilities, cancellationToken: CancellationToken.None));
 
         AssertDecision(
             OcrIntegrationRejectionReason.CapabilityDenied,
@@ -252,7 +255,7 @@ public sealed class OcrIntegrationGateTests
                 request,
                 latestRequestId: request.RequestId,
                 isArmed: true,
-                Epoch(AllServerCapabilities));
+                Epoch(AllServerCapabilities, cancellationToken: CancellationToken.None));
 
         Assert.IsTrue(allowed.Allowed);
     }
