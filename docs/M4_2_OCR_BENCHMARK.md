@@ -245,6 +245,32 @@ All three completed with zero failures and zero timeouts; none logged or persist
 
 On this matched subset, PaddleOCR measured the lowest CER and WER, Tesseract measured both higher error and higher latency, and Windows Media OCR measured much lower latency but remains English-only. This evidence still does **not** select a backend: PaddleOCR's absolute error remains high enough to justify one bounded model/configuration tuning pass before M4.2.2 is closed.
 
+
+## Bounded Paddle model/configuration tuning pass
+
+The candidate comparison leaves PaddleOCR as the only currently measured engine with Persian support and materially better multilingual evidence than the Tesseract baseline, but the absolute strict error remains too high to select it without one bounded tuning pass.
+
+The tuning matrix is intentionally small and evidence-driven:
+
+1. `PP-OCRv5_server_det + arabic_PP-OCRv5_mobile_rec` on the full seven-category corpus. PaddleOCR documents the server detector as the higher-accuracy PP-OCRv5 detection model for high-performance servers, while retaining the multilingual recognizer required for Persian.
+2. `PP-OCRv5_mobile_det + en_PP-OCRv5_mobile_rec` on the matched English-only subset. The official multilingual documentation identifies the English PP-OCRv5 recognizer as an English-optimized model with higher recognition accuracy for English scenarios.
+3. `PP-OCRv5_server_det + en_PP-OCRv5_mobile_rec` on the same matched English-only subset to isolate whether the more accurate detector adds useful desktop-UI accuracy.
+
+Official references:
+
+- https://github.com/PaddlePaddle/PaddleOCR/blob/main/docs/version3.x/module_usage/text_detection.en.md
+- https://github.com/PaddlePaddle/PaddleOCR/blob/main/docs/version3.x/algorithm/PP-OCRv5/PP-OCRv5_multi_languages.en.md
+
+No server recognition model is substituted for Persian because the measured multilingual requirement remains Persian + English. The tuning pass does not expand into arbitrary model search, PP-OCRv6, custom training, preprocessing heuristics, or product integration.
+
+One-command physical entry point:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-paddle-variants.ps1 -BenchmarkRoot D:\LocalAI-Prerequisites
+```
+
+The command reuses the existing controlled corpus and local model cache, prepares only the pinned variant models, and emits aggregate-only evidence.
+
 ## Required aggregate measurements
 
 For every engine/configuration:
