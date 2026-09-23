@@ -70,6 +70,7 @@ public sealed class DiagnosticSessionTests
             session.LogFilePath);
 
         Assert.IsFalse(session.AllowUiText);
+        Assert.IsFalse(session.AllowOcr);
     }
 
     [TestMethod]
@@ -112,7 +113,9 @@ public sealed class DiagnosticSessionTests
                     now -
                     TimeSpan.FromMinutes(1),
                 AllowUiText =
-                    expired.AllowUiText
+                    expired.AllowUiText,
+                AllowOcr =
+                    expired.AllowOcr
             };
 
         Assert.IsFalse(
@@ -212,6 +215,9 @@ public sealed class DiagnosticSessionTests
 
         Assert.IsFalse(
             DiagnosticLog.IsUiTextEnabled);
+
+        Assert.IsFalse(
+            DiagnosticLog.IsOcrEnabled);
 
         Assert.IsNull(
             DiagnosticLog.CurrentLogFilePath);
@@ -344,6 +350,48 @@ public sealed class DiagnosticSessionTests
     }
 
     [TestMethod]
+    public void DiagnosticLog_OcrOptIn_IsExplicitAndSessionScoped()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        Guid sessionId = Guid.NewGuid();
+        string sessionDirectory = CreateSessionDirectory(sessionId);
+
+        try
+        {
+            DiagnosticLog.Initialize(
+                CreateArguments(
+                    CreateDescriptor(
+                        sessionId,
+                        sessionDirectory,
+                        now,
+                        allowOcr: true)),
+                now);
+
+            DiagnosticLog.ResetSession();
+
+            Assert.IsTrue(DiagnosticLog.IsEnabled);
+            Assert.IsTrue(DiagnosticLog.IsOcrEnabled);
+            Assert.IsFalse(DiagnosticLog.IsUiTextEnabled);
+
+            string content = File.ReadAllText(
+                Path.Combine(
+                    sessionDirectory,
+                    DiagnosticLog.ApplicationLogFileName));
+
+            Assert.Contains("ocrEnabled=True", content);
+        }
+        finally
+        {
+            DiagnosticLog.ResetForTests();
+
+            if (Directory.Exists(sessionDirectory))
+            {
+                Directory.Delete(sessionDirectory, recursive: true);
+            }
+        }
+    }
+
+    [TestMethod]
     public void Sanitize_BoundsAndEscapesDiagnosticFields()
     {
         string sanitized =
@@ -370,7 +418,8 @@ public sealed class DiagnosticSessionTests
         Guid sessionId,
         string sessionDirectory,
         DateTimeOffset now,
-        bool allowUiText = false)
+        bool allowUiText = false,
+        bool allowOcr = false)
     {
         return new DiagnosticLaunchDescriptor
         {
@@ -387,7 +436,9 @@ public sealed class DiagnosticSessionTests
                 now +
                 TimeSpan.FromHours(4),
             AllowUiText =
-                allowUiText
+                allowUiText,
+            AllowOcr =
+                allowOcr
         };
     }
 
