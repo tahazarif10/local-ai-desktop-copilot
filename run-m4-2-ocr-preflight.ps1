@@ -181,6 +181,7 @@ function Get-M42PaddleProbe {
     $result = [ordered]@{
         PythonAvailable = $false
         PythonVersion = "unavailable"
+        PythonSupported = $false
         PaddleAvailable = $false
         PaddleVersion = "unavailable"
         PaddleOcrVersion = "unavailable"
@@ -208,6 +209,24 @@ function Get-M42PaddleProbe {
         if ($LASTEXITCODE -eq 0) {
             $result.PythonVersion =
                 Get-M42FirstLine -Lines $versionLines
+        }
+
+        try {
+            $pythonVersion =
+                [Version]$result.PythonVersion
+
+            $result.PythonSupported =
+                $pythonVersion.Major -eq 3 -and
+                $pythonVersion.Minor -ge 9 -and
+                $pythonVersion.Minor -le 13
+        }
+        catch {
+            $result.PythonSupported = $false
+        }
+
+        if (-not $result.PythonSupported) {
+            $result.ErrorType = "UnsupportedPythonVersion"
+            return [pscustomobject]$result
         }
 
         $probeCode = @'
@@ -479,7 +498,11 @@ else {
     $tesseractEligibility = "unavailable"
 }
 
-if ($paddle.PaddleAvailable -and
+if ($paddle.PythonAvailable -and
+    -not $paddle.PythonSupported) {
+    $paddleEligibility = "python-version-unsupported"
+}
+elseif ($paddle.PaddleAvailable -and
     $paddle.PaddleOcrVersion -ne "unavailable") {
     $paddleEligibility = "runtime-present"
 }
@@ -533,6 +556,7 @@ tesseract_error_type=$($tesseract.ErrorType)
 candidate_paddleocr=$paddleEligibility
 python_available=$($paddle.PythonAvailable)
 python_version=$($paddle.PythonVersion)
+python_supported_for_paddle=$($paddle.PythonSupported)
 paddle_available=$($paddle.PaddleAvailable)
 paddle_version=$($paddle.PaddleVersion)
 paddleocr_version=$($paddle.PaddleOcrVersion)
