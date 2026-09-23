@@ -1,7 +1,8 @@
 # ADR 0013: Evidence-gated OCR benchmark protocol
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-23
+- Accepted: 2026-09-23
 - Supersedes: none
 - Extends: ADR 0003, ADR 0012
 
@@ -187,3 +188,29 @@ M4.2.1 is accepted only when:
 - server preflight is executed before any server/GPU candidate is used in the
   controlled benchmark;
 - no backend selection is claimed from preflight alone.
+
+## M4.2.1 acceptance evidence
+
+Accepted implementation/preflight head:
+`d8f12b00524934138115f22cc8bd7149e20f4452`.
+
+[CI #137](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35854783290)
+passed the portable Core suite, Windows Core suite, Windows PowerShell parsing,
+the M4.2 preflight `-ValidateOnly` gate, prior M3.4 runner/provider regressions,
+and the strict WinUI `Debug/win-x64` build.
+
+Physical client preflight on clean head `ec7b5de740e7825835c5c6bb16bb3f13f5111d02`
+reported i7-6700K, 31.9 GiB RAM, AMD R9 M395X, legacy Windows OCR with only
+`en-US`, no Tesseract, Python 3.14.7, and no Paddle/PaddleOCR. No content was
+captured or OCR executed.
+
+Physical server preflight on clean head `d8f12b00524934138115f22cc8bd7149e20f4452`
+reported i5-12450HX, 15.7 GiB RAM, RTX 3050 6GB Laptop GPU, NVIDIA driver
+596.49, legacy Windows OCR with only `en-US`, no Tesseract, Python 3.14.0b2,
+and no Paddle/PaddleOCR. Python 3.14 is explicitly classified unsupported for
+the current Paddle Windows wheel requirement. No content was captured or OCR
+executed.
+
+The two preflights therefore establish environment facts only. They do not
+select an OCR backend or topology. M4.2.2 controlled benchmarking remains
+required.
