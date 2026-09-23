@@ -1,12 +1,12 @@
 ---
 state_schema: 2
-reference_code_commit: 03f719a1bb4a98a3834348d1f0d53fa50828c92e
-accepted_main_commit: 5ad17ee5276dccefbe5ac4d3e6f7ab845061fdaa
+reference_code_commit: d8f12b00524934138115f22cc8bd7149e20f4452
+accepted_main_commit: 920bbecbb4c7ef4c22ca3ff055df1bcaa801e911
 last_verified_date: 2026-09-23
-completed_through: M4.1
+completed_through: M4.2.1
 active_milestone: M4.2
-active_branch: dev/m4-2-ocr-benchmark
-active_status: M4.2.1 benchmark contract/preflight passed CI #137 and both fixed-machine preflights; ADR 0013 is accepted on PR #31, with review/merge remaining before M4.2.2 controlled OCR benchmarking starts
+active_branch: dev/m4-2-2-controlled-benchmark
+active_status: M4.2.1 is accepted and merged through PR #31 at main commit 920bbecbb4c7ef4c22ca3ff055df1bcaa801e911; M4.2.2 controlled OCR benchmark setup is active on the feature branch
 next_milestone: M4.2
 next_milestone_name: OCR benchmark and integration
 ---
@@ -300,19 +300,27 @@ These are fixed design inputs, not upgrade suggestions:
 
 ## Immediate acceptance gate
 
-M4.2.1 benchmark contract and target-machine preflight are accepted on feature branch `dev/m4-2-ocr-benchmark` at behavior/preflight head:
+M4.2.1 is accepted and merged to `main` through [PR #31](https://github.com/tahazarif10/local-ai-desktop-copilot/pull/31).
+
+- accepted preflight/behavior head: `d8f12b00524934138115f22cc8bd7149e20f4452`;
+- merge commit: `920bbecbb4c7ef4c22ca3ff055df1bcaa801e911`;
+- accepted [ADR 0013](decisions/0013-evidence-gated-ocr-benchmark.md);
+- CI #137 passed portable/Windows Core tests, Windows PowerShell parsing, preflight validation, prior M3.4 regressions, and the strict WinUI build;
+- physical client/server preflights completed content-free and selected no backend.
+
+M4.2.2 work is isolated on:
 
 ```text
-d8f12b00524934138115f22cc8bd7149e20f4452
+dev/m4-2-2-controlled-benchmark
 ```
 
-[CI #137](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35854783290) is PASS. The portable/Windows Core suites, Windows PowerShell parsing, M4.2 preflight `-ValidateOnly`, prior M3.4 runner/provider regressions, and strict WinUI build all passed.
+The first M4.2.2 step prepares a **server-local PaddleOCR GPU benchmark environment** without touching the existing Python 3.14 installation. `run-m4-2-ocr-benchmark-setup.ps1` uses Python Install Manager `py install --target` to create an ignored project-local Python 3.12 runtime and pins `paddlepaddle-gpu==3.2.0` from the CUDA 12.6 wheel index plus `paddleocr==3.7.0`. The server preflight driver 596.49 satisfies the documented CUDA 12.6 wheel minimum (550.54.14).
 
-Physical client preflight established: i7-6700K, 31.9 GiB RAM, AMD R9 M395X, legacy Windows OCR available only for `en-US`, no Tesseract, Python 3.14.7, no Paddle/PaddleOCR. Physical server preflight established: i5-12450HX, 15.7 GiB RAM, RTX 3050 6GB Laptop GPU, NVIDIA driver 596.49, legacy Windows OCR available only for `en-US`, no Tesseract, Python 3.14.0b2, no Paddle/PaddleOCR. Both runs were non-elevated, clean-tree, content-free, and performed no OCR or dependency installation.
+This setup downloads benchmark dependencies only. It does not execute OCR, create benchmark screenshots, select a backend, change product privacy capabilities, or add LAN pixel transport. The controlled corpus and OCR outputs remain local below ignored `.localcopilot/ocr-benchmark`; Git/PR evidence contains only aggregate metrics.
 
-Accepted [ADR 0013](decisions/0013-evidence-gated-ocr-benchmark.md) records the evidence-gated benchmark protocol. No OCR backend or topology is selected from preflight alone.
+Acceptance for this setup step requires CI parse/`-ValidateOnly` PASS and a physical server environment-preparation run reporting isolated Python 3.12, pinned Paddle/PaddleOCR versions, `paddle_compiled_with_cuda=True`, and a GPU device. After that, build/run the controlled Persian/English/mixed/UI benchmark and add a Tesseract Persian+English baseline before any product backend selection.
 
-PR #31 review/merge is the remaining repository-state gate for M4.2.1. After merge, start **M4.2.2 — controlled OCR benchmark**. Create isolated benchmark environments rather than modifying the existing Python 3.14 installations. Benchmark Windows.Media.Ocr only as an English baseline unless an explicit Persian language-pack change is separately approved. Tesseract and PaddleOCR remain candidates to install in benchmark-only environments. Do not wire OCR into product runtime or begin M4.3 VLM work before controlled benchmark evidence is reviewed.
+See [M4.2 controlled OCR benchmark](M4_2_OCR_BENCHMARK.md).
 
 ## How to update this file
 
