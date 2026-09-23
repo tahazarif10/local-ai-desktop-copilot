@@ -579,13 +579,56 @@ class BoundedHttpServer(ThreadingHTTPServer):
             self._handler_slots.release()
 
 
+def _hex_nibble(value: int) -> int:
+    if 48 <= value <= 57:
+        return value - 48
+    if 97 <= value <= 102:
+        return value - 97 + 10
+    if 65 <= value <= 70:
+        return value - 65 + 10
+    return -1
+
+
 def _read_authentication_key(path: Path) -> bytearray:
-    text = path.read_text(encoding="ascii").strip()
-    if not re.fullmatch(r"[0-9a-fA-F]{64,128}", text) or len(text) % 2 != 0:
-        raise ValueError(
-            "Authentication key file must contain 32-64 bytes as hexadecimal."
-        )
-    return bytearray.fromhex(text)
+    encoded = bytearray(path.read_bytes())
+    try:
+        start = 0
+        end = len(encoded)
+        whitespace = {9, 10, 13, 32}
+
+        while start < end and encoded[start] in whitespace:
+            start += 1
+        while end > start and encoded[end - 1] in whitespace:
+            end -= 1
+
+        hex_length = end - start
+        if (
+            hex_length < 64
+            or hex_length > 128
+            or hex_length % 2 != 0
+        ):
+            raise ValueError(
+                "Authentication key file must contain 32-64 bytes as hexadecimal."
+            )
+
+        key = bytearray(hex_length // 2)
+        try:
+            for index in range(len(key)):
+                high = _hex_nibble(encoded[start + index * 2])
+                low = _hex_nibble(encoded[start + index * 2 + 1])
+                if high < 0 or low < 0:
+                    raise ValueError(
+                        "Authentication key file must contain hexadecimal."
+                    )
+                key[index] = (high << 4) | low
+            return key
+        except BaseException:
+            for index in range(len(key)):
+                key[index] = 0
+            raise
+    finally:
+        for index in range(len(encoded)):
+            encoded[index] = 0
 
 
 def validate_contract() -> None:
