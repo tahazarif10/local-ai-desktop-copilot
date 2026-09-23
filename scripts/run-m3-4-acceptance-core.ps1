@@ -805,7 +805,9 @@ namespace LocalCopilotM34Acceptance
     Write-Host "[RUN] Accepted in-process provider-isolation regression"
 
     $providerRoot = Join-Path $runRoot "provider-regression"
-    & $providerRunnerPath -DiagnosticRoot $providerRoot
+    & $providerRunnerPath `
+        -DiagnosticRoot $providerRoot `
+        -ExpectedBranch $branch
     $providerRegression = "PASS"
 
     $providerEvidenceFiles = @(
