@@ -31,7 +31,7 @@ REQUEST_MAGIC = b"LCOPROC1"
 RESPONSE_MAGIC = b"LCOPRS01"
 REQUEST_PATH = "/v1/ocr"
 REQUEST_FIXED_HEADER = 40
-REQUEST_REGION_HEADER = 28
+REQUEST_REGION_HEADER = 20
 RESPONSE_FIXED_HEADER = 32
 
 MAX_REGIONS = 4
@@ -67,8 +67,6 @@ class AuthenticationError(ValueError):
 
 @dataclass(frozen=True)
 class RegionView:
-    x: int
-    y: int
     width: int
     height: int
     stride: int
@@ -228,17 +226,15 @@ def parse_request(body: bytes, now_unix_ms: int) -> ParsedRequest:
 
     for _ in range(region_count):
         (
-            x,
-            y,
             width,
             height,
             stride,
             pixel_format,
             descriptor_reserved,
             byte_length,
-        ) = struct.unpack_from(">iiiiiHHi", body, descriptor_offset)
+        ) = struct.unpack_from(">iiiHHi", body, descriptor_offset)
 
-        if x < 0 or y < 0 or width <= 0 or height <= 0:
+        if width <= 0 or height <= 0:
             raise ProtocolError("Region geometry is invalid.")
         if width > 8192 or height > 8192:
             raise ProtocolError("Region dimensions exceed transport limits.")
@@ -253,8 +249,6 @@ def parse_request(body: bytes, now_unix_ms: int) -> ParsedRequest:
 
         regions.append(
             RegionView(
-                x=x,
-                y=y,
                 width=width,
                 height=height,
                 stride=stride,
@@ -651,7 +645,7 @@ def _read_authentication_key(path: Path) -> bytearray:
 def validate_contract() -> None:
     if REQUEST_FIXED_HEADER != struct.calcsize(">8sHHqqqi"):
         raise RuntimeError("Request fixed-header size mismatch.")
-    if REQUEST_REGION_HEADER != struct.calcsize(">iiiiiHHi"):
+    if REQUEST_REGION_HEADER != struct.calcsize(">iiiHHi"):
         raise RuntimeError("Request region-header size mismatch.")
     if RESPONSE_FIXED_HEADER != struct.calcsize(">8sHHqqi"):
         raise RuntimeError("Response fixed-header size mismatch.")
