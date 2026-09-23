@@ -21,7 +21,7 @@ Pinned benchmark dependencies:
 - `paddlepaddle-gpu==3.2.0`;
 - CUDA 12.6 Paddle wheel index;
 - `paddleocr==3.7.0`;
-- PP-OCRv5 Persian path (`lang=fa`) for the Persian/mixed benchmark.
+- `arabic_PP-OCRv5_mobile_rec` explicitly pinned for Persian/mixed recognition; the official PP-OCRv5 multilingual model table lists Persian and English support for this model.
 
 The server driver 596.49 is above PaddlePaddle's documented Windows minimum for the CUDA 12.6 wheel family (550.54.14). The setup script therefore permits that candidate only on `MachineRole=Server`.
 
@@ -36,6 +36,22 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-ocr-benchmark
 ```
 
 The setup step downloads benchmark dependencies but does **not** run OCR, create benchmark screenshots, or select a backend. `-BenchmarkRoot` may point outside the repository; on the fixed server use `D:\LocalAI-Prerequisites` so benchmark prerequisites stay off C: and are not mixed with source files.
+
+## Accepted environment evidence
+
+Physical server acceptance on exact clean head `f8275451084af12637e66169ac3c3c06bf78f7cb`:
+
+- CI #166 PASS on the same head;
+- root `D:\LocalAI-Prerequisites`;
+- Python 3.12.10;
+- PaddlePaddle GPU 3.2.0;
+- PaddleOCR 3.7.0;
+- NVIDIA driver 596.49;
+- `gpu:0`;
+- CUDA compiled = true;
+- no product/system Python mutation;
+- no OCR or benchmark content created;
+- no backend selected.
 
 ## Controlled benchmark corpus
 
