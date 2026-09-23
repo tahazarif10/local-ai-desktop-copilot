@@ -141,6 +141,31 @@ This result is sufficient evidence that the pinned Paddle pipeline executes loca
 
 ## Tesseract comparison baseline
 
+## Tesseract controlled physical result
+
+The pinned Tesseract 5.5.3 `fas+eng` baseline was executed on the exact existing controlled OS-rendered corpus at clean head `3a2386442b357a92829f619c0b12250b6b394179`.
+
+Aggregate-only physical evidence:
+
+- seven samples / all seven required categories;
+- failures: 0;
+- timeouts: 0;
+- strict CER: 0.50938967;
+- strict WER: 1.0;
+- exact normalized match rate: 0.0;
+- warm latency p50: 285.938 ms;
+- warm latency p95: 651.489 ms;
+- warm latency max: 656.062 ms;
+- cold first OCR: 489.071 ms;
+- process RSS peak: 38.27 MiB;
+- install footprint: 110.986 MiB;
+- `tessdata_fast` footprint: 4.334 MiB;
+- raw OCR text logged/persisted: false;
+- backend remains unselected.
+
+On this shared full seven-category corpus, PaddleOCR has the lower aggregate error and lower warm latency: Tesseract CER is about 1.76x Paddle CER, Tesseract WER is about 3.19x Paddle WER, and Tesseract warm p50 latency is about 6.57x Paddle p50 latency. These are descriptive measurements on this controlled corpus, not a backend-selection claim.
+
+
 The next controlled candidate reuses the **exact same local corpus** rather than recapturing it. The baseline is pinned to Tesseract 5.5.3, `fas+eng`, LSTM OEM 1, PSM 6, and `tessdata_fast` at commit `87416418657359cb625c412a48b6e1d6d41c29bd`.
 
 The one-command physical entry point is:
