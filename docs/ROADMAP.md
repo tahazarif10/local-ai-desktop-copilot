@@ -206,7 +206,7 @@ Accepted M4.1 ROI/privacy bounds remain the input boundary for all OCR work. Pro
 
 #### ▶ M4.2.2 Controlled OCR benchmark
 
-Current first step: prepare the server-local PaddleOCR GPU benchmark environment with `run-m4-2-ocr-benchmark-setup.ps1`. The setup uses project-local Python 3.12 via Python Install Manager `--target`, pins PaddlePaddle GPU 3.2.0 on the CUDA 12.6 wheel index and PaddleOCR 3.7.0, and leaves the existing Python 3.14 installation untouched. See [M4.2 controlled OCR benchmark](M4_2_OCR_BENCHMARK.md).
+Environment preparation is accepted on exact server head `f8275451084af12637e66169ac3c3c06bf78f7cb` with CI #166 PASS. Current next step: build and run the controlled local-only OCR corpus/runner. The setup uses project-local Python 3.12 via Python Install Manager `--target`, pins PaddlePaddle GPU 3.2.0 on the CUDA 12.6 wheel index and PaddleOCR 3.7.0, and leaves the existing Python 3.14 installation untouched. See [M4.2 controlled OCR benchmark](M4_2_OCR_BENCHMARK.md).
 
 - Benchmark viable local candidates on Persian, English, mixed Persian-English, terminal/console, dialog, browser UI, and desktop application UI.
 - Keep real screenshots, ground truth, and OCR output local; PR/diagnostic evidence contains only sample IDs/categories and aggregate metrics.
