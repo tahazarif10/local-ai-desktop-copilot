@@ -321,7 +321,13 @@ The runner gate adds:
 - cold initialization, warm p50/p95/max latency, failure/timeout, RAM, GPU VRAM, runtime footprint, and model-cache footprint metrics;
 - aggregate-only result persistence. Raw OCR text, ground truth, and screenshots are neither printed nor written by the runner.
 
-The first controlled OS-rendered PaddleOCR run passed at clean head `9fa4ba26daf4becc011f6e1ccc6cf7eeb81d0156` after CI #181 PASS: 7/7 required categories, 0 failures, 0 timeouts, CER 0.28873239, WER 0.31343284, exact normalized match 0.0, warm p50/p95/max 43.513/78.132/80.619 ms, cold initialization 3389.084 ms, worker RSS peak 1494.766 MiB, GPU VRAM delta 224 MiB, raw OCR logging/persistence false. The cuDNN 9.9-compiled versus 9.5 runtime mismatch remains a recorded compatibility risk. The Tesseract 5.5.3 `fas+eng` baseline then passed on the exact same seven-sample corpus at clean head `3a2386442b357a92829f619c0b12250b6b394179`: 0 failures, 0 timeouts, CER 0.50938967, WER 1.0, exact match 0.0, warm p50/p95/max 285.938/651.489/656.062 ms, RSS peak 38.27 MiB. PaddleOCR remains an **unselected candidate**; on this corpus it measured lower error and lower warm latency than Tesseract. The next physical gate is legacy Windows Media OCR as an English-only baseline on the three eligible controlled categories because the fixed machine exposes `en-US` but no Persian OCR language.
+The first controlled OS-rendered PaddleOCR run passed at clean head `9fa4ba26daf4becc011f6e1ccc6cf7eeb81d0156` after CI #181 PASS: 7/7 required categories, 0 failures, 0 timeouts, CER 0.28873239, WER 0.31343284, exact normalized match 0.0, warm p50/p95/max 43.513/78.132/80.619 ms, cold initialization 3389.084 ms, worker RSS peak 1494.766 MiB, GPU VRAM delta 224 MiB, raw OCR logging/persistence false. The cuDNN 9.9-compiled versus 9.5 runtime mismatch remains a recorded compatibility risk.
+
+The Tesseract 5.5.3 `fas+eng` baseline passed on the exact same seven-sample corpus at clean head `3a2386442b357a92829f619c0b12250b6b394179`: 0 failures, 0 timeouts, CER 0.50938967, WER 1.0, exact match 0.0, warm p50/p95/max 285.938/651.489/656.062 ms, RSS peak 38.27 MiB.
+
+Legacy Windows Media OCR then passed at corrected clean head `563212ed9f8712057d25f6af1fc1d77893224cb3` on its eligible English-only three-sample subset: 0 failures, 0 timeouts, CER 0.31963470, WER 0.39285714, exact match 0.0, warm recognition p50/p95/max 7.028/7.619/7.667 ms and warm end-to-end p50/p95 12.235/22.830 ms. It remains ineligible for Persian/mixed use because only `en-US` is installed.
+
+No backend is selected yet. The next physical gate is a matched English-subset comparison of PaddleOCR, Tesseract, and Windows Media OCR on the exact same three controlled samples.
 
 ## How to update this file
 
