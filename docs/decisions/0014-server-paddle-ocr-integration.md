@@ -144,3 +144,28 @@ M4.2.3b additionally requires:
 - content-free diagnostic scans;
 - strict Windows build;
 - one-command physical acceptance on the fixed client/server pair.
+
+
+## M4.2.3a acceptance evidence
+
+The transport-free portable gate is accepted at functional head
+`62a64f60a09924c8007ccc2f4dd1560211ab55ea` through PR #35.
+
+[CI #216](https://github.com/tahazarif10/local-ai-desktop-copilot/actions/runs/35900957623)
+passed the portable Core suite, Windows Core suite, all existing PowerShell
+validation/provider regressions, and the strict Windows `Debug/win-x64` app
+build.
+
+The gate proves, without acquiring or transporting content:
+
+- Armed/current/uncancelled epoch is mandatory;
+- client OCR requires `CapturePixels + RunOcr`;
+- local-server OCR additionally requires `SendPixelsToLocalServer`;
+- an empty ROI plan is rejected and never widens to a full frame;
+- forged/out-of-bounds or hard-ceiling-exceeding plans are rejected;
+- publication repeats context/capability checks and rejects a non-latest request.
+
+No physical runtime claim is added by this slice because it introduces no new
+interop, content acquisition, OCR execution, network transport, or product
+runtime composition. M4.2.3b remains the first content-bearing/client-server
+integration gate and requires physical acceptance on the fixed pair.
