@@ -18,6 +18,7 @@ $paddleOcrVersion = "3.7.0"
 $paddleIndex = "https://www.paddlepaddle.org.cn/packages/stable/cu126/"
 $pythonNuGetVersion = "3.12.10"
 $pythonNuGetPackageUrl = "https://www.nuget.org/api/v2/package/python/3.12.10"
+$pythonNuGetRegistrationUrl = "https://api.nuget.org/v3/registration5-semver1/python/3.12.10.json"
 
 function Test-M422Elevated {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -118,15 +119,84 @@ function Install-M422PythonFromNuGet {
         Write-Host "Using cached CPython NuGet package."
     }
 
-    $dotnet = Get-M422Command -Name "dotnet.exe"
-    if ($null -eq $dotnet) {
-        throw "dotnet.exe is required to verify the signed CPython NuGet package."
+    $curl = Get-M422Command -Name "curl.exe"
+    if ($null -eq $curl) {
+        throw "curl.exe is required to verify the CPython NuGet package against nuget.org metadata."
     }
 
-    Write-Host "Verifying CPython NuGet package signature..."
-    & $dotnet.Source @("nuget", "verify", $packagePath, "--all")
+    $registrationPath = Join-Path $CacheRoot ("python." + $pythonNuGetVersion + ".registration.json")
+    if (-not (Test-Path -LiteralPath $registrationPath)) {
+        $registrationPartial = $registrationPath + ".partial"
+        Remove-Item -LiteralPath $registrationPartial -Force -ErrorAction SilentlyContinue
+        Write-Host "Downloading official nuget.org registration metadata..."
+        & $curl.Source @(
+            "--fail",
+            "--location",
+            "--show-error",
+            "--silent",
+            "--ipv4",
+            "--retry", "3",
+            "--retry-delay", "3",
+            "--retry-connrefused",
+            "--connect-timeout", "30",
+            "--max-time", "300",
+            "--output", $registrationPartial,
+            $pythonNuGetRegistrationUrl
+        )
+        if ($LASTEXITCODE -ne 0) {
+            Remove-Item -LiteralPath $registrationPartial -Force -ErrorAction SilentlyContinue
+            throw "nuget.org registration metadata download failed with curl exit code $LASTEXITCODE."
+        }
+        Move-Item -LiteralPath $registrationPartial -Destination $registrationPath -Force
+    }
+
+    $registration = Get-Content -LiteralPath $registrationPath -Raw | ConvertFrom-Json
+    $catalogUrl = [string]$registration.catalogEntry
+    if ([string]::IsNullOrWhiteSpace($catalogUrl) -or $catalogUrl -notmatch "^https://api\.nuget\.org/") {
+        throw "nuget.org registration metadata did not contain an expected catalogEntry URL."
+    }
+
+    $catalogPath = Join-Path $CacheRoot ("python." + $pythonNuGetVersion + ".catalog.json")
+    $catalogPartial = $catalogPath + ".partial"
+    Remove-Item -LiteralPath $catalogPartial -Force -ErrorAction SilentlyContinue
+    Write-Host "Downloading official nuget.org catalog hash metadata..."
+    & $curl.Source @(
+        "--fail",
+        "--location",
+        "--show-error",
+        "--silent",
+        "--ipv4",
+        "--retry", "3",
+        "--retry-delay", "3",
+        "--retry-connrefused",
+        "--connect-timeout", "30",
+        "--max-time", "300",
+        "--output", $catalogPartial,
+        $catalogUrl
+    )
     if ($LASTEXITCODE -ne 0) {
-        throw "CPython NuGet package signature verification failed."
+        Remove-Item -LiteralPath $catalogPartial -Force -ErrorAction SilentlyContinue
+        throw "nuget.org catalog metadata download failed with curl exit code $LASTEXITCODE."
+    }
+    Move-Item -LiteralPath $catalogPartial -Destination $catalogPath -Force
+
+    $catalog = Get-Content -LiteralPath $catalogPath -Raw | ConvertFrom-Json
+    $hashAlgorithm = [string]$catalog.packageHashAlgorithm
+    $expectedPackageHash = [string]$catalog.packageHash
+    if ($hashAlgorithm -ne "SHA512" -or [string]::IsNullOrWhiteSpace($expectedPackageHash)) {
+        throw "nuget.org catalog metadata did not contain the expected SHA512 package hash."
+    }
+
+    Write-Host "Verifying CPython NuGet package SHA512 against official nuget.org catalog metadata..."
+    $actualHashHex = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA512).Hash
+    $actualHashBytes = New-Object byte[] ($actualHashHex.Length / 2)
+    for ($i = 0; $i -lt $actualHashBytes.Length; $i++) {
+        $actualHashBytes[$i] = [Convert]::ToByte($actualHashHex.Substring($i * 2, 2), 16)
+    }
+    $actualPackageHash = [Convert]::ToBase64String($actualHashBytes)
+
+    if (-not [string]::Equals($actualPackageHash, $expectedPackageHash, [StringComparison]::Ordinal)) {
+        throw "CPython NuGet package SHA512 did not match official nuget.org catalog metadata."
     }
 
     $extractRoot = Join-Path $PackageRoot "python"
@@ -170,6 +240,7 @@ if ($ValidateOnly) {
     if ($paddleIndex -notmatch "/cu126/$") { throw "M4.2.2 GPU benchmark must use the pinned CUDA 12.6 wheel index." }
     if ($pythonNuGetVersion -ne "3.12.10") { throw "Unexpected project-local Python NuGet version." }
     if ($pythonNuGetPackageUrl -ne "https://www.nuget.org/api/v2/package/python/3.12.10") { throw "Unexpected CPython NuGet package source." }
+    if ($pythonNuGetRegistrationUrl -ne "https://api.nuget.org/v3/registration5-semver1/python/3.12.10.json") { throw "Unexpected CPython NuGet registration metadata source." }
     Write-Host "M4.2.2 benchmark setup validation: PASS"
     return
 }
