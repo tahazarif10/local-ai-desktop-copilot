@@ -56,6 +56,9 @@ jobs:
           python3 -m py_compile ./scripts/m4_2_tesseract_benchmark.py
           python3 -m py_compile ./scripts/m4_2_score_stdin.py
           python3 ./scripts/m4_2_tesseract_benchmark.py --benchmark-root . --manifest dummy --tesseract-exe dummy --tessdata-dir dummy --validate-only
+          python3 -m py_compile ./scripts/m4_2_ocr_server.py
+          python3 ./scripts/test_m4_2_ocr_server.py
+          python3 ./scripts/m4_2_ocr_server.py --validate-only
 
       - name: Upload test results
         if: always()
