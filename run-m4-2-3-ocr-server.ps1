@@ -72,8 +72,8 @@ function Find-OpenSsl {
 
     $gitCommand = Get-Command git.exe -ErrorAction SilentlyContinue
     if ($null -ne $gitCommand -and (Test-Path -LiteralPath $gitCommand.Source)) {
-        $gitRoot = [IO.DirectoryInfo]$gitCommand.Source
-        $gitRoot = $gitRoot.Directory
+        $gitFile = [IO.FileInfo]$gitCommand.Source
+        $gitRoot = $gitFile.Directory
         if ($null -ne $gitRoot -and $gitRoot.Name -ieq "cmd") {
             $gitRoot = $gitRoot.Parent
         }
