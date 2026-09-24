@@ -169,9 +169,6 @@ jobs:
         shell: powershell
         run: .\run-m4-2-3-ocr-acceptance.ps1 -ValidateOnly
 
-      - name: Build M4.2.3 OCR provisioner
-        run: dotnet build .\tools\LocalCopilot.OcrProvisioner\LocalCopilot.OcrProvisioner.csproj -c Release --warnaserror
-
       - name: Validate physical raw-provider runner patch
         shell: powershell
         run: |
