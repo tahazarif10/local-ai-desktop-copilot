@@ -9,7 +9,8 @@ internal sealed record DiagnosticSession(
     string SessionId,
     string DirectoryPath,
     string LogFilePath,
-    bool AllowUiText);
+    bool AllowUiText,
+    bool AllowOcr);
 
 internal sealed class DiagnosticLaunchDescriptor
 {
@@ -44,6 +45,12 @@ internal sealed class DiagnosticLaunchDescriptor
     }
 
     public bool AllowUiText
+    {
+        get;
+        init;
+    }
+
+    public bool AllowOcr
     {
         get;
         init;
@@ -160,7 +167,8 @@ internal static class DiagnosticSessionParser
                     Path.Combine(
                         sessionDirectory,
                         ApplicationLogFileName),
-                    descriptor!.AllowUiText);
+                    descriptor!.AllowUiText,
+                    descriptor.AllowOcr);
 
             return true;
         }

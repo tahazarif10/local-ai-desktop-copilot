@@ -431,7 +431,59 @@ policy with no new pixel crop, OCR runtime, process, or network path.
 M4.2.3b must not reuse benchmark scripts as an implicit product protocol. It
 requires an explicit authenticated/encrypted bounded request contract,
 pre-provisioned models, cancellation/deadline/size limits, content-free
-diagnostics, and a one-command physical client/server acceptance harness.
+diagnostics, and physical acceptance on the fixed client/server pair.
+
+Current draft transport is defined by proposed ADR 0015 and uses pinned TLS plus
+replay-resistant HMAC authentication. Credentials and certificate private keys
+remain outside Git.
+
+For the physical gate, first synchronize both machines to the exact accepted
+candidate head and require a clean working tree. On the AI server, provision the
+transport once and start acceptance mode:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-3-ocr-server.ps1 `
+  -BenchmarkRoot D:\LocalAI-Prerequisites `
+  -Provision `
+  -AcceptanceMode `
+  -DiagnosticDelayMs 1500
+```
+
+The server command:
+- refuses to overwrite existing credential material;
+- generates the self-signed server certificate, private key, and 32-byte HMAC
+  key outside Git;
+- restricts private credential ACLs to the current Windows principal;
+- validates wrong certificate pin, wrong HMAC key, replay, expired deadline,
+  and single-active Busy behavior before declaring the server precheck passed;
+- leaves the server running for the client test;
+- prints the local `client-bundle` directory path but never prints the HMAC
+  key or private key.
+
+Transfer the generated `client-bundle` directory to the fixed client through
+the installation/provisioning channel. The bundle contains the public
+certificate pin metadata plus the client copy of the secret HMAC key and must
+be handled as sensitive installation material.
+
+On the fixed client, run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-m4-2-3-ocr-acceptance.ps1 `
+  -ClientBundle <copied-client-bundle-path> `
+  -ServerHost <fixed-server-LAN-name-or-address>
+```
+
+The client runner uses a controlled WinForms target and the actual product
+runtime. It requires explicit `-EnableOcr` diagnostic activation, Arms sensing,
+proves bounded M4.1 ROI capture and authenticated server OCR, forces
+active/pending overlap through the server's acceptance-only delay, requires
+NotLatestRequest rejection before a final publishable OCR result, Disarms, then
+verifies OCR runtime teardown precedes coordinator teardown. Raw controlled text
+must not appear in the application log or final diagnostic bundle.
+
+ADR 0015 must remain Proposed and PR #36 must remain unmerged until the server
+precheck, fixed-client product acceptance, prohibited-content scan, strict
+Windows build, and final CI all pass.
 
 
 ## 8. Performance evidence

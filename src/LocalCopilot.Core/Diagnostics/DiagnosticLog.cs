@@ -53,6 +53,19 @@ public static class DiagnosticLog
         }
     }
 
+    public static bool IsOcrEnabled
+    {
+        get
+        {
+            lock (Gate)
+            {
+                return
+                    _initialized &&
+                    _session?.AllowOcr == true;
+            }
+        }
+    }
+
     public static void Initialize(
         IReadOnlyList<string>? processArguments)
     {
@@ -81,7 +94,8 @@ public static class DiagnosticLog
                 Environment.NewLine +
                 $"schema={DiagnosticSessionParser.SchemaVersion} " +
                 $"sessionId={session.SessionId} " +
-                $"uiTextEnabled={session.AllowUiText}" +
+                $"uiTextEnabled={session.AllowUiText} " +
+                $"ocrEnabled={session.AllowOcr}" +
                 Environment.NewLine;
 
             lock (Gate)

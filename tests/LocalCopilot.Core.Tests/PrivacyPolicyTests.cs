@@ -60,6 +60,33 @@ public sealed class PrivacyPolicyTests
     }
 
     [TestMethod]
+    public void DiagnosticOcrOptIn_GrantsOnlyOcrAndPixelEgress()
+    {
+        PrivacyPolicy policy = new(
+            PrivacyPolicyConfiguration.CreateProductDefault(
+                diagnosticNotepadRuleEnabled: true,
+                diagnosticOcrEnabled: true));
+
+        PrivacyEvaluation result = Evaluate(policy, "editor");
+
+        Assert.IsTrue(result.Allows(PrivacyCapability.CapturePixels));
+        Assert.IsTrue(result.Allows(PrivacyCapability.RunOcr));
+        Assert.IsTrue(result.Allows(PrivacyCapability.SendPixelsToLocalServer));
+        Assert.IsFalse(result.Allows(PrivacyCapability.SendTextToLocalServer));
+        Assert.IsFalse(result.Allows(PrivacyCapability.SendAudioToLocalServer));
+        Assert.IsFalse(result.Allows(PrivacyCapability.ReadUiText));
+    }
+
+    [TestMethod]
+    public void DiagnosticOcrOptIn_WithoutDiagnosticSession_IsRejected()
+    {
+        Assert.ThrowsExactly<ArgumentException>(
+            () => PrivacyPolicyConfiguration.CreateProductDefault(
+                diagnosticNotepadRuleEnabled: false,
+                diagnosticOcrEnabled: true));
+    }
+
+    [TestMethod]
     public void DiagnosticUiTextOptIn_WithoutDiagnosticSession_IsRejected()
     {
         Assert.ThrowsExactly<ArgumentException>(

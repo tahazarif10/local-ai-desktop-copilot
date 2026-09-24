@@ -67,7 +67,8 @@ public sealed record PrivacyPolicyConfiguration(
 {
     public static PrivacyPolicyConfiguration CreateProductDefault(
         bool diagnosticNotepadRuleEnabled = false,
-        bool diagnosticUiTextEnabled = false)
+        bool diagnosticUiTextEnabled = false,
+        bool diagnosticOcrEnabled = false)
     {
         if (diagnosticUiTextEnabled &&
             !diagnosticNotepadRuleEnabled)
@@ -75,6 +76,14 @@ public sealed record PrivacyPolicyConfiguration(
             throw new ArgumentException(
                 "UI text requires an active diagnostic session.",
                 nameof(diagnosticUiTextEnabled));
+        }
+
+        if (diagnosticOcrEnabled &&
+            !diagnosticNotepadRuleEnabled)
+        {
+            throw new ArgumentException(
+                "OCR requires an active diagnostic session.",
+                nameof(diagnosticOcrEnabled));
         }
 
         List<ApplicationPrivacyRule> rules = new();
@@ -106,6 +115,13 @@ public sealed record PrivacyPolicyConfiguration(
             {
                 globalGrants |=
                     PrivacyCapability.ReadUiText;
+            }
+
+            if (diagnosticOcrEnabled)
+            {
+                globalGrants |=
+                    PrivacyCapability.RunOcr |
+                    PrivacyCapability.SendPixelsToLocalServer;
             }
         }
 
@@ -148,16 +164,19 @@ public sealed class PrivacyPolicy
     {
         bool diagnosticNotepadRuleEnabled = DiagnosticLog.IsEnabled;
         bool diagnosticUiTextEnabled = DiagnosticLog.IsUiTextEnabled;
+        bool diagnosticOcrEnabled = DiagnosticLog.IsOcrEnabled;
         PrivacyPolicy policy = new(
             PrivacyPolicyConfiguration.CreateProductDefault(
                 diagnosticNotepadRuleEnabled,
-                diagnosticUiTextEnabled));
+                diagnosticUiTextEnabled,
+                diagnosticOcrEnabled));
 
         DiagnosticLog.Write(
             "PRIVACY.POLICY_READY",
             $"revision={policy.Revision} " +
             $"diagnosticNotepadRule={diagnosticNotepadRuleEnabled} " +
-            $"diagnosticUiText={diagnosticUiTextEnabled}");
+            $"diagnosticUiText={diagnosticUiTextEnabled} " +
+            $"diagnosticOcr={diagnosticOcrEnabled}");
 
         return policy;
     }

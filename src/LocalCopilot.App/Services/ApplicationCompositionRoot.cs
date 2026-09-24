@@ -5,7 +5,8 @@ namespace LocalCopilot_App.Services;
 
 internal sealed record ApplicationComposition(
     DesktopCopilotCoordinator Coordinator,
-    UiEnrichmentRuntimeService UiEnrichmentRuntimeService);
+    UiEnrichmentRuntimeService UiEnrichmentRuntimeService,
+    OcrEnrichmentRuntimeService? OcrEnrichmentRuntimeService);
 
 public static class ApplicationCompositionRoot
 {
@@ -65,8 +66,41 @@ public static class ApplicationCompositionRoot
                 persistentChangeDetectionService,
                 uiAutomationProbeWorker);
 
+        OcrEnrichmentRuntimeService? ocrEnrichmentRuntimeService =
+            null;
+
+        if (LocalCopilot_App.Diagnostics.DiagnosticLog.IsOcrEnabled)
+        {
+            if (!OcrRuntimeConfiguration.TryLoad(
+                    out OcrRuntimeConfiguration? ocrConfiguration))
+            {
+                throw new InvalidOperationException(
+                    "OCR diagnostic opt-in requires valid explicit server configuration.");
+            }
+
+            OcrServerTransport transport =
+                ocrConfiguration!.CreateTransport();
+
+            try
+            {
+                ocrEnrichmentRuntimeService =
+                    new OcrEnrichmentRuntimeService(
+                        contextEpochManager,
+                        sensingOrchestrator,
+                        persistentChangeDetectionService,
+                        foregroundWindowService,
+                        transport);
+            }
+            catch
+            {
+                transport.Dispose();
+                throw;
+            }
+        }
+
         return new ApplicationComposition(
             coordinator,
-            uiEnrichmentRuntimeService);
+            uiEnrichmentRuntimeService,
+            ocrEnrichmentRuntimeService);
     }
 }
