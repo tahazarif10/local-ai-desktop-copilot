@@ -26,7 +26,6 @@ if ($ValidateOnly) {
     if ($expectedDetectionModel -ne "PP-OCRv5_server_det") { throw "Unexpected detector pin." }
     if ($expectedRecognitionModel -ne "arabic_PP-OCRv5_mobile_rec") { throw "Unexpected recognizer pin." }
     if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "scripts\m4_2_ocr_server.py"))) { throw "OCR server script is missing." }
-    if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "tools\LocalCopilot.OcrProvisioner\LocalCopilot.OcrProvisioner.csproj"))) { throw "OCR provisioner project is missing." }
     Write-Host "M4.2.3 OCR SERVER WRAPPER VALIDATION: PASS"
     return
 }
@@ -65,9 +64,36 @@ $clientBundle = Join-Path $transportRoot "client-bundle"
 $clientConfig = Join-Path $clientBundle "ocr-client-config.json"
 $serverScript = Join-Path $repoRoot "scripts\m4_2_ocr_server.py"
 $transportProbe = Join-Path $repoRoot "scripts\m4_2_ocr_transport_probe.py"
-$provisioner = Join-Path $repoRoot "tools\LocalCopilot.OcrProvisioner\LocalCopilot.OcrProvisioner.csproj"
+function Find-OpenSsl {
+    $command = Get-Command openssl.exe -ErrorAction SilentlyContinue
+    if ($null -ne $command -and (Test-Path -LiteralPath $command.Source)) {
+        return [IO.Path]::GetFullPath($command.Source)
+    }
 
-foreach ($required in @($python,$detector,$recognizer,$serverScript,$transportProbe,$provisioner)) {
+    $gitCommand = Get-Command git.exe -ErrorAction SilentlyContinue
+    if ($null -ne $gitCommand -and (Test-Path -LiteralPath $gitCommand.Source)) {
+        $gitRoot = [IO.DirectoryInfo]$gitCommand.Source
+        $gitRoot = $gitRoot.Directory
+        if ($null -ne $gitRoot -and $gitRoot.Name -ieq "cmd") {
+            $gitRoot = $gitRoot.Parent
+        }
+
+        if ($null -ne $gitRoot) {
+            foreach ($relative in @("usr\bin\openssl.exe","mingw64\bin\openssl.exe","mingw32\bin\openssl.exe")) {
+                $candidate = Join-Path $gitRoot.FullName $relative
+                if (Test-Path -LiteralPath $candidate) {
+                    return [IO.Path]::GetFullPath($candidate)
+                }
+            }
+        }
+    }
+
+    throw "OpenSSL was not found. Git for Windows normally includes it; no download is performed by this runner."
+}
+
+$openssl = Find-OpenSsl
+
+foreach ($required in @($python,$detector,$recognizer,$serverScript,$transportProbe,$openssl)) {
     if (-not (Test-Path -LiteralPath $required)) { throw ("Required OCR server dependency is missing: " + $required) }
 }
 
@@ -76,14 +102,71 @@ if ($Provision) {
         $existing = Get-ChildItem -LiteralPath $transportRoot -Force -ErrorAction SilentlyContinue
         if (@($existing).Count -ne 0) { throw "OCR transport provisioning directory is not empty. Refusing to overwrite credentials." }
     }
+
     New-Item -ItemType Directory -Path $transportRoot -Force | Out-Null
-    & dotnet run --project $provisioner -- --output-dir $transportRoot --server-name $ServerName
-    if ($LASTEXITCODE -ne 0) { throw "OCR transport provisioning failed." }
+    New-Item -ItemType Directory -Path $clientBundle -Force | Out-Null
+
+    $sanKind = "DNS"
+    $parsedIp = $null
+    if ([Net.IPAddress]::TryParse($ServerName,[ref]$parsedIp)) {
+        $sanKind = "IP"
+    }
+
+    & $openssl req `
+        -x509 `
+        -newkey rsa:3072 `
+        -sha256 `
+        -days 730 `
+        -nodes `
+        -keyout $keyPath `
+        -out $certPath `
+        -subj "/CN=LocalCopilot OCR Server" `
+        -addext ("subjectAltName={0}:{1}" -f $sanKind,$ServerName) `
+        -addext "keyUsage=digitalSignature,keyEncipherment" `
+        -addext "extendedKeyUsage=serverAuth"
+    if ($LASTEXITCODE -ne 0) {
+        throw "OpenSSL certificate provisioning failed."
+    }
+
+    & $openssl rand -hex -out $authPath 32
+    if ($LASTEXITCODE -ne 0) {
+        throw "OpenSSL authentication-key provisioning failed."
+    }
+
+    $clientAuthPath = Join-Path $clientBundle "ocr-auth-key.hex"
+    Copy-Item -LiteralPath $authPath -Destination $clientAuthPath
+
+    $fingerprintLine = (& $openssl x509 -in $certPath -noout -fingerprint -sha256 | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or $fingerprintLine -notmatch "=(?<fp>[0-9A-Fa-f:]{95})$") {
+        throw "Unable to calculate server certificate SHA-256 fingerprint."
+    }
+
+    $certificateSha256Provisioned = ($Matches.fp -replace ":","").ToLowerInvariant()
+
+    $clientConfiguration = [ordered]@{
+        schema = 1
+        server_name = $ServerName
+        port = $expectedPort
+        server_certificate_sha256 = $certificateSha256Provisioned
+        authentication_key_file = "ocr-auth-key.hex"
+    }
+
+    $clientConfiguration | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $clientConfig -Encoding UTF8
+
     $currentPrincipal = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-    foreach ($secretPath in @($keyPath,$authPath,(Join-Path $clientBundle "ocr-auth-key.hex"))) {
+    foreach ($secretPath in @($keyPath,$authPath,$clientAuthPath)) {
         & icacls.exe $secretPath /inheritance:r /grant:r ("{0}:F" -f $currentPrincipal) | Out-Null
         if ($LASTEXITCODE -ne 0) { throw ("Unable to restrict credential ACL: " + $secretPath) }
     }
+
+    Write-Host "M4.2.3 OCR PROVISIONING: PASS"
+    Write-Host ("openssl=" + $openssl)
+    Write-Host ("server_name=" + $ServerName)
+    Write-Host ("certificate_sha256=" + $certificateSha256Provisioned)
+    Write-Host ("client_bundle=" + $clientBundle)
+    Write-Host "download_performed=False"
+    Write-Host "authentication_key_printed=False"
+    Write-Host "private_key_printed=False"
 }
 
 foreach ($required in @($certPath,$keyPath,$authPath,$clientConfig)) {
